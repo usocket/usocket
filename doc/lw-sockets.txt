@@ -1,0 +1,16 @@
+http://www.lispworks.com/reference/lwu41/lwref/LWRM_37.HTM
+
+Package: COMM
+
+get-host-entry
+get-socket-address
+get-socket-peer-address
+ip-address-string
+open-tcp-stream
+socket-stream-address
+socket-stream-peer-address
+start-up-server
+start-up-server-and-mp
+socket-stream
+string-ip-address
+with-noticed-socket-stream

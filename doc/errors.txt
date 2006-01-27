@@ -1,0 +1,13 @@
+EADDRINUSE address-in-use-error
+EAGAIN interrupted-error
+EBADF bad-file-descriptor-error
+ECONNREFUSED connection-refused-error
+EINTR interrupted-error
+EINVAL invalid-argument-error
+ENOBUFS no-buffers-error
+ENOMEM out-of-memory-error
+EOPNOTSUPP operation-not-supported-error
+EPERM operation-not-permitted-error
+EPROTONOSUPPORT protocol-not-supported-error
+ESOCKTNOSUPPORT socket-type-not-supported-error
+ENETUNREACH network-unreachable-error

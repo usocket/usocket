@@ -1,0 +1,17 @@
+
+;; the backends must implement
+;;
+;;  - handle-condition
+;;  - open
+;;  - close
+;;  - listen
+;;  - accept
+;;  - read-line
+;;  - write-sequence
+;;  - get-host-by-address
+;;  - get-host-by-name
+;;
+;; the backend must wrap all calls to its socket functions in a
+;; handler-case/bind to make sure handle-condition is called.
+
+;; open should take either the hostname or an vectorized ip
