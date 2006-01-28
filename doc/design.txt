@@ -1,0 +1,25 @@
+
+                                                        -*- text -*-
+
+                  usocket: Universal sockets library
+                  ==================================
+
+Contents
+========
+
+
+
+Design goal
+===========
+
+To provide a portable socket interface for as many implementations as
+possible, while keeping the portability layer as thin as possible.
+
+Minimally, I'd like to support:
+ - SBCL
+ - CMUCL
+ - Allegro
+ - LispWorks
+ - ArmedBear (ABCL)
+
+
