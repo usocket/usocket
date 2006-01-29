@@ -1,3 +1,6 @@
+                                                                -*- text -*-
+
+$Id$
 
 ;; the backends must implement
 ;;
@@ -15,3 +18,21 @@
 ;; handler-case/bind to make sure handle-condition is called.
 
 ;; open should take either the hostname or an vectorized ip
+
+usocket socket interface:
+
+ - usocket (class)
+ - socket-create (function) [ to create a passive socket ]
+ - socket-connect (function) [ to create an active/connected socket ]
+ - socket-close (method)
+ - socket-accept (method)
+ - socket-local-address (method)
+ - socket-peer-address (method)
+ - socket-stream (usocket slot accessor),
+    the value of which satisfies the normal stream interface
+
+usocket name resolution interface:
+
+ - get-host-by-address
+ - get-host-by-name
+

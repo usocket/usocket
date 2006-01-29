@@ -5,26 +5,26 @@
 
 (in-package :usocket)
 
-(defclass socket ()
-  ((real-socket
-    :initarg :real-socket
-    :accessor real-socket)
-   (real-stream
-    :initarg :real-stream
-    :accessor real-stream)
-   (host
-    :initarg :host
-    :accessor host)
-   (port
-    :initarg :port
-    :accessor port)))
+(defclass usocket ()
+  ((socket
+    :initarg :socket
+    :accessor socket)
+   (stream
+    :initarg :stream
+    :accessor stream)
+   (local-address
+    :initarg :local-address
+    :accessor local-address)
+   (local-port
+    :initarg :local-port
+    :accessor local-port)))
 
-(defun make-socket (&key socket host port (stream nil))
-  (make-instance 'socket
-                 :real-socket socket
-                 :host host
-                 :port port
-                 :real-stream stream))
+(defun make-socket (&key socket local-address local-port stream))
+  (make-instance 'usocket
+                 :socket socket
+                 :local-address host
+                 :local-port local-port
+                 :stream stream))
 
 ;;
 ;; Utility

@@ -42,6 +42,7 @@ a library with the intention to provide portability code in only
 
 Also, I need this library to extend cl-irc with full DCC functionality.
 
+
 
 Design goal
 ===========
