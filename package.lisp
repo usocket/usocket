@@ -10,22 +10,23 @@
 (eval-when (:execute :load-toplevel :compile-toplevel)
   (defpackage :usocket
       (:use :cl)
-    (:nicknames :usoc)
-    (:shadowing-import-from "COMMON-LISP" :close
-                  :open
-                  :read-line
-                  :write-sequence)
-    (:export :open ; socket related operations
-             :make-socket 
-             :close
-             :read-line
-             :write-sequence
-             :socket ; socket object and accessors
-             :host
-             :port
+    (:export :socket-connect ; socket constructors and methods
+             :socket-close
+
+             :usocket ; socket object and accessors
+             :socket-stream
+
              :get-host-by-address ; name services
+             :get-hosts-by-name
              :get-host-by-name
-             :host-byte-order ; utility operators
+             :get-random-host-by-name
+
+             :host-byte-order ; IPv4 utility functions
+             :hbo-to-dotted-quad
+             :hbo-to-vector-quad
+             :vector-quad-to-dotted-quad
+             :dotted-quad-to-vector-quad
+
              :usocket-error ; conditions
              :no-route-to-host)))
 

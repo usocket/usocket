@@ -1,5 +1,5 @@
 ;;;; $Id$
-;;;; $Source$
+;;;; $URL$
 
 ;;;; See LICENSE for licensing information.
 
@@ -11,7 +11,7 @@
     :accessor socket)
    (stream
     :initarg :stream
-    :accessor stream)
+    :accessor socket-stream)
    (local-address
     :initarg :local-address
     :accessor local-address)
@@ -19,15 +19,17 @@
     :initarg :local-port
     :accessor local-port)))
 
-(defun make-socket (&key socket local-address local-port stream))
+(defun make-socket (&key socket local-address local-port stream)
   (make-instance 'usocket
                  :socket socket
-                 :local-address host
+                 :local-address local-address
                  :local-port local-port
                  :stream stream))
 
+(defgeneric socket-close (usocket))
+
 ;;
-;; Utility
+;; IPv4 utility functions
 ;;
 
 (defun list-of-strings-to-integers (list)
@@ -77,3 +79,15 @@ parse-integer) on each of the string elements."
 3232235777."
   (+ (* (aref vector 0) 256 256 256) (* (aref vector 1) 256 256)
      (* (aref vector 2) 256) (aref vector 3)))
+
+;;
+;; DNS helper functions
+;;
+
+(defun get-host-by-name (name)
+  (let ((hosts (get-hosts-by-name name)))
+    (car hosts)))
+
+(defun get-random-host-by-name (name)
+  (let ((hosts (get-hosts-by-name name)))
+    (elt hosts (random (length hosts)))))

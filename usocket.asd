@@ -13,12 +13,11 @@
 
 (defsystem usocket
     :name "usocket"
-    :author "Erik Enge"
+    :author "Erik Enge & Erik Huelsmann"
     :version "0.1.0"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
-    :depends-on #+sbcl (:sb-bsd-sockets :split-sequence)
-                #-sbcl (:split-sequence)
+    :depends-on (#+sbcl :sb-bsd-sockets :split-sequence)
     :components ((:file "package")
                  (:file "usocket"
                         :depends-on ("package"))
