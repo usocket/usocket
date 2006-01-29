@@ -72,8 +72,9 @@ Several relevant support functionalities will have to be provided too:
 Minimally, I'd like to support:
  - SBCL
  - CMUCL
+ - ABCL (ArmedBear)
+ - clisp
  - Allegro
  - LispWorks
- - ArmedBear (ABCL)
 
 
