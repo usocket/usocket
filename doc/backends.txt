@@ -1,0 +1,22 @@
+                                                                -*- text -*-
+
+A document to describe which APIs a backend should implement.
+
+
+Each backend should implement:
+
+Sockets functions:
+
+ - socket-connect
+
+
+Sockets methods:
+
+ - socket-close
+
+
+Name resolution functions:
+
+ - get-host-by-address (name string)
+ - get-hosts-by-name (address vector-quad)
+
