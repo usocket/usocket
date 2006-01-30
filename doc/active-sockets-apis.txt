@@ -3,6 +3,14 @@
 A document to summarizing which API's of the different implementations
 are associated with 'Step 1'.
 
+Interface to be implemented in step 1:
+
+ - socket-connect
+ - socket-close
+ - get-host-by-address
+ - get-hosts-by-name
+
+(and something to do with errors; maybe move this to step 1a?)
 
 SBCL
 ====
@@ -16,4 +24,21 @@ SBCL
   DNS name resolution:
   - get-host-by-name
   - get-host-by-address
-  - host-ent-addresses
+  - ::host-ent-addresses
+  - host-ent-name
+
+
+CMUCL
+=====
+
+  sockets:
+  - ext:connect-to-inet-socket
+  - sys:make-fd-stream
+  - ext:close-socket
+
+  DNS name resolution:
+  - ext:host-entry-name
+  - ext::lookup-host-entry
+  - ext:host-entry-addr-list
+  - ext:lookup-host-entry
+

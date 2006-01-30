@@ -20,7 +20,12 @@ an IP address represented in vector notation, such as #(192 168 1 1).
 Returns a usocket object."
   (let* ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                 :type type :protocol :tcp))
-         (stream (sb-bsd-sockets:socket-make-stream socket))
+         (stream (sb-bsd-sockets:socket-make-stream socket
+                                                    :input t
+                                                    :output t
+                                                    :buffering :full
+                                                    :element-type 'character))
+         ;;###FIXME: The above line probably needs an :external-format
          (usocket (make-instance 'usocket :stream stream :socket socket)))
     (handler-case (sb-bsd-sockets:socket-connect socket host port)
       (condition (condition) (handle-condition condition usocket)))

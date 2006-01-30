@@ -12,21 +12,21 @@
                       :real-condition condition
                       :socket socket))))
 
-(defun open (host port &optional (type :stream))
+(defun socket-connect (host port &optional (type :stream))
   (let* ((socket (ext:connect-to-inet-socket (host-byte-order host) port type))
-         (stream (sys:make-fd-stream socket :input t :output t :element-type 'character))
-         (usocket (make-socket :socket socket :host host :port port :stream stream)))
+         (stream (sys:make-fd-stream socket :input t :output t
+                                     :element-type 'character
+                                     :buffering :full))
+         ;;###FIXME the above line probably needs an :external-format
+         (usocket (make-socket :socket socket
+                               :host host :port port :stream stream)))
     usocket))
 
-(defmethod close ((socket socket))
+(defmethod socket-close ((usocket usocket))
   "Close socket."
-  (ext:close-socket (real-socket socket)))
+  (ext:close-socket (socket usocket)))
 
-(defmethod read-line ((socket socket))
-  (cl:read-line (real-stream socket)))
 
-(defmethod write-sequence ((socket socket) sequence)
-  (cl:write-sequence sequence (real-stream socket)))
 
 (defun get-host-by-address (address)
   (handler-case (ext:host-entry-name
