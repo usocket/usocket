@@ -14,21 +14,18 @@
 
 (defun open (host port &optional (type :stream))
   (declare (ignore type))
-  (make-socket :socket (sock:make-socket :remote-host host
-                                         :remote-port port)))
+  (let ((socket (sock:make-socket :remote-host host
+                                  :remote-port port)))
+    (make-socket :socket socket :stream socket)))
 
-(defmethod close ((socket socket))
+(defmethod close ((usocket usocket))
   "Close socket."
-  (sock:close (real-socket socket)))
+  (sock:close (socket usocket)))
 
-(defmethod read-line ((socket socket))
-  (cl:read-line (real-socket socket)))
 
-(defmethod write-sequence ((socket socket) sequence)
-  (cl:write-sequence sequence (real-socket socket)))
 
 (defun get-host-by-address (address)
   (sock:lookup-host address))
 
-(defun get-host-by-name (name)
+(defun get-hosts-by-name (name)
   (sock:lookup-host name))

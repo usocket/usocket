@@ -12,29 +12,31 @@
                       :real-condition condition
                       :socket socket))))
 
-(defun open (host port &optional (type :stream))
+(defun socket-connect (host port &optional (type :stream))
   (declare (ignore type))
-  (make-socket :socket (socket:socket-connect port host)
-               :host host
-               :port port))
+  (let ((socket (socket:socket-connect port host
+                                       :element-type 'character
+                                       :buffered t)))
+    (make-socket :socket socket
+                 :stream socket ;; the socket is a stream too
+                 :host host
+                 :port port))
 
-(defmethod close ((socket socket))
+(defmethod socket-close ((usocket usocket))
   "Close socket."
-  (socket:socket-server-close (real-socket socket)))
+  (close (socket usocket)))
 
-(defmethod read-line ((socket socket))
-  (cl:read-line (real-socket socket)))
 
-(defmethod write-sequence ((socket socket) sequence)
-  (cl:write-sequence sequence (real-socket socket)))
 
 (defun get-host-by-address (address)
-  (handler-case (posix:hostent-name
-                 (posix:resolve-host-ipaddr (vector-quad-to-dotted-quad address)))
-    (condition (condition) (handle-condition condition))))
+  (handler-case
+   (posix:hostent-name
+    (posix:resolve-host-ipaddr (vector-quad-to-dotted-quad address)))
+   (condition (condition) (handle-condition condition))))
 
-(defun get-host-by-name (name)
-  (handler-case (mapcar #'dotted-quad-to-vector-quad
-                        (posix:hostent-addr-list (posix:resolve-host-ipaddr name)))
-    (condition (condition) (handle-condition condition))))
-  
+(defun get-hosts-by-name (name)
+  (handler-case
+   (mapcar #'dotted-quad-to-vector-quad
+           (posix:hostent-addr-list (posix:resolve-host-ipaddr name)))
+   (condition (condition) (handle-condition condition))))
+
