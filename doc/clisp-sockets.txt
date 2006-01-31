@@ -14,3 +14,13 @@ http://clisp.cons.org/impnotes.html#socket
 (SOCKET:SOCKET-STREAM-LOCAL socket-stream [do-not-resolve-p])
 (SOCKET:SOCKET-STREAM-SHUTDOWN socket-stream direction)
 (SOCKET:SOCKET-OPTIONS socket-server &REST {option}*)
+
+
+(posix:resolve-host-ipaddr &optional host)
+
+with the host-ent structure:
+
+  name      - host name
+  aliases   - LIST of aliases
+  addr-list - LIST of IPs as dotted quads (IPv4) or coloned octets (IPv6)
+  addrtype  - INTEGER address type IPv4 or IPv6

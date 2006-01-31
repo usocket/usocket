@@ -20,3 +20,7 @@ Name resolution functions:
  - get-host-by-address (name string)
  - get-hosts-by-name (address vector-quad)
 
+
+An error-handling function, resolving implementation specific errors
+to this list of errors:
+

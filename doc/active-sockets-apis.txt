@@ -18,6 +18,7 @@ SBCL
   sockets:
   - socket-bind
   - make-instance 'inet-socket
+  - socket-make-stream
   - socket-connect
   - socket-close
 

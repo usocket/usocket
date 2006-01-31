@@ -34,6 +34,12 @@ extentsions::get-socket-host-and-port socket-fd
 
 
 
+There's currently only 1 condition to be raised:
+
+  SOCKET-ERROR (derived from SIMPLE-ERROR)
+    which has a SOCKET-ERRNO slot containing the unix error number.
+
+
 
 
 [Function]
