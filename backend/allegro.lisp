@@ -25,7 +25,10 @@
 
 
 (defun get-host-by-address (address)
-  (sock:lookup-host address))
+  (sock:ipaddr-to-hostname address))
 
 (defun get-hosts-by-name (name)
-  (sock:lookup-host name))
+  ;;###FIXME: ACL has the acldns module which returns all A records
+  ;; only problem: it doesn't fall back to tcp (from udp) if the returned
+  ;; structure is too long.
+  (list (hbo-to-vector-quad (sock:lookup-hostname name))))
