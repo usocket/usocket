@@ -1,5 +1,5 @@
 ;;;; $Id$
-;;;; $Source$
+;;;; $URL$
 
 ;;;; See the LICENSE file for licensing information.
 
@@ -16,17 +16,14 @@
              :usocket ; socket object and accessors
              :socket-stream
 
-             :get-host-by-address ; name services
-             :get-hosts-by-name
-             :get-host-by-name
-             :get-random-host-by-name
-
              :host-byte-order ; IPv4 utility functions
              :hbo-to-dotted-quad
              :hbo-to-vector-quad
              :vector-quad-to-dotted-quad
              :dotted-quad-to-vector-quad
 
-             :usocket-error ; conditions
-             :no-route-to-host)))
+             :usocket-condition ; conditions
+             :usocket-error ; errors
+             :usocket-unknown-condition
+             :usocket-unknown-error)))
 

@@ -59,9 +59,18 @@ Functional requirements
 The interface provided should allow:
  - 'client'/active sockets
  - 'server'/listening sockets
- - retrieve IP addresses/ports for both sides of the connection
  - provide the usual stream methods to operate on the connection stream
    (not necessarily the socket itself; maybe a socket slot too)
+
+For now, as long as there are no possibilities to have UDP sockets
+to write a DNS client library: (which in the end may work better,
+because in this respect all implementations are different...)
+ - retrieve IP addresses/ports for both sides of the connection
+--- later addition
+I don't think it's a good idea to implement name lookup in the
+very first of steps: we'll see if this is required to get the
+package accepted; not all implementations support it.
+--- later addition; end
 
 Several relevant support functionalities will have to be provided too:
  - long <-> quad-vector operators

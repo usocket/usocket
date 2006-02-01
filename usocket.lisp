@@ -5,6 +5,8 @@
 
 (in-package :usocket)
 
+
+
 (defclass usocket ()
   ((socket
     :initarg :socket
@@ -19,14 +21,21 @@
     :initarg :local-port
     :accessor local-port)))
 
-(defun make-socket (&key socket local-address local-port stream)
+(defun make-socket (&key socket stream)
   (make-instance 'usocket
                  :socket socket
-                 :local-address local-address
-                 :local-port local-port
                  :stream stream))
 
-(defgeneric socket-close (usocket))
+(defgeneric socket-close (usocket)
+  (:documentation "Close a previously opened USOCKET."))
+
+(defmacro with-connected-socket ((var socket) &body body)
+  `(let ((,var ,socket))
+     (unwind-protect
+         (progn
+           ,@body)
+       (when ,var
+         (socket-close ,var)))))
 
 ;;
 ;; IPv4 utility functions
