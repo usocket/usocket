@@ -19,7 +19,7 @@ SBCL
   - socket-bind
   - make-instance 'inet-socket
   - socket-make-stream
-  - socket-connect
+  - socket-connect (ip vector-quad) port
   - socket-close
 
   DNS name resolution:
@@ -33,7 +33,7 @@ CMUCL
 =====
 
   sockets:
-  - ext:connect-to-inet-socket
+  - ext:connect-to-inet-socket (ip integer) port
   - sys:make-fd-stream
   - ext:close-socket
 
@@ -42,4 +42,34 @@ CMUCL
   - ext::lookup-host-entry
   - ext:host-entry-addr-list
   - ext:lookup-host-entry
+
+
+ABCL
+====
+
+  sockets
+  - ext:socket-connect (hostname string) port
+  - ext:get-socket-stream
+  - ext:socket-close
+
+
+clisp
+=====
+
+  sockets
+  - socket-connect port (hostname string)
+  - close (socket)
+
+
+Allegro
+=======
+
+  sockets
+  - make-socket
+  - socket-connect
+  - close
+
+  DNS resolution
+  - lookup-hostname
+  - ipaddr-to-hostname
 

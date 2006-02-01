@@ -24,3 +24,15 @@ with the host-ent structure:
   aliases   - LIST of aliases
   addr-list - LIST of IPs as dotted quads (IPv4) or coloned octets (IPv6)
   addrtype  - INTEGER address type IPv4 or IPv6
+
+
+Errors are of type
+
+SYSTEM::SIMPLE-OS-ERROR
+ with a 1 element (integer) SYSTEM::$FORMAT-ARGUMENTS list
+
+This integer stores the OS error reported; meaning WSA* codes on Win32
+and E* codes on *nix, only: unix.lisp in CMUCL shows
+BSD, Linux and SRV4 have different number assignments for the same
+E* constant names  :-(
+
