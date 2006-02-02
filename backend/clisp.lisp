@@ -1,5 +1,5 @@
 ;;;; $Id$
-;;;; $Source$
+;;;; $URL$
 
 ;;;; See LICENSE for licensing information.
 
