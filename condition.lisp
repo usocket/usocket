@@ -82,9 +82,9 @@
      (condition (condition) (handle-condition condition ,socket))))
 
 (defparameter +unix-errno-condition-map+
-  `((11 . usocket-retry-condition) ;; EAGAIN
-    (35 . usocket-retry-condition) ;; EDEADLCK
-    (4 . usocket-interrupted-condition))) ;; EINTR
+  `(((11) . usocket-retry-condition) ;; EAGAIN
+    ((35) . usocket-retry-condition) ;; EDEADLCK
+    ((4) . usocket-interrupted-condition))) ;; EINTR
 
 (defparameter +unix-errno-error-map+
   ;;### the first column is for non-(linux or srv4) systems
@@ -117,7 +117,7 @@
 
 
 (defun map-errno-condition (errno)
-  (cdr (assoc errno +unix-errno-error-map+)))
+  (cdr (assoc errno +unix-errno-error-map+ :test #'member)))
 
 
 (defun map-errno-error (errno)
