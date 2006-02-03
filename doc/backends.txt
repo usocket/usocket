@@ -1,5 +1,7 @@
                                                                 -*- text -*-
 
+$Id$
+
 A document to describe which APIs a backend should implement.
 
 
@@ -15,12 +17,29 @@ Sockets methods:
  - socket-close
 
 
-Name resolution functions:
-
- - get-host-by-address (name string)
- - get-hosts-by-name (address vector-quad)
-
-
 An error-handling function, resolving implementation specific errors
 to this list of errors:
 
+ - usocket-address-in-use-error
+ - usocket-address-not-available-error
+ - usocket-bad-file-descriptor-error
+ - usocket-connection-refused-error
+ - usocket-invalid-argument-error
+ - usocket-no-buffers-error
+ - usocket-operation-not-supported-error
+ - usocket-operation-not-permitted-error
+ - usocket-protocol-not-supported-error
+ - usocket-socket-type-not-supported-error
+ - usocket-network-unreachable-error
+ - usocket-network-down-error
+ - usocket-network-reset-error
+ - usocket-host-down-error
+ - usocket-host-unreachable-error
+ - usocket-shutdown-error
+ - usocket-timeout-error
+ - usocket-unkown-error
+
+and these conditions:
+
+ - usocket-interrupted-condition
+ - usocket-unkown-condition
