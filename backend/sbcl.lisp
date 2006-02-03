@@ -41,7 +41,9 @@
                                  usock-error)))
              (if usock-error
                  (error usock-error :socket socket)
-               (error 'usocket-unknown-error :real-error condition))))
+               (error 'usocket-unknown-error
+                      :socket socket
+                      :real-error condition))))
     (condition (let* ((usock-cond (cdr (assoc (type-of condition)
                                               +sbcl-condition-map+)))
                       (usock-cond (if (functionp usock-cond)
@@ -67,9 +69,10 @@ Returns a usocket object."
                                                     :buffering :full
                                                     :element-type 'character))
          ;;###FIXME: The above line probably needs an :external-format
-         (usocket (make-instance 'usocket :stream stream :socket socket)))
+         (usocket (make-instance 'usocket :stream stream :socket socket))
+         (ip (host-to-vector-quad host)))
     (with-mapped-conditions (usocket)
-      (sb-bsd-sockets:socket-connect socket host port))
+      (sb-bsd-sockets:socket-connect socket ip port))
     usocket))
 
 (defmethod socket-close ((usocket usocket))

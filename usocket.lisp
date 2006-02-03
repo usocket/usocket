@@ -97,11 +97,30 @@ parse-integer) on each of the string elements."
 ;; DNS helper functions
 ;;
 
+#-clisp
 (defun get-host-by-name (name)
   (let ((hosts (get-hosts-by-name name)))
     (car hosts)))
 
+#-clisp
 (defun get-random-host-by-name (name)
   (let ((hosts (get-hosts-by-name name)))
     (elt hosts (random (length hosts)))))
 
+#-clisp
+(defun host-to-vector-quad (host)
+  "Translate a host specification (vector quad, dotted quad or domain name)
+to a vector quad."
+  (if (vectorp host)
+      host
+    (let* ((ip (ignore-errors
+                 (dotted-quad-to-vector-quad host))))
+      (if (and ip (= 4 (length ip)))
+          ip
+        (get-random-host-by-name host)))))
+
+(defun host-to-hostname (host)
+  "Translate a string or vector quad to a stringified hostname."
+  (if (stringp host)
+      host
+    (vector-quad-to-dotted-quad host)))
