@@ -13,6 +13,8 @@
     (:export :socket-connect ; socket constructors and methods
              :socket-close
 
+             :with-connected-socket ; macros
+
              :usocket ; socket object and accessors
              :socket-stream
 

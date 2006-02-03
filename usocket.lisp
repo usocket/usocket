@@ -14,12 +14,13 @@
    (stream
     :initarg :stream
     :accessor socket-stream)
-   (local-address ;; possibly need to eliminate
-    :initarg :local-address
-    :accessor local-address)
-   (local-port ;; possibly need to eliminate
-    :initarg :local-port
-    :accessor local-port)))
+;;    (local-address ;; possibly need to eliminate
+;;     :initarg :local-address
+;;     :accessor local-address)
+;;    (local-port ;; possibly need to eliminate
+;;     :initarg :local-port
+;;     :accessor local-port)
+   ))
 
 (defun make-socket (&key socket stream)
   (make-instance 'usocket
