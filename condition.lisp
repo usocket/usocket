@@ -74,12 +74,7 @@
 
 (define-condition usocket-unknown-error (usocket-error)
   ((real-error :initarg :real-error
-               :accessor usocket-real-error)
-   ;; clisp error wrt its condition system...
-   ;;it doesn't seem to inherit slots
-   #+clisp
-   (socket :initarg :socket
-           :accessor :usocket-socket))
+               :accessor usocket-real-error))
   (:documentation ""))
 
 
