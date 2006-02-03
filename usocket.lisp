@@ -14,10 +14,10 @@
    (stream
     :initarg :stream
     :accessor socket-stream)
-   (local-address
+   (local-address ;; possibly need to eliminate
     :initarg :local-address
     :accessor local-address)
-   (local-port
+   (local-port ;; possibly need to eliminate
     :initarg :local-port
     :accessor local-port)))
 
@@ -27,9 +27,12 @@
                  :stream stream))
 
 (defgeneric socket-close (usocket)
-  (:documentation "Close a previously opened USOCKET."))
+  (:documentation "Close a previously opened `usocket'."))
 
 (defmacro with-connected-socket ((var socket) &body body)
+  "Bind `socket' to `var', ensuring socket destruction on exit.
+
+The `body' is an implied progn form."
   `(let ((,var ,socket))
      (unwind-protect
          (progn
@@ -100,3 +103,4 @@ parse-integer) on each of the string elements."
 (defun get-random-host-by-name (name)
   (let ((hosts (get-hosts-by-name name)))
     (elt hosts (random (length hosts)))))
+
