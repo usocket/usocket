@@ -2,37 +2,50 @@
 
 $Id$
 
-;; the backends must implement
-;;
-;;  - handle-condition
-;;  - open
-;;  - close
-;;  - listen
-;;  - accept
-;;  - read-line
-;;  - write-sequence
-;;  - get-host-by-address
-;;  - get-host-by-name
-;;
-;; the backend must wrap all calls to its socket functions in a
-;; handler-case/bind to make sure handle-condition is called.
 
-;; open should take either the hostname or an vectorized ip
-
-usocket socket interface:
+usocket interface:
 
  - usocket (class)
- - socket-create (function) [ to create a passive socket ]
  - socket-connect (function) [ to create an active/connected socket ]
+    socket-connect host port
+      where `host' is a vectorized ip
+                      or a string representation of a dotted ip address
+                      or a hostname for lookup in the DNS system
  - socket-close (method)
+    socket-close socket
+      where socket a previously returned socket
+ - socket-stream (usocket slot accessor),
+    socket-stream socket
+      the return value of which satisfies the normal stream interface
+
+
+Errors:
+ - usocket-address-in-use-error
+ - usocket-address-not-available-error
+ - usocket-bad-file-descriptor-error
+ - usocket-connection-refused-error
+ - usocket-invalid-argument-error
+ - usocket-no-buffers-error
+ - usocket-operation-not-supported-error
+ - usocket-operation-not-permitted-error
+ - usocket-protocol-not-supported-error
+ - usocket-socket-type-not-supported-error
+ - usocket-network-unreachable-error
+ - usocket-network-down-error
+ - usocket-network-reset-error
+ - usocket-host-down-error
+ - usocket-host-unreachable-error
+ - usocket-shutdown-error
+ - usocket-timeout-error
+ - usocket-unkown-error
+
+Non-fatal conditions:
+ - usocket-interrupted-condition
+ - usocket-unkown-condition
+
+
+TODO:
+ - socket-create (function) [ to create a passive socket ]
  - socket-accept (method)
  - socket-local-address (method)
  - socket-peer-address (method)
- - socket-stream (usocket slot accessor),
-    the value of which satisfies the normal stream interface
-
-usocket name resolution interface:
-
- - get-host-by-address
- - get-host-by-name
-
