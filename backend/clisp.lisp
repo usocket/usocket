@@ -25,21 +25,25 @@
     (system::simple-os-error
        (destructuring-bind
            (&optional usock-err errorp)
-           (cdr (assoc (car (system::$format-arguments))
-                       +clisp-error-map+))
+           (cdr (assoc (car (simple-condition-format-arguments condition))
+                       +clisp-error-map+ :test #'member))
          (if usock-err
              (if errorp
                  (error usock-err :socket socket)
                (signal usock-err :socket socket))
-           (error 'usocket-unkown-error
+           (error 'usocket-unknown-error
                   :socket socket
                   :real-error condition))))))
 
 (defun socket-connect (host port &optional (type :stream))
   (declare (ignore type))
-  (let ((socket (socket:socket-connect port (host-to-hostname host)
-                                       :element-type 'character
-                                       :buffered t)))
+  (let ((socket)
+        (hostname (host-to-hostname host)))
+    (with-mapped-conditions (socket)
+       (setf socket
+             (socket:socket-connect port hostname
+                                    :element-type 'character
+                                    :buffered t)))
     (make-socket :socket socket
                  :stream socket))) ;; the socket is a stream too
 ;;                 :host host
@@ -47,19 +51,6 @@
 
 (defmethod socket-close ((usocket usocket))
   "Close socket."
-  (close (socket usocket)))
-
-
-
-(defun get-host-by-address (address)
-  (handler-case
-   (posix:hostent-name
-    (posix:resolve-host-ipaddr (vector-quad-to-dotted-quad address)))
-   (condition (condition) (handle-condition condition))))
-
-(defun get-hosts-by-name (name)
-  (handler-case
-   (mapcar #'dotted-quad-to-vector-quad
-           (posix:hostent-addr-list (posix:resolve-host-ipaddr name)))
-   (condition (condition) (handle-condition condition))))
+  (with-mapped-conditions (usocket)
+    (close (socket usocket))))
 

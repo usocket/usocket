@@ -17,7 +17,9 @@
 ;;                      (real-condition c) (socket c)))))
 
 (define-condition usocket-condition (condition)
-  () ;;###FIXME: no slots (yet); should at least be the affected usocket...
+  ((socket :initarg :socket
+           :accessor :usocket-socket))
+  ;;###FIXME: no slots (yet); should at least be the affected usocket...
   (:documentation ""))
 
 (define-condition usocket-error (usocket-condition error)
@@ -72,7 +74,12 @@
 
 (define-condition usocket-unknown-error (usocket-error)
   ((real-error :initarg :real-error
-               :accessor usocket-real-error))
+               :accessor usocket-real-error)
+   ;; clisp error wrt its condition system...
+   ;;it doesn't seem to inherit slots
+   #+clisp
+   (socket :initarg :socket
+           :accessor :usocket-socket))
   (:documentation ""))
 
 
