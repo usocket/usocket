@@ -24,6 +24,8 @@ Errors:
  - usocket-address-not-available-error
  - usocket-bad-file-descriptor-error
  - usocket-connection-refused-error
+ - usocket-connection-aborted-error * TODO
+ - usocket-connection-reset-error * TODO
  - usocket-invalid-argument-error
  - usocket-no-buffers-error
  - usocket-operation-not-supported-error
