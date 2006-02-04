@@ -20,18 +20,22 @@
                          :socket socket))))
 
 (defun socket-connect (host port &optional (type :stream))
-  (let* ((socket (ext:connect-to-inet-socket (host-byte-order host) port type))
-         (stream (sys:make-fd-stream socket :input t :output t
-                                     :element-type 'character
-                                     :buffering :full))
-         ;;###FIXME the above line probably needs an :external-format
-         (usocket (make-socket :socket socket
-                               :host host :port port :stream stream)))
-    usocket))
+  (let* ((socket))
+    (setf socket
+          (with-mapped-conditions (socket)
+             (ext:connect-to-inet-socket (host-byte-order host) port type)))
+    (let* ((stream (sys:make-fd-stream socket :input t :output t
+                                       :element-type 'character
+                                       :buffering :full))
+           ;;###FIXME the above line probably needs an :external-format
+           (usocket (make-socket :socket socket
+                                 :host host :port port :stream stream)))
+      usocket)))
 
 (defmethod socket-close ((usocket usocket))
   "Close socket."
-  (ext:close-socket (socket usocket)))
+  (with-mapped-conditions (usocket)
+    (ext:close-socket (socket usocket))))
 
 
 
