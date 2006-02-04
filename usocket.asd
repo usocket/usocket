@@ -17,7 +17,9 @@
     :version "0.1.0"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
-    :depends-on (#+sbcl :sb-bsd-sockets :split-sequence)
+    :depends-on (:split-sequence
+                 #+allegro :socket
+                 #+sbcl :sb-bsd-sockets)
     :components ((:file "package")
                  (:file "usocket"
                         :depends-on ("package"))
