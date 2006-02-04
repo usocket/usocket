@@ -9,27 +9,34 @@
   (map-errno-error (sb-bsd-sockets::socket-error-errno sock-err)))
 
 (defparameter +sbcl-condition-map+
-  '((interrupted-error . usocket-interrupted-condition)))
+  '((interrupted-error . interrupted-condition)))
 
 (defparameter +sbcl-error-map+
-  `((sb-bsd-sockets:address-in-use-error . usocket-address-in-use-error)
-    (sb-bsd-sockets::no-address-error . usocket-address-not-available-error)
-    (sb-bsd-sockets:bad-file-descriptor-error . usocket-bad-file-descriptor-error)
-    (sb-bsd-sockets:connection-refused-error . usocket-connection-refused-error)
-    (sb-bsd-sockets:invalid-argument-error . usocket-invalid-argument-error)
-    (no-buffers-error . usocket-no-buffers-error)
-    (operation-not-supported-error . usocket-operation-not-supported-error)
-    (operation-not-permitted-error . usocket-operation-not-permitted-error)
-    (protocol-not-supported-error . usocket-protocol-not-supported-error)
-    (socket-type-not-supported-error . usocket-socket-type-not-supported-error)
-    (network-unreachable-error . usocket-network-unreachable-error)
-    ;;    (... . usocket-network-down-error)
-    (no-recovery-error . usocket-network-reset-error)
-    ;;    (... . usocket-host-down-error)
-    ;;    (... . usocket-host-unreachable-error)
-    ;;    (... . usocket-shutdown-error)
-    (operation-timeout-error . usocket-timeout-error)
-    (sb-bsd-sockets:socket-error . ,#'map-socket-error)))
+  ;;### FIXME: sb-bsd-sockets also has a name-service-error
+  ;; which is signalled when a hostname can't be resolved...
+  ;; what to do with that?
+  `((sb-bsd-sockets:address-in-use-error . address-in-use-error)
+    (sb-bsd-sockets::no-address-error . address-not-available-error)
+    (sb-bsd-sockets:bad-file-descriptor-error . bad-file-descriptor-error)
+    (sb-bsd-sockets:connection-refused-error . connection-refused-error)
+    (sb-bsd-sockets:invalid-argument-error . invalid-argument-error)
+    (sb-bsd-sockets:no-buffers-error . no-buffers-error)
+    (sb-bsd-sockets:operation-not-supported-error . operation-not-supported-error)
+    (sb-bsd-sockets:operation-not-permitted-error . operation-not-permitted-error)
+    (sb-bsd-sockets:protocol-not-supported-error . protocol-not-supported-error)
+    (sb-bsd-sockets:socket-type-not-supported-error . socket-type-not-supported-error)
+    (sb-bsd-sockets:network-unreachable-error . network-unreachable-error)
+    ;;    (... . network-down-error)
+    ;;    (... . host-down-error)
+    ;;    (... . host-unreachable-error)
+    ;;    (... . shutdown-error)
+    (sb-bsd-sockets:operation-timeout-error . timeout-error)
+    (sb-bsd-sockets:socket-error . ,#'map-socket-error)
+    ;; Nameservice errors
+    (sb-bsd-sockets:no-recovery-error . network-reset-error)
+;;    (sb-bsd-sockets:try-again-condition ...)
+;;    (sb-bsd-sockets:host-not-found ...)
+    ))
 
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
@@ -41,7 +48,7 @@
                                  usock-error)))
              (if usock-error
                  (error usock-error :socket socket)
-               (error 'usocket-unknown-error
+               (error 'unknown-error
                       :socket socket
                       :real-error condition))))
     (condition (let* ((usock-cond (cdr (assoc (type-of condition)
@@ -51,7 +58,7 @@
                                     usock-cond)))
                  (if usock-cond
                      (signal usock-cond :socket socket)
-                   (signal 'usocket-unkown-condition
+                   (signal 'unkown-condition
                            :real-condition condition))))))
 
 

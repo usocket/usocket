@@ -10,8 +10,8 @@
     (:address-not-available . usocket-address-not-available-error)
     (:network-down . usocket-network-down-error)
     (:network-reset . usocket-network-reset-error)
-;;    (:connection-aborted . ) FIXME: take these 2 errors in the supported list
-;;    (:connection-reset . )
+    (:connection-aborted . usocket-connection-aborted-error)
+    (:connection-reset . usocket-connection-reset-error)
     (:no-buffer-space . usocket-no-buffers-error)
     (:shutdown . usocket-shutdown-error)
     (:connection-timed-out . usocket-timeout-error)

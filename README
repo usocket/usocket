@@ -20,30 +20,30 @@ usocket interface:
 
 
 Errors:
- - usocket-address-in-use-error
- - usocket-address-not-available-error
- - usocket-bad-file-descriptor-error
- - usocket-connection-refused-error
- - usocket-connection-aborted-error * TODO
- - usocket-connection-reset-error * TODO
- - usocket-invalid-argument-error
- - usocket-no-buffers-error
- - usocket-operation-not-supported-error
- - usocket-operation-not-permitted-error
- - usocket-protocol-not-supported-error
- - usocket-socket-type-not-supported-error
- - usocket-network-unreachable-error
- - usocket-network-down-error
- - usocket-network-reset-error
- - usocket-host-down-error
- - usocket-host-unreachable-error
- - usocket-shutdown-error
- - usocket-timeout-error
- - usocket-unkown-error
+ - address-in-use-error
+ - address-not-available-error
+ - bad-file-descriptor-error
+ - connection-refused-error
+ - connection-aborted-error * TODO
+ - connection-reset-error * TODO
+ - invalid-argument-error
+ - no-buffers-error
+ - operation-not-supported-error
+ - operation-not-permitted-error
+ - protocol-not-supported-error
+ - socket-type-not-supported-error
+ - network-unreachable-error
+ - network-down-error
+ - network-reset-error
+ - host-down-error
+ - host-unreachable-error
+ - shutdown-error
+ - timeout-error
+ - unkown-error
 
 Non-fatal conditions:
- - usocket-interrupted-condition
- - usocket-unkown-condition
+ - interrupted-condition
+ - unkown-condition
 
 
 TODO:
