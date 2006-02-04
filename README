@@ -24,8 +24,8 @@ Errors:
  - address-not-available-error
  - bad-file-descriptor-error
  - connection-refused-error
- - connection-aborted-error * TODO
- - connection-reset-error * TODO
+ - connection-aborted-error
+ - connection-reset-error
  - invalid-argument-error
  - no-buffers-error
  - operation-not-supported-error
@@ -51,3 +51,9 @@ TODO:
  - socket-accept (method)
  - socket-local-address (method)
  - socket-peer-address (method)
+
+
+KNOWN PROBLEMS
+- CMUCL error reporting wrt sockets raises only simple-errors
+  meaning there's no way to tell different error conditions apart.
+  All errors are mapped to unknown-error on CMUCL.
