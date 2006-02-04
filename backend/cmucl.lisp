@@ -5,12 +5,19 @@
 
 (in-package :usocket)
 
+
+;; CMUCL error handling is brain-dead: it doesn't preserve any
+;; information other than the OS error string from which the
+;; error can be determined. The OS error string isn't good enough
+;; given that it may have been localized (l10n).
+;;
+;; Just catch the errors and encapsulate them in an unknown-error
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
   (typecase condition
-    (condition (error 'usocket-error
-                      :real-condition condition
-                      :socket socket))))
+    (simple-error (error 'unknown-error
+                         :real-condition condition
+                         :socket socket))))
 
 (defun socket-connect (host port &optional (type :stream))
   (let* ((socket (ext:connect-to-inet-socket (host-byte-order host) port type))
