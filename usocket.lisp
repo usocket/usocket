@@ -111,16 +111,26 @@ parse-integer) on each of the string elements."
 (defun host-to-vector-quad (host)
   "Translate a host specification (vector quad, dotted quad or domain name)
 to a vector quad."
-  (if (vectorp host)
-      host
-    (let* ((ip (ignore-errors
-                 (dotted-quad-to-vector-quad host))))
-      (if (and ip (= 4 (length ip)))
-          ip
-        (get-random-host-by-name host)))))
+  (etypecase host
+    (string (let* ((ip (ignore-errors
+                         (dotted-quad-to-vector-quad host))))
+              (if (and ip (= 4 (length ip)))
+                  ;; valid IP dotted quad?
+                  ip
+                (get-random-host-by-name host))))
+    ((vector t 4) host)
+    (integer (hbo-to-vector-quad host))))
 
 (defun host-to-hostname (host)
   "Translate a string or vector quad to a stringified hostname."
-  (if (stringp host)
-      host
-    (vector-quad-to-dotted-quad host)))
+  (etypecase host
+    (string host)
+    ((vector t 4) (vector-quad-to-dotted-quad host))
+    (integer (hbo-to-dotted-quad host))))
+
+
+(defun host-to-hbo (host)
+  (etypecase host
+    (string (host-to-hbo (get-host-by-name host)))
+    ((vector t 4) (host-byte-order host))
+    (integer host)))
