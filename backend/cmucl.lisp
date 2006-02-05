@@ -6,15 +6,47 @@
 (in-package :usocket)
 
 
+(defun remap-maybe-for-win32 (z)
+  (mapcar #'(lambda (x)
+              (cons (mapcar #'(lambda (y)
+                                (+ 10000 y))
+                            (car x))
+                    (cdr x)))
+          z))
+
+(defparameter +cmucl-error-map+
+  #+win32
+   (append (remap-for-win32 +unix-errno-condition-map+)
+          (remap-for-win32 +unix-errno-error-map+))
+  #-win32
+  (append +unix-errno-condition-map+
+          +unix-errno-error-map+))
+
+
 ;; CMUCL error handling is brain-dead: it doesn't preserve any
 ;; information other than the OS error string from which the
 ;; error can be determined. The OS error string isn't good enough
 ;; given that it may have been localized (l10n).
 ;;
+;; The above applies to versions pre 19b; 19d and newer are expected to
+;; contain even better error reporting.
+;;
+;;
 ;; Just catch the errors and encapsulate them in an unknown-error
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
   (typecase condition
+    (ext::simple-error
+       (let ((usock-err
+              (cdr (assoc (ext::socket-errno c)
+                          +cmucl-error-map+ :test member))))
+         (if usock-err
+             (if (subtypep usock-err 'error)
+                 (error usock-err :socket socket)
+               (signal usock-err :socket socket))
+           (error 'unknown-error
+                  :socket socket
+                  :real-error condition))))
     (simple-error (error 'unknown-error
                          :real-condition condition
                          :socket socket))))
@@ -23,7 +55,7 @@
   (let* ((socket))
     (setf socket
           (with-mapped-conditions (socket)
-             (ext:connect-to-inet-socket (host-byte-order host) port type)))
+             (ext:connect-to-inet-socket (host-to-hbo host) port type)))
     (let* ((stream (sys:make-fd-stream socket :input t :output t
                                        :element-type 'character
                                        :buffering :full))
