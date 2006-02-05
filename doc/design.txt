@@ -66,11 +66,6 @@ For now, as long as there are no possibilities to have UDP sockets
 to write a DNS client library: (which in the end may work better,
 because in this respect all implementations are different...)
  - retrieve IP addresses/ports for both sides of the connection
---- later addition
-I don't think it's a good idea to implement name lookup in the
-very first of steps: we'll see if this is required to get the
-package accepted; not all implementations support it.
---- later addition; end
 
 Several relevant support functionalities will have to be provided too:
  - long <-> quad-vector operators
@@ -86,3 +81,40 @@ Minimally, I'd like to support:
  - Allegro
  - LispWorks
  - OpenMCL
+
+
+Comments on the design above
+============================
+
+I don't think it's a good idea to implement name lookup in the
+very first of steps: we'll see if this is required to get the
+package accepted; not all implementations support it.
+
+Name resolution errors ...
+Since there is no name resolution library (yet), nor standardized
+hooks into the standard C library to do it the same way on
+all platforms, name resolution errors can manifest themselves
+in a lot of different ways.  How to marshall these to the
+library users?
+
+Several solutions come to mind:
+
+1) Map them to 'unknown-error
+2) Give them their own errors and map to those
+3) ...
+
+Given that the library doesn't now, but may in the future,
+include name resolution officially, I tend to think (1) is the
+right answer: it leaves it all undecided.
+
+These errors can be raised by the nameresolution service
+(netdb.h) as values for 'int h_errno':
+
+- HOST_NOT_FOUND (1)
+- TRY_AGAIN      (2) /* Server fail or non-authoritive Host not found */
+- NO_RECOVERY    (3) /* Failed permanently */
+- NO_DATA        (4) /* Valid address, no data for requested record */
+
+int *__h_errno_location(void) points to thread local h_errno on
+threaded glibc2 systems.
+
