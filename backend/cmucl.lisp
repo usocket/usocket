@@ -5,8 +5,8 @@
 
 (in-package :usocket)
 
-
-(defun remap-maybe-for-win32 (z)
+#+win32
+(defun remap-for-win32 (z)
   (mapcar #'(lambda (x)
               (cons (mapcar #'(lambda (y)
                                 (+ 10000 y))
@@ -16,12 +16,22 @@
 
 (defparameter +cmucl-error-map+
   #+win32
-   (append (remap-for-win32 +unix-errno-condition-map+)
+  (append (remap-for-win32 +unix-errno-condition-map+)
           (remap-for-win32 +unix-errno-error-map+))
   #-win32
   (append +unix-errno-condition-map+
           +unix-errno-error-map+))
 
+(defun cmucl-map-socket-error (err &key condition socket)
+  (let ((usock-err
+         (cdr (assoc err +cmucl-error-map+ :test #'member))))
+    (if usock-err
+        (if (subtypep usock-err 'error)
+            (error usock-err :socket socket)
+          (signal usock-err :socket socket))
+      (error 'unknown-error
+             :socket socket
+             :real-error condition))))
 
 ;; CMUCL error handling is brain-dead: it doesn't preserve any
 ;; information other than the OS error string from which the
@@ -36,17 +46,9 @@
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
   (typecase condition
-    (ext::simple-error
-       (let ((usock-err
-              (cdr (assoc (ext::socket-errno c)
-                          +cmucl-error-map+ :test member))))
-         (if usock-err
-             (if (subtypep usock-err 'error)
-                 (error usock-err :socket socket)
-               (signal usock-err :socket socket))
-           (error 'unknown-error
-                  :socket socket
-                  :real-error condition))))
+    (ext::socket-error (cmucl-map-socket-error (ext::socket-errno condition)
+                                               :socket socket
+                                               :condition condition))
     (simple-error (error 'unknown-error
                          :real-condition condition
                          :socket socket))))
@@ -56,13 +58,16 @@
     (setf socket
           (with-mapped-conditions (socket)
              (ext:connect-to-inet-socket (host-to-hbo host) port type)))
-    (let* ((stream (sys:make-fd-stream socket :input t :output t
-                                       :element-type 'character
-                                       :buffering :full))
-           ;;###FIXME the above line probably needs an :external-format
-           (usocket (make-socket :socket socket
-                                 :host host :port port :stream stream)))
-      usocket)))
+    (if socket
+        (let* ((stream (sys:make-fd-stream socket :input t :output t
+                                           :element-type 'character
+                                           :buffering :full))
+               ;;###FIXME the above line probably needs an :external-format
+               (usocket (make-socket :socket socket
+                                     :stream stream)))
+          usocket)
+      (let ((err (unix:unix-errno)))
+        (when err (cmucl-map-socket-error err))))))
 
 (defmethod socket-close ((usocket usocket))
   "Close socket."
@@ -76,7 +81,7 @@
                  (ext::lookup-host-entry (host-byte-order address)))
     (condition (condition) (handle-condition condition))))
 
-(defun get-host-by-name (name)
+(defun get-hosts-by-name (name)
   (handler-case (mapcar #'hbo-to-vector-quad
                         (ext:host-entry-addr-list
                          (ext:lookup-host-entry name)))

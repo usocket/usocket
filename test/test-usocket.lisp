@@ -37,10 +37,14 @@
   (catch 'caught-error
     (handler-bind ((usocket:network-unreachable-error
                     #'(lambda (c) (throw 'caught-error nil)))
+                   ;; cmu doesn't report as specific as above
+                   #+cmu
+                   (usocket:unknown-error
+                    #'(lambda (c) (throw 'caught-error nil)))
                    (condition
                     #'(lambda (c) (throw 'caught-error t))))
       (usocket:socket-connect 2130706432 80) ;; == #(127 0 0 0)
-      t))
+      :unreach))
   nil)
 
 ;; let's hope c-l.net doesn't move soon, or that people start to
@@ -50,7 +54,7 @@
     (unwind-protect
         (typep sock 'usocket:usocket)
       (usocket:socket-close sock)))
-  t)
+  t) 
 (deftest socket-connect.2
   (let ((sock (usocket:socket-connect #(65 110 12 237) 80)))
     (unwind-protect
