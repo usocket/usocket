@@ -80,6 +80,7 @@ parse-integer) on each of the string elements."
   (let ((list (list-of-strings-to-integers (split-sequence:split-sequence #\. string))))
     (vector (first list) (second list) (third list) (fourth list))))
 
+(defgeneric host-byte-order (address))
 (defmethod host-byte-order ((string string))
   "Convert a string, such as 192.168.1.1, to host-byte-order, such as
 3232235777."
@@ -128,9 +129,13 @@ to a vector quad."
     ((vector t 4) (vector-quad-to-dotted-quad host))
     (integer (hbo-to-dotted-quad host))))
 
-
+#-clisp
 (defun host-to-hbo (host)
   (etypecase host
-    (string (host-to-hbo (get-host-by-name host)))
+    (string (let ((ip (ignore-errors
+                        (dotted-quad-to-vector-quad host))))
+              (if (and ip (= 4 (length ip)))
+                  ip
+                (host-to-hbo (get-host-by-name host)))))
     ((vector t 4) (host-byte-order host))
     (integer host)))
