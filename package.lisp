@@ -16,6 +16,7 @@
              :with-connected-socket ; macros
 
              :usocket ; socket object and accessors
+             :socket
              :socket-stream
 
              :host-byte-order ; IPv4 utility functions

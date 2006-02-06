@@ -1,5 +1,5 @@
 ;;;; $Id$
-;;;; $Source$
+;;;; $URL$
 
 ;;;; See the LICENSE file for licensing information.
 
@@ -9,5 +9,5 @@
   (defpackage :usocket-test
       (:use :cl :rt)
     (:nicknames :usoct)
-    (:export :do-tests)))
+    (:export :do-tests :run-usocket-tests)))
 
