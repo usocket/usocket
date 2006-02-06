@@ -27,6 +27,6 @@
 
              :usocket-condition ; conditions
              :usocket-error ; errors
-             :usocket-unknown-condition
-             :usocket-unknown-error)))
+             :unknown-condition
+             :unknown-error)))
 
