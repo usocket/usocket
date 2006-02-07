@@ -5,6 +5,8 @@
 
 (in-package :usocket)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (require "comm"))
 
 #+win32
 (defun remap-maybe-for-win32 (z)
@@ -51,13 +53,15 @@
         (stream))
     (setf stream
           (with-mapped-conditions ()
-             (comm:open-tcp-stream host port)))
-    (make-socket :socket (comm:socket-stream-socket stream)
-                 :stream stream)))
+             (comm:open-tcp-stream hostname port)))
+    (if stream
+        (make-socket :socket (comm:socket-stream-socket stream)
+                     :stream stream)
+      (error 'unknown-error))))
 ;;                 :host host
 ;;                 :port port))
 
 (defmethod socket-close ((usocket usocket))
   "Close socket."
-  (close (stream usocket)))
+  (close (socket-stream usocket)))
 

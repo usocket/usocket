@@ -18,7 +18,7 @@
 
 (define-condition usocket-condition (condition)
   ((socket :initarg :socket
-           :accessor :usocket-socket))
+           :accessor usocket-socket))
   ;;###FIXME: no slots (yet); should at least be the affected usocket...
   (:documentation ""))
 

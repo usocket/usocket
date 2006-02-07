@@ -38,7 +38,7 @@
     (handler-bind ((usocket:network-unreachable-error
                     #'(lambda (c) (throw 'caught-error nil)))
                    ;; cmu doesn't report as specific as above
-                   #+cmu
+                   #+(or cmu lispworks)
                    (usocket:unknown-error
                     #'(lambda (c) (throw 'caught-error nil)))
                    (condition

@@ -18,8 +18,7 @@
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (:split-sequence
-                 #+sbcl :sb-bsd-sockets
-                 #+lispworks "comm")
+                 #+sbcl :sb-bsd-sockets)
     :components ((:file "package")
                  (:file "usocket"
                         :depends-on ("package"))
