@@ -79,7 +79,8 @@
           (force-output (usocket:socket-stream sock))
           (read-line (usocket:socket-stream sock)))
       (usocket:socket-close sock)))
-  #.(format nil "HTTP/1.1 200 OK~A" #\Return) nil)
+  #+clisp "HTTP/1.1 200 OK"
+  #-clisp #.(format nil "HTTP/1.1 200 OK~A" #\Return) nil)
 
 
 (defun run-usocket-tests ()

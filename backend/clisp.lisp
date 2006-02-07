@@ -29,7 +29,7 @@
     (system::simple-os-error
        (let ((usock-err
               (cdr (assoc (car (simple-condition-format-arguments condition))
-                          +clisp-error-map+ :test member))))
+                          +clisp-error-map+ :test #'member))))
          (if usock-err
              (if (subtypep usock-err 'error)
                  (error usock-err :socket socket)

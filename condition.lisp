@@ -111,7 +111,7 @@
     ((1) . operation-not-permitted-error)
     ((43 92) . protocol-not-supported-error)
     ((44 93) . socket-type-not-supported-error)
-    ((51 102) . network-unreachable-error)
+    ((51 101) . network-unreachable-error)
     ((50 100) . network-down-error)
     ((52 102) . network-reset-error)
     ((58 108) . already-shutdown-error)
