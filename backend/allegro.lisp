@@ -10,6 +10,7 @@
     (:address-not-available . address-not-available-error)
     (:network-down . network-down-error)
     (:network-reset . network-reset-error)
+    (:network-unreachable . network-unreachable-error)
     (:connection-aborted . connection-aborted-error)
     (:connection-reset . connection-reset-error)
     (:no-buffer-space . no-buffers-error)
@@ -22,14 +23,15 @@
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
   (typecase condition
-    (socket-error (let ((usock-err
-                         (cdr (assoc (stream-error-identifier condition)
-                                     +allegro-identifier-error-map+))))
-                    (if usock-err
-                        (error usock-err :socket socket)
-                      (error 'unknown-error
-                             :real-condition condition
-                             :socket socket))))))
+    (excl:socket-error
+     (let ((usock-err
+            (cdr (assoc (excl:stream-error-identifier condition)
+                        +allegro-identifier-error-map+))))
+       (if usock-err
+           (error usock-err :socket socket)
+         (error 'unknown-error
+                :real-error condition
+                :socket socket))))))
 
 (defun socket-connect (host port &optional (type :stream))
   (declare (ignore type))

@@ -18,7 +18,6 @@
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (:split-sequence
-                 #+allegro :socket
                  #+sbcl :sb-bsd-sockets
                  #+lispworks "comm")
     :components ((:file "package")
