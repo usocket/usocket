@@ -5,6 +5,8 @@
 
 (in-package :usocket-test)
 
+
+(defparameter +non-existing-host+ "10.0.0.13")
 (defparameter *soc1* (usocket::make-socket :socket :my-socket
                                            :stream :my-stream))
 
@@ -46,6 +48,20 @@
       (usocket:socket-connect 2130706432 80) ;; == #(127 0 0 0)
       :unreach))
   nil)
+(deftest socket-failure.2
+  (catch 'caught-error
+    (handler-bind ((usocket:host-unreachable-error
+                    #'(lambda (c) (throw 'caught-error nil)))
+                   ;; cmu doesn't report as specific as above
+                   #+(or cmu lispworks)
+                   (usocket:unknown-error
+                    #'(lambda (c) (throw 'caught-error nil)))
+                   (condition
+                    #'(lambda (c) (throw 'caught-error t))))
+      (usocket:socket-connect +non-existing-host+ 80) ;; == #(127 0 0 0)
+      :unreach))
+  nil)
+
 
 ;; let's hope c-l.net doesn't move soon, or that people start to
 ;; test usocket like crazy..
