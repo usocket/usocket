@@ -139,3 +139,15 @@ to a vector quad."
                 (host-to-hbo (get-host-by-name host)))))
     ((vector t 4) (host-byte-order host))
     (integer host)))
+
+;;
+;; Setting of documentation for backend defined functions
+;;
+
+(setf (documentation 'socket-connect 'function)
+      "Connect to `host' on `port'.  `host' is assumed to be a string of
+an IP address represented in vector notation, such as #(192 168 1 1).
+`port' is assumed to be an integer.
+
+Returns a usocket object.")
+
