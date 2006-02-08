@@ -12,28 +12,25 @@
   '((interrupted-error . interrupted-condition)))
 
 (defparameter +sbcl-error-map+
-  ;;### FIXME: sb-bsd-sockets also has a name-service-error
-  ;; which is signalled when a hostname can't be resolved...
-  ;; what to do with that?
   `((sb-bsd-sockets:address-in-use-error . address-in-use-error)
     (sb-bsd-sockets::no-address-error . address-not-available-error)
     (sb-bsd-sockets:bad-file-descriptor-error . bad-file-descriptor-error)
     (sb-bsd-sockets:connection-refused-error . connection-refused-error)
     (sb-bsd-sockets:invalid-argument-error . invalid-argument-error)
     (sb-bsd-sockets:no-buffers-error . no-buffers-error)
-    (sb-bsd-sockets:operation-not-supported-error . operation-not-supported-error)
-    (sb-bsd-sockets:operation-not-permitted-error . operation-not-permitted-error)
-    (sb-bsd-sockets:protocol-not-supported-error . protocol-not-supported-error)
-    (sb-bsd-sockets:socket-type-not-supported-error . socket-type-not-supported-error)
+    (sb-bsd-sockets:operation-not-supported-error
+     . operation-not-supported-error)
+    (sb-bsd-sockets:operation-not-permitted-error
+     . operation-not-permitted-error)
+    (sb-bsd-sockets:protocol-not-supported-error
+     . protocol-not-supported-error)
+    (sb-bsd-sockets:socket-type-not-supported-error
+     . socket-type-not-supported-error)
     (sb-bsd-sockets:network-unreachable-error . network-unreachable-error)
-    ;;    (... . network-down-error)
-    ;;    (... . host-down-error)
-    ;;    (... . host-unreachable-error)
-    ;;    (... . shutdown-error)
     (sb-bsd-sockets:operation-timeout-error . timeout-error)
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
-    ;; Nameservice errors
-    (sb-bsd-sockets:no-recovery-error . network-reset-error)
+    ;; Nameservice errors: mapped to unknown-error
+;;    (sb-bsd-sockets:no-recovery-error . network-reset-error)
 ;;    (sb-bsd-sockets:try-again-condition ...)
 ;;    (sb-bsd-sockets:host-not-found ...)
     ))
@@ -63,11 +60,6 @@
 
 
 (defun socket-connect (host port &optional (type :stream))
-  "Connect to `host' on `port'.  `host' is assumed to be a string of
-an IP address represented in vector notation, such as #(192 168 1 1).
-`port' is assumed to be an integer.
-
-Returns a usocket object."
   (let* ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                 :type type :protocol :tcp))
          (stream (sb-bsd-sockets:socket-make-stream socket
@@ -83,7 +75,6 @@ Returns a usocket object."
     usocket))
 
 (defmethod socket-close ((usocket usocket))
-  "Close socket."
   (with-mapped-conditions (usocket)
     (sb-bsd-sockets:socket-close (socket usocket))))
 
