@@ -1,0 +1,16 @@
+
+- Check consistency of error translation for each of the backends
+  with the design document.
+
+- Move all function documentation from the backends to
+  (setf documentation) forms in usocket.lisp.
+
+- Extend ABCL socket support with the 4 java errors in java.net
+  so that they can map to our usocket errors instead of mapping
+  all errors to unknown-error.
+
+- Investigate which backends would support streams with other
+  elements than :element-type 'character, especially since
+  cl-irc chokes on characters which are non-UTF8 conforming...
+  Probably other clients do too (try that with a binary HTTP stream!)
+

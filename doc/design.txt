@@ -101,6 +101,7 @@ Several solutions come to mind:
 
 1) Map them to 'unknown-error
 2) Give them their own errors and map to those
+   ... which implies that they are actually supported atm.
 3) ...
 
 Given that the library doesn't now, but may in the future,
