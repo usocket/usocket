@@ -98,29 +98,38 @@ parse-integer) on each of the string elements."
 ;; DNS helper functions
 ;;
 
-#-clisp
-(defun get-host-by-name (name)
-  (let ((hosts (get-hosts-by-name name)))
-    (car hosts)))
+#-(or clisp openmcl armedbear)
+(progn
+  (defun get-host-by-name (name)
+    (let ((hosts (get-hosts-by-name name)))
+      (car hosts)))
 
-#-clisp
-(defun get-random-host-by-name (name)
-  (let ((hosts (get-hosts-by-name name)))
-    (elt hosts (random (length hosts)))))
+  (defun get-random-host-by-name (name)
+    (let ((hosts (get-hosts-by-name name)))
+      (elt hosts (random (length hosts)))))
 
-#-clisp
-(defun host-to-vector-quad (host)
-  "Translate a host specification (vector quad, dotted quad or domain name)
+  (defun host-to-vector-quad (host)
+    "Translate a host specification (vector quad, dotted quad or domain name)
 to a vector quad."
-  (etypecase host
-    (string (let* ((ip (ignore-errors
-                         (dotted-quad-to-vector-quad host))))
-              (if (and ip (= 4 (length ip)))
-                  ;; valid IP dotted quad?
-                  ip
-                (get-random-host-by-name host))))
-    ((vector t 4) host)
-    (integer (hbo-to-vector-quad host))))
+    (etypecase host
+      (string (let* ((ip (ignore-errors
+                           (dotted-quad-to-vector-quad host))))
+                (if (and ip (= 4 (length ip)))
+                    ;; valid IP dotted quad?
+                    ip
+                  (get-random-host-by-name host))))
+      ((vector t 4) host)
+      (integer (hbo-to-vector-quad host))))
+
+  (defun host-to-hbo (host)
+    (etypecase host
+      (string (let ((ip (ignore-errors
+                          (dotted-quad-to-vector-quad host))))
+                (if (and ip (= 4 (length ip)))
+                    ip
+                  (host-to-hbo (get-host-by-name host)))))
+      ((vector t 4) (host-byte-order host))
+      (integer host))))
 
 (defun host-to-hostname (host)
   "Translate a string or vector quad to a stringified hostname."
@@ -128,17 +137,6 @@ to a vector quad."
     (string host)
     ((vector t 4) (vector-quad-to-dotted-quad host))
     (integer (hbo-to-dotted-quad host))))
-
-#-clisp
-(defun host-to-hbo (host)
-  (etypecase host
-    (string (let ((ip (ignore-errors
-                        (dotted-quad-to-vector-quad host))))
-              (if (and ip (= 4 (length ip)))
-                  ip
-                (host-to-hbo (get-host-by-name host)))))
-    ((vector t 4) (host-byte-order host))
-    (integer host)))
 
 ;;
 ;; Setting of documentation for backend defined functions

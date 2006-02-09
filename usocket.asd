@@ -36,4 +36,6 @@
                                   :depends-on ("condition"))
                  #+allegro (:file "allegro" :pathname "backend/allegro"
                                   :depends-on ("condition"))
+                 #+armedbear (:file "armedbear" :pathname "backend/armedbear"
+                                                :depends-on ("condition"))
                  ))
