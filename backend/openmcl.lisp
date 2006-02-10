@@ -30,8 +30,8 @@
                                   +openmcl-error-map+))))
        (if usock-err
            (error usock-err :socket socket)
-         (error 'unknown-error :socket socket :real-erorr condition))))
-    (error (error 'unknown-error :socket socket :real-erorr condition))
+         (error 'unknown-error :socket socket :real-error condition))))
+    (error (error 'unknown-error :socket socket :real-error condition))
     (condition (signal 'unknown-condition :real-condition condition))))
 
 (defun socket-connect (host port)
