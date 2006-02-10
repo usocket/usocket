@@ -15,21 +15,21 @@
 
 (deftest socket-no-connect.1
   (catch 'caught-error
-    (handler-bind ((usocket:usocket-error
+    (handler-bind ((usocket:socket-error
                     #'(lambda (c) (throw 'caught-error nil))))
       (usocket:socket-connect "127.0.0.0" 80)
       t))
   nil)
 (deftest socket-no-connect.2
   (catch 'caught-error
-    (handler-bind ((usocket:usocket-error
+    (handler-bind ((usocket:socket-error
                     #'(lambda (c) (throw 'caught-error nil))))
       (usocket:socket-connect #(127 0 0 0) 80)
       t))
   nil)
 (deftest socket-no-connect.3
   (catch 'caught-error
-    (handler-bind ((usocket:usocket-error
+    (handler-bind ((usocket:socket-error
                     #'(lambda (c) (throw 'caught-error nil))))
       (usocket:socket-connect 2130706432 80) ;; == #(127 0 0 0)
       t))

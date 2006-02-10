@@ -13,7 +13,7 @@ for my_lisp in sbcl ; do
 echo "
 (require 'usocket-test)
 
-(usocket-test:run-usocket-tests)
+(usocket-test:do-tests)
 
 (quit)
 " | $my_lisp

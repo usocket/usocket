@@ -13,7 +13,7 @@
   ;;###FIXME: no slots (yet); should at least be the affected usocket...
   (:documentation "Parent condition for all socket related conditions."))
 
-(define-condition socket-error (usocket-condition error)
+(define-condition socket-error (socket-condition error)
   () ;; no slots (yet)
   (:documentation "Parent error for all socket related errors"))
 
@@ -41,9 +41,9 @@
 ;; Mass define and export our conditions
 (define-usocket-condition-classes
   (interrupted-condition)
-  (usocket-condition))
+  (socket-condition))
 
-(define-condition unknown-condition (usocket-condition)
+(define-condition unknown-condition (socket-condition)
   ((real-condition :initarg :real-condition
                    :accessor usocket-real-condition))
   (:documentation "Condition raised when there's no other - more applicable -
@@ -71,9 +71,9 @@ condition available."))
    host-unreachable-error
    shutdown-error
    timeout-error)
-  (usocket-error))
+  (socket-error))
 
-(define-condition unknown-error (usocket-error)
+(define-condition unknown-error (socket-error)
   ((real-error :initarg :real-error
                :accessor usocket-real-error))
   (:documentation "Error raised when there's no other - more applicable -

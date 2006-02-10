@@ -25,8 +25,8 @@
              :vector-quad-to-dotted-quad
              :dotted-quad-to-vector-quad
 
-             :usocket-condition ; conditions
-             :usocket-error ; errors
+             :socket-condition ; conditions
+             :socket-error ; errors
              :unknown-condition
              :unknown-error)))
 
