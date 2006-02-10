@@ -8,7 +8,6 @@
 
 
 (defun handle-condition (condition &optional socket)
-  (describe condition)
   (typecase condition
     (error (error 'unknown-error :socket socket :real-error condition))))
 
