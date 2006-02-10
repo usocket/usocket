@@ -8,8 +8,9 @@
 
 
 (defun handle-condition (condition &optional socket)
+  (describe condition)
   (typecase condition
-    (error (error 'unkown-error :socket socket :real-error condition))))
+    (error (error 'unknown-error :socket socket :real-error condition))))
 
 (defun socket-connect (host port)
   (let ((usock))

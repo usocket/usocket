@@ -39,8 +39,8 @@
   (catch 'caught-error
     (handler-bind ((usocket:network-unreachable-error
                     #'(lambda (c) (throw 'caught-error nil)))
-                   ;; cmu doesn't report as specific as above
-                   #+(or cmu lispworks)
+                   ;; some lisps don't report as specific as above
+                   #+(or cmu lispworks armedbear)
                    (usocket:unknown-error
                     #'(lambda (c) (throw 'caught-error nil)))
                    (condition
@@ -52,8 +52,8 @@
   (catch 'caught-error
     (handler-bind ((usocket:host-unreachable-error
                     #'(lambda (c) (throw 'caught-error nil)))
-                   ;; cmu doesn't report as specific as above
-                   #+(or cmu lispworks)
+                   ;; some lisps don't report as specific as above
+                   #+(or cmu lispworks armedbear)
                    (usocket:unknown-error
                     #'(lambda (c) (throw 'caught-error nil)))
                    (condition
