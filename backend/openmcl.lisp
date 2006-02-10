@@ -32,7 +32,7 @@
            (error usock-err :socket socket)
          (error 'unknown-error :socket socket :real-erorr condition))))
     (error (error 'unknown-error :socket socket :real-erorr condition))
-    (condition (signal 'unkown-condition :real-condition condition))))
+    (condition (signal 'unknown-condition :real-condition condition))))
 
 (defun socket-connect (host port)
   (let ((sock))
