@@ -5,28 +5,26 @@
 
 (in-package :usocket)
 
-;; (define-condition usocket-error (error)
-;;   ((real-condition
-;;     :reader real-condition
-;;     :initarg :real-condition)
-;;    (socket
-;;     :reader socket
-;;     :initarg :socket))
-;;   (:report (lambda (c stream)
-;;              (format stream "Error (~A) occured in socket: ~A."
-;;                      (real-condition c) (socket c)))))
+;; Conditions raised by sockets operations
 
-(define-condition usocket-condition (condition)
+(define-condition socket-condition (condition)
   ((socket :initarg :socket
            :accessor usocket-socket))
   ;;###FIXME: no slots (yet); should at least be the affected usocket...
-  (:documentation ""))
+  (:documentation "Parent condition for all socket related conditions."))
 
-(define-condition usocket-error (usocket-condition error)
+(define-condition socket-error (usocket-condition error)
   () ;; no slots (yet)
-  (:documentation ""))
+  (:documentation "Parent error for all socket related errors"))
 
+(define-condition ns-condition (condition)
+  ((host-or-ip :initarg :host-or-ip
+               :accessor host-or-ip))
+  (:documentation "Parent condition for all name resolution conditions."))
 
+(define-condition ns-error (ns-condition error)
+  ()
+  (:documentation "Parent error for all name resolution errors."))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun define-usocket-condition-class (class &rest parents)
@@ -48,7 +46,8 @@
 (define-condition unknown-condition (usocket-condition)
   ((real-condition :initarg :real-condition
                    :accessor usocket-real-condition))
-  (:documentation ""))
+  (:documentation "Condition raised when there's no other - more applicable -
+condition available."))
 
 
 ;; Mass define and export our errors
@@ -77,8 +76,34 @@
 (define-condition unknown-error (usocket-error)
   ((real-error :initarg :real-error
                :accessor usocket-real-error))
-  (:documentation ""))
+  (:documentation "Error raised when there's no other - more applicable -
+error available."))
 
+
+(define-usocket-condition-classes
+  (ns-try-again)
+  (ns-condition))
+
+(define-condition ns-unknown-condition (ns-condition)
+  ((real-error :initarg :real-condition
+               :accessor ns-real-condition))
+  (:documentation "Condition raised when there's no other - more applicable -
+condition available."))
+
+(define-usocket-condition-classes
+  ;; the no-data error code in the Unix 98 api
+  ;; isn't really an error: there's just no data to return.
+  ;; with lisp, we just return NIL (indicating no data) instead of
+  ;; raising an exception...
+  (ns-host-not-found
+   ns-no-recovery)
+  (ns-error))
+
+(define-condition ns-unknown-error (ns-error)
+  ((real-error :initarg :real-error
+               :accessor ns-real-error))
+  (:documentation "Error raised when there's no other - more applicable -
+error available."))
 
 (defmacro with-mapped-conditions ((&optional socket) &body body)
   `(handler-case
@@ -120,11 +145,16 @@
     ((65 113) . host-unreachable-error)))
 
 
-
-
 (defun map-errno-condition (errno)
   (cdr (assoc errno +unix-errno-error-map+ :test #'member)))
 
 
 (defun map-errno-error (errno)
   (cdr (assoc errno +unix-errno-error-map+ :test #'member)))
+
+
+(defparameter +unix-ns-error-map+
+  `((1 . ns-host-not-found-error)
+    (2 . ns-try-again-condition)
+    (3 . ns-no-recovery-error)))
+
