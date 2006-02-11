@@ -36,12 +36,12 @@
     (condition (signal 'unknown-condition :real-condition condition))))
 
 (defun socket-connect (host port)
-  (let ((sock))
-    (with-mapped-conditions (sock)
-      (setf sock
-            (openmcl-socket:make-socket :remote-host (host-to-hostname host)
-                             :remote-port port))
-      (openmcl-socket:socket-connect sock))))
+  (with-mapped-conditions ()
+     (let ((mcl-sock (openmcl-socket:make-socket :remote-host
+                                                 (host-to-hostname host)
+                                                 :remote-port port)))
+        (openmcl-socket:socket-connect mcl-sock)
+        (make-socket :stream mcl-sock :socket mcl-sock))))
 
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)
