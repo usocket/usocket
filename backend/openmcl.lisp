@@ -26,7 +26,7 @@
 (defun handle-condition (condition &optional socket)
   (typecase condition
     (socket-error
-     (let ((usock-err (cdr (assoc (socket-error-identifier condition)
+     (let ((usock-err (cdr (assoc (socket:socket-error-identifier condition)
                                   +openmcl-error-map+))))
        (if usock-err
            (error usock-err :socket socket)
@@ -38,10 +38,10 @@
   (let ((sock))
     (with-mapped-conditions (sock)
       (setf sock
-            (make-socket :remote-host (host-to-hostname host)
-                         :remote-port port))
-      (socket-connect sock))))
+            (socket:make-socket :remote-host (host-to-hostname host)
+                                :remote-port port))
+      (socket:socket-connect sock))))
 
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)
-    (close (socket usocket))))
+    (socket:close (socket usocket))))
