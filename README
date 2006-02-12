@@ -3,6 +3,31 @@
 $Id$
 
 
+This is the usocket Common Lisp sockets library: a library to bring
+sockets access to the broadest of common lisp implementations as possible.
+
+
+The library currently supports:
+
+ - SBCL
+ - CMUCL
+ - ArmedBear
+ - clisp
+ - Allegro
+ - LispWorks
+ - OpenMCL
+ - <Your favorite Common Lisp here?>
+
+If your favorite common lisp misses in the list above, please contact
+usocket-devel@common-lisp.net and submit a request.  Please include
+references to available sockets functions in your lisp implementation.
+
+The library has been ASDF (http://cliki.net/ASDF) enabled, meaning
+that you can tar up a checkout and use that to ASDF-INSTALL:INSTALL
+the package in your system package site.  (Or use your usual ASDF
+tricks to use the checkout directly.)
+
+
 usocket interface:
 
  - usocket (class)
@@ -46,14 +71,14 @@ Non-fatal conditions:
  - unkown-condition
 
 
-TODO:
- - socket-create (function) [ to create a passive socket ]
- - socket-accept (method)
- - socket-local-address (method)
- - socket-peer-address (method)
 
 
 KNOWN PROBLEMS
 - CMUCL error reporting wrt sockets raises only simple-errors
   meaning there's no way to tell different error conditions apart.
   All errors are mapped to unknown-error on CMUCL.
+
+- When running the test suite through the run-usocket-tests.sh shell
+  script, ArmedBear 0.0.9 will report failure - even when it didn't.
+  You need a CVS version later than 2006-02-11, or later than 0.0.9
+  for the script to work correctly.
