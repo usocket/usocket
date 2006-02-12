@@ -35,7 +35,7 @@
      (raise-error-from-id (openmcl-socket:socket-error-identifier condition)
                           socket condition))
     (ccl::socket-creation-error #| ugh! |#
-     (raise-error-from-id (ccl::socket-creationg-error-idenitifier condition)
+     (raise-error-from-id (ccl::socket-creationg-error-identifier condition)
                           socket condition))
     (error (error 'unknown-error :socket socket :real-error condition))
     (condition (signal 'unknown-condition :real-condition condition))))
