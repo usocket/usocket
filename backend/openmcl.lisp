@@ -27,7 +27,7 @@
   (let ((usock-err (cdr (assoc condition-id +openmcl-error-map+))))
     (if usock-err
         (error usock-err :socket socket)
-      (error 'unknown-error :socket socket :real-error real-condition)))
+      (error 'unknown-error :socket socket :real-error real-condition))))
 
 (defun handle-condition (condition &optional socket)
   (typecase condition
