@@ -14,3 +14,7 @@
   cl-irc chokes on characters which are non-UTF8 conforming...
   Probably other clients do too (try that with a binary HTTP stream!)
 
+- change CMUCL implementation to catch name resolution errors:
+  Don't send host names into connect-to-inet-socket, but use
+  gethostbyname, binding the return value and the error code.
+  Raise an error if gethostbyname returns one.
