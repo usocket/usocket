@@ -23,15 +23,20 @@
     (:access-denied . operation-not-permitted-error)))
 
 
+(defun raise-error-from-id (condition-id socket real-condition)
+  (let ((usock-err (cdr (assoc condition-id +openmcl-error-map+))))
+    (if usock-err
+        (error usock-err :socket socket)
+      (error 'unknown-error :socket socket :real-error real-condition)))
+
 (defun handle-condition (condition &optional socket)
   (typecase condition
     (openmcl-socket:socket-error
-     (let ((usock-err
-            (cdr (assoc (openmcl-socket:socket-error-identifier condition)
-                        +openmcl-error-map+))))
-       (if usock-err
-           (error usock-err :socket socket)
-         (error 'unknown-error :socket socket :real-error condition))))
+     (raise-error-from-id (openmcl-socket:socket-error-identifier condition)
+                          socket condition))
+    (ccl::socket-creation-error #| ugh! |#
+     (raise-error-from-id (ccl::socket-creationg-error-idenitifier condition)
+                          socket condition))
     (error (error 'unknown-error :socket socket :real-error condition))
     (condition (signal 'unknown-condition :real-condition condition))))
 

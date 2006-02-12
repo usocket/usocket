@@ -58,10 +58,12 @@
   nil)
 
 (deftest socket-failure.1
-  (with-caught-conditions (#-(or cmu lispworks armedbear)
+  (with-caught-conditions (#-(or cmu lispworks armedbear openmcl)
                              'usocket:network-unreachable-error
                            #+(or cmu lispworks armedbear)
                              'usocket:unknown-error
+                           #+openmcl
+                             'usocket:timeout-error
                            nil)
     (usocket:socket-connect 2130706432 80) ;; == #(127 0 0 0)
     :unreach)
@@ -71,7 +73,9 @@
                              'usocket:unknown-error
                            #+cmu
                              'usocket:network-unreachable-error
-                           #-(or lispworks armedbear cmu)
+                           #+openmcl
+                             'usocket:timeout-error
+                           #-(or lispworks armedbear cmu openmcl)
                              'usocket:host-unreachable-error
                            nil)
       (usocket:socket-connect +non-existing-host+ 80) ;; == #(127 0 0 0)
