@@ -7,14 +7,19 @@ A document to describe which APIs a backend should implement.
 
 Each backend should implement:
 
-Sockets functions:
+Functions:
 
+ - handle-condition
  - socket-connect
+ - get-hosts-by-name [ optional ]
+ - get-host-by-address [ optional ]
 
 
-Sockets methods:
+Methods:
 
  - socket-close
+
+
 
 
 An error-handling function, resolving implementation specific errors
