@@ -11,6 +11,8 @@ Step 2 is about implementing:
  (get-peer-address sock) -> ip
  (get-local-port sock) -> port
  (get-peer-port sock) -> port
+ (get-local-name sock) -> ip, port
+ (get-peer-name sock) -> ip, port
 
 
 ABCL
