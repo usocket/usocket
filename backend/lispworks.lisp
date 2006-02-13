@@ -47,8 +47,7 @@
 ;;                       :real-condition condition
 ;;                       :socket socket))))
 
-(defun socket-connect (host port &optional (type :stream))
-  (declare (ignore type))
+(defun socket-connect (host port)
   (let ((hostname (host-to-hostname host))
         (stream))
     (setf stream

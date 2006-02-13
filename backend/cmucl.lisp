@@ -53,7 +53,7 @@
                          :real-condition condition
                          :socket socket))))
 
-(defun socket-connect (host port &optional (type :stream))
+(defun socket-connect (host port)
   (let* ((socket))
     (setf socket
           (with-mapped-conditions (socket)

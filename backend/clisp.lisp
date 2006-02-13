@@ -38,8 +38,7 @@
                   :socket socket
                   :real-error condition))))))
 
-(defun socket-connect (host port &optional (type :stream))
-  (declare (ignore type))
+(defun socket-connect (host port)
   (let ((socket)
         (hostname (host-to-hostname host)))
     (with-mapped-conditions (socket)

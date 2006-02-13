@@ -59,7 +59,7 @@
                            :real-condition condition))))))
 
 
-(defun socket-connect (host port &optional (type :stream))
+(defun socket-connect (host port)
   (let* ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                 :type type :protocol :tcp))
          (stream (sb-bsd-sockets:socket-make-stream socket

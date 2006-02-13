@@ -5,6 +5,9 @@
 
 (in-package :usocket)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (require :sock))
+
 (defparameter +allegro-identifier-error-map+
   '((:address-in-use . address-in-use-error)
     (:address-not-available . address-not-available-error)
@@ -33,8 +36,7 @@
                 :real-error condition
                 :socket socket))))))
 
-(defun socket-connect (host port &optional (type :stream))
-  (declare (ignore type))
+(defun socket-connect (host port)
   (let ((socket))
     (setf socket
           (with-mapped-conditions (socket)
