@@ -74,6 +74,29 @@
   (with-mapped-conditions (usocket)
     (ext:close-socket (socket usocket))))
 
+(defmethod get-local-name ((usocket usocket))
+  (multiple-value-bind
+      (address port)
+      (ext:get-socket-host-and-port (socket usocket))
+    (values (hbo-to-vector-quad address) port)))
+
+(defmethod get-peer-name ((usocket usocket))
+  (multiple-value-bind
+      (address port)
+      (ext:get-peer-host-and-port (socket usocket))
+    (values (hbo-to-vector-quad address) port)))
+
+(defmethod get-local-address ((usocket usocket))
+  (nth-value 1 (get-local-name usocket)))
+
+(defmethod get-peer-address ((usocket usocket))
+  (nth-value 1 (get-peer-name usocket)))
+
+(defmethod get-local-port ((usocket usocket))
+  (nth-value 2 (get-local-name usocket)))
+
+(defmethod get-peer-port ((usocket usocket))
+  (nth-value 2 (get-peer-name usocket)))
 
 
 (defun get-host-by-address (address)

@@ -30,6 +30,27 @@
 (defgeneric socket-close (usocket)
   (:documentation "Close a previously opened `usocket'."))
 
+(defgeneric get-local-address (socket)
+  (:documentation "Returns the IP address of the socket."))
+
+(defgeneric get-peer-address (socket)
+  (:documentation
+   "Returns the IP address of the peer the socket is connected to."))
+
+(defgeneric get-local-port (socket)
+  (:documentation "Returns the IP port of the socket."))
+
+(defgeneric get-peer-port (socket)
+  (:documentation "Returns the IP port of the peer the socket to."))
+
+(defgeneric get-local-name (socket)
+  (:documentation "Returns the IP address and port of the socket as values."))
+
+(defgeneric get-peer-name (socket)
+  (:documentation
+   "Returns the IP address and port of the peer
+the socket is connected to as values."))
+
 (defmacro with-connected-socket ((var socket) &body body)
   "Bind `socket' to `var', ensuring socket destruction on exit.
 

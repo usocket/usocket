@@ -51,3 +51,23 @@
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
+
+(defmethod get-local-address ((usocket usocket))
+  (hbo-to-vector-quad (openmcl-socket:local-host (socket usocket))))
+
+(defmethod get-peer-address ((usocket usocket))
+  (hbo-to-vector-quad (openmcl-socket:remote-host (socket usocket))))
+
+(defmethod get-local-port ((usocket usocket))
+  (openmcl-socket:local-port (socket usocket)))
+
+(defmethod get-peer-port ((usocket usocket))
+  (openmcl-socket:remote-port (socket usocket)))
+
+(defmethod get-local-name ((usocket usocket))
+  (values (get-local-address usocket)
+          (get-local-port usocket)))
+
+(defmethod get-peer-name ((usocket usocket))
+  (values (get-peer-address usocket)
+          (get-peer-port usocket)))

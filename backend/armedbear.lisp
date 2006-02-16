@@ -24,7 +24,7 @@
     (ext:socket-close (socket usocket))))
 
 
-#.(if (find-symbol "SOCKET-LOCAL-ADDRESS" :ext)
+#.(if (null (find-symbol "SOCKET-LOCAL-ADDRESS" :ext))
       ;; abcl 0.0.9 compat code
       '(progn
          (declaim (inline %socket-address %socket-port))
@@ -51,4 +51,26 @@
          (defun socket-peer-port (socket)
            "Returns the peer port number of the given socket."
            (%socket-port socket "getPort")))
-    '(progn))
+    '(progn
+       (import (:socket-peer-port :socket-peer-address
+                :socket-local-port :socket-local-address) :ext)))
+
+(defmethod get-local-address ((usocket usocket))
+  (dotted-quad-to-vector-quad (socket-local-address (socket usocket))))
+
+(defmethod get-peer-address ((usocket usocket))
+  (dotted-quad-to-vector-quad (socket-peer-address (socket usocket))))
+
+(defmethod get-local-port ((usocket usocket))
+  (socket-local-port (socket usocket)))
+
+(defmethod get-peer-port ((usocket usocket))
+  (socket-peer-port (socket usocket)))
+
+(defmethod get-local-name ((usocket usocket))
+  (values (get-local-address usocket)
+          (get-local-port usocket)))
+
+(defmethod get-peer-name ((usocket usocket))
+  (values (get-peer-address usocket)
+          (get-peer-port usocket)))

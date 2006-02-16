@@ -56,3 +56,27 @@
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
+(defmethod get-local-name ((usocket usocket))
+  (multiple-value-bind
+      (address port)
+      (socket:socket-stream-local (socket usocket) nil)
+    (values (dotted-quad-to-vector-quad address) port)))
+
+(defmethod get-peer-name ((usocket usocket))
+  (multiple-value-bind
+      (address port)
+      (socket:socket-stream-peer (socket usocket) nil)
+    (values (dotted-quad-to-vector-quad address) port)))
+
+(defmethod get-local-address ((usocket usocket))
+  (nth-value 1 (get-local-name usocket)))
+
+(defmethod get-peer-address ((usocket usocket))
+  (nth-value 1 (get-peer-name usocket)))
+
+(defmethod get-local-port ((usocket usocket))
+  (nth-value 2 (get-local-name usocket)))
+
+(defmethod get-peer-port ((usocket usocket))
+  (nth-value 2 (get-peer-name usocket)))
+

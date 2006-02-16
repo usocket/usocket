@@ -61,7 +61,7 @@
 
 (defun socket-connect (host port)
   (let* ((socket (make-instance 'sb-bsd-sockets:inet-socket
-                                :type type :protocol :tcp))
+                                :type :stream :protocol :tcp))
          (stream (sb-bsd-sockets:socket-make-stream socket
                                                     :input t
                                                     :output t
@@ -78,6 +78,23 @@
   (with-mapped-conditions (usocket)
     (sb-bsd-sockets:socket-close (socket usocket))))
 
+(defmethod get-local-name ((usocket usocket))
+  (sb-bsd-sockets:socket-name (socket usocket)))
+
+(defmethod get-peer-name ((usocket usocket))
+  (sb-bsd-sockets:socket-peername (socket usocket)))
+
+(defmethod get-local-address ((usocket usocket))
+  (nth-value 1 (get-local-name usocket)))
+
+(defmethod get-peer-address ((usocket usocket))
+  (nth-value 1 (get-peer-name usocket)))
+
+(defmethod get-local-port ((usocket usocket))
+  (nth-value 2 (get-local-name usocket)))
+
+(defmethod get-peer-port ((usocket usocket))
+  (nth-value 2 (get-peer-name usocket)))
 
 
 (defun get-host-by-address (address)
