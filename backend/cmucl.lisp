@@ -57,7 +57,7 @@
   (let* ((socket))
     (setf socket
           (with-mapped-conditions (socket)
-             (ext:connect-to-inet-socket (host-to-hbo host) port type)))
+             (ext:connect-to-inet-socket (host-to-hbo host) port :stream)))
     (if socket
         (let* ((stream (sys:make-fd-stream socket :input t :output t
                                            :element-type 'character
