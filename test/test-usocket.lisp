@@ -122,6 +122,28 @@
   #+clisp "HTTP/1.1 200 OK"
   #-clisp #.(format nil "HTTP/1.1 200 OK~A" #\Return) nil)
 
+(deftest socket-name.1
+  (with-caught-conditions (nil nil)
+    (let ((sock (usocket:socket-connect #(65 110 12 237) 80)))
+      (unwind-protect
+          (usocket::get-peer-address sock)
+        (usocket:socket-close sock))))
+  #(65 110 12 237))
+(deftest socket-name.2
+  (with-caught-conditions (nil nil)
+    (let ((sock (usocket:socket-connect #(65 110 12 237) 80)))
+      (unwind-protect
+          (usocket::get-peer-port sock)
+        (usocket:socket-close sock))))
+  80)
+(deftest socket-name.2
+  (with-caught-conditions (nil nil)
+    (let ((sock (usocket:socket-connect #(65 110 12 237) 80)))
+      (unwind-protect
+          (usocket::get-peer-name sock)
+        (usocket:socket-close sock))))
+  #(65 110 12 237) 80)
+
 
 (defun run-usocket-tests ()
   (do-tests))
