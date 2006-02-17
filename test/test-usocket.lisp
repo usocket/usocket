@@ -136,13 +136,20 @@
           (usocket::get-peer-port sock)
         (usocket:socket-close sock))))
   80)
-(deftest socket-name.2
+(deftest socket-name.3
   (with-caught-conditions (nil nil)
     (let ((sock (usocket:socket-connect #(65 110 12 237) 80)))
       (unwind-protect
           (usocket::get-peer-name sock)
         (usocket:socket-close sock))))
   #(65 110 12 237) 80)
+(deftest socket-name.4
+  (with-caught-conditions (nil nil)
+    (let ((sock (usocket:socket-connect #(65 110 12 237) 80)))
+      (unwind-protect
+          (usocket::get-local-address sock)
+        (usocket:socket-close sock))))
+  #(10 0 0 252))
 
 
 (defun run-usocket-tests ()
