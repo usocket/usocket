@@ -18,3 +18,5 @@
   Don't send host names into connect-to-inet-socket, but use
   gethostbyname, binding the return value and the error code.
   Raise an error if gethostbyname returns one.
+
+- Add INET6 support.
