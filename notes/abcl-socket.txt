@@ -1,9 +1,10 @@
 
 ABCL provides a callback interface to java objects, next to these calls:
 
- - make-socket
- - socket-close
- - make-server-socket
+ - ext:make-socket
+ - ext:socket-close
+ - ext:make-server-socket
+ - ext:socket-accept
  - ext:get-socket-stream (returning an io-stream)
 
 abcl-swank (see SLIME) shows how to call directly into java.
