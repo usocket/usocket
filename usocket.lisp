@@ -30,6 +30,8 @@ and stream objects."
                               (external-format :default)
                               (element-type 'character)
                               (protocol :tcp))
+  "trivial-sockets compat function to make usocket a drop-in replacement
+apart from the package naming difference."
   (unless (and (eql local-host :any) (eql local-port 0))
     (error 'unsupported :feature :bind))
   (unless (eql protocol :tcp)
