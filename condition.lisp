@@ -5,6 +5,13 @@
 
 (in-package :usocket)
 
+;; Condition raised by operations with unsupported arguments
+;; For trivial-sockets compatibility.
+
+(define-condition unsupported (error)
+  ((feature :initarg :feature :reader unsupported-feature)))
+
+
 ;; Conditions raised by sockets operations
 
 (define-condition socket-condition (condition)

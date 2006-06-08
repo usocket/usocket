@@ -10,22 +10,37 @@
 (defclass usocket ()
   ((socket
     :initarg :socket
-    :accessor socket)
+    :accessor socket
+    :documentation "Implementation specific socket object instance.")
    (stream
     :initarg :stream
-    :accessor socket-stream)
-;;    (local-address ;; possibly need to eliminate
-;;     :initarg :local-address
-;;     :accessor local-address)
-;;    (local-port ;; possibly need to eliminate
-;;     :initarg :local-port
-;;     :accessor local-port)
-   ))
+    :accessor socket-stream
+    :documentation "Implementation specific socket stream instance.")))
 
 (defun make-socket (&key socket stream)
+  "Create a usocket socket type from implementation specific socket
+and stream objects."
   (make-instance 'usocket
                  :socket socket
                  :stream stream))
+
+(defun open-stream (peer-host peer-port
+                              &key (local-host :any)
+                              (local-port 0)
+                              (external-format :default)
+                              (element-type 'character)
+                              (protocol :tcp))
+  (unless (and (eql local-host :any) (eql local-port 0))
+    (error 'unsupported :feature :bind))
+  (unless (eql protocol :tcp)
+    (error 'unsupported :feature `(:protocol ,protocol)))
+  (unless (eql external-format :default)
+    (error 'unsupported :feature :external-format))
+  (unless (eql element-type 'character)
+    (error 'unsupported :feature :element-type))
+  (let ((sock (socket-connect peer-host peer-port)))
+    (when sock
+      (socket-stream sock))))
 
 (defgeneric socket-close (usocket)
   (:documentation "Close a previously opened `usocket'."))
@@ -103,8 +118,8 @@ parse-integer) on each of the string elements."
 
 (defgeneric host-byte-order (address))
 (defmethod host-byte-order ((string string))
-  "Convert a string, such as 192.168.1.1, to host-byte-order, such as
-3232235777."
+  "Convert a string, such as 192.168.1.1, to host-byte-order,
+such as 3232235777."
   (let ((list (list-of-strings-to-integers (split-sequence:split-sequence #\. string))))
     (+ (* (first list) 256 256 256) (* (second list) 256 256)
        (* (third list) 256) (fourth list))))
@@ -161,6 +176,11 @@ to a vector quad."
 
 ;;
 ;; Setting of documentation for backend defined functions
+;;
+
+;; Documentation for the function
+;;
+;; (defun SOCKET-CONNECT (host port) ..)
 ;;
 
 (setf (documentation 'socket-connect 'function)
