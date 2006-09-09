@@ -17,8 +17,8 @@
 
 (defparameter +clisp-error-map+
   #+win32
-  (append (remap-for-win32 +unix-errno-condition-map+)
-          (remap-for-win32 +unix-errno-error-map+))
+  (append (remap-maybe-for-win32 +unix-errno-condition-map+)
+          (remap-maybe-for-win32 +unix-errno-error-map+))
   #-win32
   (append +unix-errno-condition-map+
           +unix-errno-error-map+))
