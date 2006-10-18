@@ -102,8 +102,8 @@ condition available."))
   ;; isn't really an error: there's just no data to return.
   ;; with lisp, we just return NIL (indicating no data) instead of
   ;; raising an exception...
-  (ns-host-not-found
-   ns-no-recovery)
+  (ns-host-not-found-error
+   ns-no-recovery-error)
   (ns-error))
 
 (define-condition ns-unknown-error (ns-error)

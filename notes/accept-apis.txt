@@ -1,0 +1,173 @@
+
+                                                             -*- text -*-
+
+Part of 'Step 3': Server/passive tcp socket interfaces supplied by
+the different implementations in order to provide the same externally.
+
+
+ABCL
+====
+
+ - ext:make-server-socket port
+ - ext:socket-accept socket
+ - ext:socket-close socket
+
+Allegro
+=======
+
+ - socket:make-socket :type :stream :connect :passive
+                      :local-port <port> :reuse-address t :backlog <nr>
+                      :local-host <host-ip>
+ - socket:accept-connection sock &key wait
+ - close
+
+
+clisp
+=====
+
+ - socket:socket-server &optional port &key interface backlog
+ - socket:socket-server-close sock
+ - socket:socket-server-host sock
+ - socket:socket-server-port sock
+ - socket:socket-accept sock &key element-type external-format buffered timeout
+ - socket:socket-options sock &rest options
+
+... and ofcourse, there's the raw-sockets
+
+CMUCL
+=====
+
+ - ext:create-inet-listener port &optional kind
+                            &key reuseaddress backlog interface
+ - ext:accept-tcp-connection socket
+
+
+LispWorks
+=========
+
+ - comm::get-fd-from-socket (socket-os-fd lispworks-socket)
+ - comm::create-tcp-socket-for-service port
+     (may use comm::*use_so_reuseaddr* for that socket option)
+     misses the ability to specify an interface to bind to.
+ - comm::socket-close
+
+
+OpenMCL
+=======
+
+ - openmcl-socket:accept-connection
+ - openmcl-socket:make-socket :local-host <if> :local-port port
+                              :reuse-address t :type :stream :connect :passive
+                              :backlog <nr>
+ - close
+
+
+SBCL
+====
+
+ - make-instance 'inet-socket
+ - sb-bsd-sockets:sockopt-*
+ - sb-bsd-sockets:socket-bind
+ - sb-bsd-sockets:socket-listen
+ - sb-bsd-sockets:socket-accept
+
+
+;;
+;;
+;; The above APIs are good enough to implement a simple
+;; accept interface, but doesn't give access to specifying
+;; socket options before the socket is bound to the interface
+;; ==> This may only actually be required for SO_REUSEADDRESS?!???
+;;
+;; The other option would be to use lots of FFI - where needed -
+;; and use the (mostly internal) glue routines from the implementations
+
+
+ABCL
+====
+
+ With ABCL - lacking a good sockets API - it's still possible to implement
+ whatever we need to get good access...
+
+
+Allegro
+=======
+
+ Hmm. The accept function in this implementation does not allow limiting
+ connections to a given host/ip, but it does allow to create sockets
+ with mostly the right options.
+
+ Is that enough reason to do this entirely in ffi?!
+
+ Also, doing this in FFI would require to reverse engineer the creation
+ of socket streams.  Maybe Franz tech support could help there though.
+
+ Need to investigate the IPC_* symbols an the sockets package:
+ there are lots of functions which look like they should be useable.
+
+
+clisp
+=====
+
+ This implementation allows access to the full sockets as described
+ in http://clisp.cons.org/impnotes/rawsock.html.
+
+
+CMUCL
+=====
+
+ Provides (in unix package):
+
+  - unix-accept
+  - unix-bind
+  - unix-listen
+  - unix-socket
+
+ Provides (in extentions):
+
+  - inet-sockaddr
+  - get-socket-option
+  - set-socket-option
+  - create-inet-listener port &key host reuse-address backlog
+
+
+LispWorks
+=========
+
+ The implementation provides a lot of undocumented functions the library
+ could tap into:
+
+  - comm::socket
+  - comm::bind
+  - comm::accept
+  - comm::getsockopt
+  - comm::setsockopt
+  - comm::initialize-sockaddr_in (helper)
+  - comm::streams-from-fd (helper)
+
+
+OpenMCL
+=======
+
+ - make-socket provides all options which we'll need to set,
+   it doesn't however provide access to [gs]etsockopt...
+
+
+SBCL
+====
+
+ provides (in sb-bsd-sockets):
+   socket-bind
+   socket-accept
+   sokcet-listen
+
+ provides (in sb-bsd-sockets-internal [sockint]):
+   getsockopt
+   setsockopt
+
+   SO-* constants
+   TCP-* constant(s)
+   AF-* constants (and, since AF-* == IF-*, we don't need others)
+
+
+

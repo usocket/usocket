@@ -164,8 +164,8 @@ to a vector quad."
       (string (let ((ip (ignore-errors
                           (dotted-quad-to-vector-quad host))))
                 (if (and ip (= 4 (length ip)))
-                    ip
-                  (host-to-hbo (get-host-by-name host)))))
+                    (host-byte-order ip)
+            (host-to-hbo (get-host-by-name host)))))
       ((vector t 4) (host-byte-order host))
       (integer host))))
 
@@ -186,9 +186,19 @@ to a vector quad."
 ;;
 
 (setf (documentation 'socket-connect 'function)
-      "Connect to `host' on `port'.  `host' is assumed to be a string of
+      "Connect to `host' on `port'.  `host' is assumed to be a string or
 an IP address represented in vector notation, such as #(192 168 1 1).
 `port' is assumed to be an integer.
 
 Returns a usocket object.")
 
+;; Documentation for the function
+;;
+;; (defun SOCKET-LISTEN (host port &key local-ip local-port
+;;                                      reuseaddress backlog) ..)
+
+
+;; Documentation for the function
+;;
+;; (defun SOCKET-ACCEPT (socket &key element-type external-format
+;;                                   buffered timeout) ..)
