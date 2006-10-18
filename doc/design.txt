@@ -13,7 +13,7 @@ Contents
  * Motivation
  * Design goal
  * Functional requirements
- * Comments on the functional requirements
+
 
 
 
@@ -82,33 +82,6 @@ Minimally, I'd like to support:
  - LispWorks
  - OpenMCL
 
-
-The lifetime of a socket can be described with these steps:
-
- 1. Socket creation (socket() function)
- 2. Socket initializaiton (setsockopt(), bind() and listen()/connect() funcs)
- 3. Socket use (accept() / recv[from], send[to])
- 4. Socket termination (shutdown())
- 5. Socket destruction (close())
-
-While for most applications steps 1-3 can be condensed into 1 (which most
-implementations do), if the library wants to be extensible into other
-domains than IP, a means should be provided to do socket initialization
-without knowing what parameters to accept beforehand: other protocols
-require parameters for setsockopt we will not know about in advance.
-
-There are several possibilities to address this issue:
-
- a. Force the 3 steps apart [hard to get done with the current status
-    for some implementations, as they are currently integrated in the
-    public interface].
- b. Find a mechanism to pass options which we want setsockopt to
-    be called with. Problem: what to do with implementations which
-    don't support setting of all options *before* the bind() call?
-    Does it matter that some options may be set after the bind()
-    call? What if they're not set before connect() [buffer size changes
-    have to be set before connect()]?
- c. ... ?
 
 Comments on the design above
 ============================
