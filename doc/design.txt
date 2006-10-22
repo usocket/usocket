@@ -13,7 +13,7 @@ Contents
  * Motivation
  * Design goal
  * Functional requirements
-
+ * Class structure
 
 
 
@@ -119,3 +119,18 @@ These errors can be raised by the nameresolution service
 int *__h_errno_location(void) points to thread local h_errno on
 threaded glibc2 systems.
 
+
+Class structure
+===============
+
+ usocket
+  |
+  +- datagram-usocket
+  +- stream-usocket
+  \- stream-server-usocket
+
+The usocket class will have methods to query local properties, such
+as:
+
+ - get-local-name: to query to which interface the socket is bound
+ - <other socket and protocol options such as SO_REUSEADDRESS>
