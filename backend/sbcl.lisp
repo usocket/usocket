@@ -68,7 +68,7 @@
                                                     :buffering :full
                                                     :element-type 'character))
          ;;###FIXME: The above line probably needs an :external-format
-         (usocket (make-instance 'usocket :stream stream :socket socket))
+         (usocket (make-stream-socket :stream stream :socket socket))
          (ip (host-to-vector-quad host)))
     (with-mapped-conditions (usocket)
       (sb-bsd-sockets:socket-connect socket ip port))

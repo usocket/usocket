@@ -11,18 +11,45 @@
   ((socket
     :initarg :socket
     :accessor socket
-    :documentation "Implementation specific socket object instance.")
-   (stream
+    :documentation "Implementation specific socket object instance."))
+  (:documentation
+"The main socket class."))
+
+(defclass stream-usocket (usocket)
+   ((stream
     :initarg :stream
     :accessor socket-stream
-    :documentation "Implementation specific socket stream instance.")))
+    :documentation "Stream instance associated with the socket.
 
-(defun make-socket (&key socket stream)
+Iff an external-format was passed to `socket-connect' or `socket-listen'
+the stream is a flexi-stream. Otherwise the stream is implementation
+specific."))
+   (:documentation ""))
+
+(defclass stream-server-usocket (usocket)
+  ()
+  (:documentation ""))
+
+;;Not in use yet:
+;;(defclass datagram-usocket (usocket)
+;;  ()
+;;  (:documentation ""))
+
+(defun make-socket (&key socket)
+  "Create a usocket socket type from implementation specific socket."
+  (make-stream-socket :socket socket))
+
+(defun make-stream-socket (&key socket stream)
   "Create a usocket socket type from implementation specific socket
 and stream objects."
-  (make-instance 'usocket
+  (make-instance 'stream-usocket
                  :socket socket
                  :stream stream))
+
+(defun make-stream-server-socket (socket)
+  "Create a usocket-server socket type from an implementation-specific socket
+object."
+  (make-instance 'stream-server-usocket :socket socket))
 
 (defun open-stream (peer-host peer-port
                               &key (local-host :any)

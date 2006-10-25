@@ -16,8 +16,8 @@
     (with-mapped-conditions (usock)
        (let ((sock (ext:make-socket (host-to-hostname host) port)))
          (setf usock
-               (make-socket :socket sock
-                            :stream (ext:get-socket-stream sock)))))))
+               (make-stream-socket :socket sock
+                                   :stream (ext:get-socket-stream sock)))))))
 
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)

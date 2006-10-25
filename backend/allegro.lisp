@@ -42,7 +42,7 @@
           (with-mapped-conditions (socket)
              (socket:make-socket :remote-host (host-to-hostname host)
                                  :remote-port port)))
-    (make-socket :socket socket :stream socket)))
+    (make-stream-socket :socket socket :stream socket)))
 
 (defmethod socket-close ((usocket usocket))
   "Close socket."

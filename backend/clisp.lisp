@@ -46,8 +46,8 @@
              (socket:socket-connect port hostname
                                     :element-type 'character
                                     :buffered t)))
-    (make-socket :socket socket
-                 :stream socket))) ;; the socket is a stream too
+    (make-stream-socket :socket socket
+                        :stream socket))) ;; the socket is a stream too
 ;;                 :host host
 ;;                 :port port))
 

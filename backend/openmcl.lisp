@@ -46,7 +46,7 @@
                                                  (host-to-hostname host)
                                                  :remote-port port)))
         (openmcl-socket:socket-connect mcl-sock)
-        (make-socket :stream mcl-sock :socket mcl-sock))))
+        (make-stream-socket :stream mcl-sock :socket mcl-sock))))
 
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)

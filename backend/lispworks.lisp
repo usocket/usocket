@@ -54,8 +54,8 @@
           (with-mapped-conditions ()
              (comm:open-tcp-stream hostname port)))
     (if stream
-        (make-socket :socket (comm:socket-stream-socket stream)
-                     :stream stream)
+        (make-stream-socket :socket (comm:socket-stream-socket stream)
+                            :stream stream)
       (error 'unknown-error))))
 ;;                 :host host
 ;;                 :port port))

@@ -63,8 +63,8 @@
                                            :element-type 'character
                                            :buffering :full))
                ;;###FIXME the above line probably needs an :external-format
-               (usocket (make-socket :socket socket
-                                     :stream stream)))
+               (usocket (make-stream-socket :socket socket
+                                            :stream stream)))
           usocket)
       (let ((err (unix:unix-errno)))
         (when err (cmucl-map-socket-error err))))))

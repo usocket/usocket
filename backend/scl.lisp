@@ -41,7 +41,7 @@
                      :element-type 'character
                      :buffering :full)))
     ;;###FIXME the above line probably needs an :external-format
-    (make-socket :socket socket :stream stream)))
+    (make-stream-socket :socket socket :stream stream)))
 
 (defmethod socket-close ((usocket usocket))
   "Close socket."
