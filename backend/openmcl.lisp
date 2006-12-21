@@ -40,12 +40,15 @@
     (error (error 'unknown-error :socket socket :real-error condition))
     (condition (signal 'unknown-condition :real-condition condition))))
 
-(defun socket-connect (host port)
+(defun socket-connect (host port &key (element-type 'character))
   (with-mapped-conditions ()
      (let ((mcl-sock (openmcl-socket:make-socket :remote-host
                                                  (host-to-hostname host)
                                                  :remote-port port)))
-        (openmcl-socket:socket-connect mcl-sock)
+        (openmcl-socket:socket-connect mcl-sock
+                                       :element-type (if (subtypep element-type
+                                                                   'character)
+                                                         :text :binary))
         (make-stream-socket :stream mcl-sock :socket mcl-sock))))
 
 (defmethod socket-close ((usocket usocket))

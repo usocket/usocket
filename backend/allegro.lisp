@@ -36,12 +36,14 @@
                 :real-error condition
                 :socket socket))))))
 
-(defun socket-connect (host port)
+(defun socket-connect (host port &key (element-type 'character)
   (let ((socket))
     (setf socket
           (with-mapped-conditions (socket)
              (socket:make-socket :remote-host (host-to-hostname host)
-                                 :remote-port port)))
+                                 :remote-port port
+                                 :format (if (subtypep element-type 'character)
+                                             :text :binary))))
     (make-stream-socket :socket socket :stream socket)))
 
 (defmethod socket-close ((usocket usocket))

@@ -59,14 +59,14 @@
                            :real-condition condition))))))
 
 
-(defun socket-connect (host port)
+(defun socket-connect (host port &key (element-type 'character))
   (let* ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                 :type :stream :protocol :tcp))
          (stream (sb-bsd-sockets:socket-make-stream socket
                                                     :input t
                                                     :output t
                                                     :buffering :full
-                                                    :element-type 'character))
+                                                    :element-type element-type))
          ;;###FIXME: The above line probably needs an :external-format
          (usocket (make-stream-socket :stream stream :socket socket))
          (ip (host-to-vector-quad host)))

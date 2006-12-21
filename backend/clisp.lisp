@@ -38,13 +38,13 @@
                   :socket socket
                   :real-error condition))))))
 
-(defun socket-connect (host port)
+(defun socket-connect (host port &key (element-type 'character))
   (let ((socket)
         (hostname (host-to-hostname host)))
     (with-mapped-conditions (socket)
        (setf socket
              (socket:socket-connect port hostname
-                                    :element-type 'character
+                                    :element-type element-type
                                     :buffered t)))
     (make-stream-socket :socket socket
                         :stream socket))) ;; the socket is a stream too

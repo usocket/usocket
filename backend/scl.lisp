@@ -33,12 +33,12 @@
         :real-condition condition
         :socket socket))))
 
-(defun socket-connect (host port)
+(defun socket-connect (host port &key (element-type 'character))
   (let* ((socket
       (with-mapped-conditions (nil)
         (ext:connect-to-inet-socket (host-to-hbo host) port :kind :stream)))
      (stream (sys:make-fd-stream socket :input t :output t
-                     :element-type 'character
+                     :element-type element-type
                      :buffering :full)))
     ;;###FIXME the above line probably needs an :external-format
     (make-stream-socket :socket socket :stream stream)))

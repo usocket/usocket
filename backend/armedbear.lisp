@@ -11,13 +11,15 @@
   (typecase condition
     (error (error 'unknown-error :socket socket :real-error condition))))
 
-(defun socket-connect (host port)
+(defun socket-connect (host port &key (element-type 'character))
   (let ((usock))
     (with-mapped-conditions (usock)
        (let ((sock (ext:make-socket (host-to-hostname host) port)))
          (setf usock
-               (make-stream-socket :socket sock
-                                   :stream (ext:get-socket-stream sock)))))))
+               (make-stream-socket
+                :socket sock
+                :stream (ext:get-socket-stream sock
+                                               :element-type element-type)))))))
 
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)
