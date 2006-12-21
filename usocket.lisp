@@ -51,26 +51,6 @@ and stream objects."
 object."
   (make-instance 'stream-server-usocket :socket socket))
 
-(defun open-stream (peer-host peer-port
-                              &key (local-host :any)
-                              (local-port 0)
-                              (external-format :default)
-                              (element-type 'character)
-                              (protocol :tcp))
-  "trivial-sockets compat function to make usocket a drop-in replacement
-apart from the package naming difference."
-  (unless (and (eql local-host :any) (eql local-port 0))
-    (error 'unsupported :feature :bind))
-  (unless (eql protocol :tcp)
-    (error 'unsupported :feature `(:protocol ,protocol)))
-  (unless (eql external-format :default)
-    (error 'unsupported :feature :external-format))
-  (unless (eql element-type 'character)
-    (error 'unsupported :feature :element-type))
-  (let ((sock (socket-connect peer-host peer-port)))
-    (when sock
-      (socket-stream sock))))
-
 (defgeneric socket-close (usocket)
   (:documentation "Close a previously opened `usocket'."))
 
