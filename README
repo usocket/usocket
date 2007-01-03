@@ -2,7 +2,16 @@
 
 $Id$
 
+Content
+=======
 
+ * Introduction
+ * Non-support for :external-format
+ * API definition
+ * Known problems
+
+Introduction
+============
 This is the usocket Common Lisp sockets library: a library to bring
 sockets access to the broadest of common lisp implementations as possible.
 
@@ -13,9 +22,10 @@ The library currently supports:
  - CMUCL
  - ArmedBear
  - clisp
- - Allegro
+ - Allegro Common Lisp
  - LispWorks
  - OpenMCL
+ - Scieneer Common Lisp
  - <Your favorite Common Lisp here?>
 
 If your favorite common lisp misses in the list above, please contact
@@ -28,11 +38,28 @@ the package in your system package site.  (Or use your usual ASDF
 tricks to use the checkout directly.)
 
 
-usocket interface:
+Non-support of :external-format
+===============================
+
+Because of its definition in the hyperspec, there's no common
+external-format between lisp implementations: every vendor has chosen
+a different way to solve the problem of newline translation or
+character set recoding.
+
+Because there's no way to avoid platform specific code in the application
+when using external-format, the purpose of a portability layer gets
+defeated.  So, for now, usocket doesn't support external-format.
+
+The workaround to get reasonably portable external-format support is to
+layer a flexi-stream (from flexi-streams) on top of a usocket stream.
+
+
+API definition
+==============
 
  - usocket (class)
  - socket-connect (function) [ to create an active/connected socket ]
-    socket-connect host port
+    socket-connect host port &key element-type
       where `host' is a vectorized ip
                       or a string representation of a dotted ip address
                       or a hostname for lookup in the DNS system
@@ -73,7 +100,8 @@ Non-fatal conditions:
 
 
 
-KNOWN PROBLEMS
+Known problems
+==============
 - CMUCL error reporting wrt sockets raises only simple-errors
   meaning there's no way to tell different error conditions apart.
   All errors are mapped to unknown-error on CMUCL.
