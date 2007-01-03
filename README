@@ -16,6 +16,8 @@ The library currently supports:
  - Allegro
  - LispWorks
  - OpenMCL
+ - ECL
+ - Scieneer Common Lisp
  - <Your favorite Common Lisp here?>
 
 If your favorite common lisp misses in the list above, please contact
