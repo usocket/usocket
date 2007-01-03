@@ -30,8 +30,8 @@
                               :depends-on ("condition"))
                  #+scl (:file "scl" :pathname "backend/scl"
                               :depends-on ("condition"))
-                 #+sbcl (:file "sbcl" :pathname "backend/sbcl"
-                               :depends-on ("condition"))
+                 #+(or sbcl ecl) (:file "sbcl" :pathname "backend/sbcl"
+                                        :depends-on ("condition"))
                  #+lispworks (:file "lispworks" :pathname "backend/lispworks"
                                     :depends-on ("condition"))
                  #+openmcl (:file "openmcl" :pathname "backend/openmcl"

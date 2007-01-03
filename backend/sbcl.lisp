@@ -5,6 +5,14 @@
 
 (in-package :usocket)
 
+;; There's no way to preload the sockets library other than by requiring it
+;;
+;; ECL sockets has been forked off sb-bsd-sockets and implements the
+;; same interface. We use the same file for now.
+#+ecl
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (require :sockets))
+
 (defun map-socket-error (sock-err)
   (map-errno-error (sb-bsd-sockets::socket-error-errno sock-err)))
 
