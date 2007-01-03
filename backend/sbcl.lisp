@@ -63,7 +63,7 @@
                                     usock-cond)))
                  (if usock-cond
                      (signal usock-cond :socket socket)
-                   (signal 'unkown-condition
+                   (signal 'unknown-condition
                            :real-condition condition))))))
 
 
