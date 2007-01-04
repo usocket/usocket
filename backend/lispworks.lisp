@@ -47,12 +47,13 @@
 ;;                       :real-condition condition
 ;;                       :socket socket))))
 
-(defun socket-connect (host port)
+(defun socket-connect (host port &key (element-type 'character))
   (let ((hostname (host-to-hostname host))
         (stream))
     (setf stream
           (with-mapped-conditions ()
-             (comm:open-tcp-stream hostname port)))
+             (comm:open-tcp-stream hostname port
+                                   :element-type element-type)))
     (if stream
         (make-stream-socket :socket (comm:socket-stream-socket stream)
                             :stream stream)

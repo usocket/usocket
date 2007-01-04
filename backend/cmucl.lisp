@@ -53,14 +53,14 @@
                          :real-condition condition
                          :socket socket))))
 
-(defun socket-connect (host port)
+(defun socket-connect (host port &key (element-type 'character))
   (let* ((socket))
     (setf socket
           (with-mapped-conditions (socket)
              (ext:connect-to-inet-socket (host-to-hbo host) port :stream)))
     (if socket
         (let* ((stream (sys:make-fd-stream socket :input t :output t
-                                           :element-type 'character
+                                           :element-type element-type
                                            :buffering :full))
                ;;###FIXME the above line probably needs an :external-format
                (usocket (make-stream-socket :socket socket
