@@ -34,7 +34,8 @@
                          (describe c)
                          c))))))
 
-(defparameter +non-existing-host+ "10.0.0.13")
+(defparameter +non-existing-host+ "192.168.1.1")
+(defparameter +unused-local-port+ 15213)
 (defparameter *soc1* (usocket::make-stream-socket :socket :my-socket
                                                   :stream :my-stream))
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -45,17 +46,17 @@
 
 (deftest socket-no-connect.1
   (with-caught-conditions ('usocket:socket-error nil)
-      (usocket:socket-connect "127.0.0.0" 80)
+      (usocket:socket-connect "127.0.0.0" +unused-local-port+)
       t)
   nil)
 (deftest socket-no-connect.2
   (with-caught-conditions ('usocket:socket-error nil)
-    (usocket:socket-connect #(127 0 0 0) 80)
+    (usocket:socket-connect #(127 0 0 0) +unused-local-port+)
     t)
   nil)
 (deftest socket-no-connect.3
   (with-caught-conditions ('usocket:socket-error nil)
-    (usocket:socket-connect 2130706432 80) ;; == #(127 0 0 0)
+    (usocket:socket-connect 2130706432 +unused-local-port+) ;; == #(127 0 0 0)
     t)
   nil)
 
@@ -67,7 +68,7 @@
                            #+openmcl
                              'usocket:timeout-error
                            nil)
-    (usocket:socket-connect 2130706432 80) ;; == #(127 0 0 0)
+    (usocket:socket-connect 2130706432 +unused-local-port+) ;; == #(127 0 0 0)
     :unreach)
   nil)
 (deftest socket-failure.2
@@ -80,7 +81,7 @@
                            #-(or lispworks armedbear cmu openmcl)
                              'usocket:host-unreachable-error
                            nil)
-      (usocket:socket-connect "192.168.1.1" 80) ;; == #(127 0 0 0)
+      (usocket:socket-connect +non-existing-host+ 80) ;; 80 = just a port
       :unreach)
   nil)
 
