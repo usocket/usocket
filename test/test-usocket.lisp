@@ -35,8 +35,8 @@
                          c))))))
 
 (defparameter +non-existing-host+ "10.0.0.13")
-(defparameter *soc1* (usocket::make-socket :socket :my-socket
-                                           :stream :my-stream))
+(defparameter *soc1* (usocket::make-stream-socket :socket :my-socket
+                                                  :stream :my-stream))
 
 (deftest make-socket.1 (usocket:socket *soc1*) :my-socket)
 (deftest make-socket.2 (usocket:socket-stream *soc1*) :my-stream)
