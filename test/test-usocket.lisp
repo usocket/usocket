@@ -37,6 +37,8 @@
 (defparameter +non-existing-host+ "10.0.0.13")
 (defparameter *soc1* (usocket::make-stream-socket :socket :my-socket
                                                   :stream :my-stream))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defparameter +common-lisp-net+ #(80 68 86 115)))
 
 (deftest make-socket.1 (usocket:socket *soc1*) :my-socket)
 (deftest make-socket.2 (usocket:socket-stream *soc1*) :my-stream)
@@ -78,7 +80,7 @@
                            #-(or lispworks armedbear cmu openmcl)
                              'usocket:host-unreachable-error
                            nil)
-      (usocket:socket-connect +non-existing-host+ 80) ;; == #(127 0 0 0)
+      (usocket:socket-connect "192.168.1.1" 80) ;; == #(127 0 0 0)
       :unreach)
   nil)
 
@@ -94,14 +96,14 @@
   t)
 (deftest socket-connect.2
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect #(65 110 12 237) 80)))
+    (let ((sock (usocket:socket-connect +common-lisp-net+ 80)))
       (unwind-protect
           (typep sock 'usocket:usocket)
         (usocket:socket-close sock))))
   t)
 (deftest socket-connect.3
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect 1097731309 80)))
+    (let ((sock (usocket:socket-connect (usocket::host-byte-order +common-lisp-net+) 80)))
       (unwind-protect
           (typep sock 'usocket:usocket)
         (usocket:socket-close sock))))
@@ -124,32 +126,32 @@
 
 (deftest socket-name.1
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect #(65 110 12 237) 80)))
+    (let ((sock (usocket:socket-connect +common-lisp-net+ 80)))
       (unwind-protect
           (usocket::get-peer-address sock)
         (usocket:socket-close sock))))
-  #(65 110 12 237))
+  #.+common-lisp-net+)
 (deftest socket-name.2
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect #(65 110 12 237) 80)))
+    (let ((sock (usocket:socket-connect +common-lisp-net+ 80)))
       (unwind-protect
           (usocket::get-peer-port sock)
         (usocket:socket-close sock))))
   80)
 (deftest socket-name.3
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect #(65 110 12 237) 80)))
+    (let ((sock (usocket:socket-connect +common-lisp-net+ 80)))
       (unwind-protect
           (usocket::get-peer-name sock)
         (usocket:socket-close sock))))
-  #(65 110 12 237) 80)
+  #.+common-lisp-net+ 80)
 (deftest socket-name.4
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect #(65 110 12 237) 80)))
+    (let ((sock (usocket:socket-connect +common-lisp-net+ 80)))
       (unwind-protect
           (usocket::get-local-address sock)
         (usocket:socket-close sock))))
-  #(10 0 0 252))
+  #(192 168 1 65))
 
 
 (defun run-usocket-tests ()
