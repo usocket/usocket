@@ -45,10 +45,7 @@
      (let ((mcl-sock (openmcl-socket:make-socket :remote-host
                                                  (host-to-hostname host)
                                                  :remote-port port)))
-        (openmcl-socket:socket-connect mcl-sock
-                                       :element-type (if (subtypep element-type
-                                                                   'character)
-                                                         :text :binary))
+        (openmcl-socket:socket-connect mcl-sock)
         (make-stream-socket :stream mcl-sock :socket mcl-sock))))
 
 (defmethod socket-close ((usocket usocket))
