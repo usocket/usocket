@@ -5,7 +5,11 @@
 
 (in-package :usocket)
 
+(defparameter *wildcard-host* #(0 0 0 0)
+  "Hostname to pass when all interfaces in the current system are to be bound.")
 
+(defparameter *auto-port* 0
+  "Port number to pass when an auto-assigned port number is wanted.")
 
 (defclass usocket ()
   ((socket
@@ -17,9 +21,9 @@
 
 (defclass stream-usocket (usocket)
    ((stream
-    :initarg :stream
-    :accessor socket-stream
-    :documentation "Stream instance associated with the socket.
+     :initarg :stream
+     :accessor socket-stream
+     :documentation "Stream instance associated with the socket.
 
 Iff an external-format was passed to `socket-connect' or `socket-listen'
 the stream is a flexi-stream. Otherwise the stream is implementation
@@ -27,8 +31,14 @@ specific."))
    (:documentation ""))
 
 (defclass stream-server-usocket (usocket)
-  ()
-  (:documentation ""))
+  ((element-type
+    :initarg :element-type
+    :initform 'character
+    :reader element-type
+    :documentation "Default element type for streams created by
+`socket-accept'."))
+  (:documentation "Socket which listens for stream connections to
+be initiated from remote sockets."))
 
 ;;Not in use yet:
 ;;(defclass datagram-usocket (usocket)
@@ -46,10 +56,14 @@ and stream objects."
                  :socket socket
                  :stream stream))
 
-(defun make-stream-server-socket (socket)
-  "Create a usocket-server socket type from an implementation-specific socket
-object."
-  (make-instance 'stream-server-usocket :socket socket))
+(defun make-stream-server-socket (socket &key (element-type 'character))
+  "Create a usocket-server socket type from an
+implementation-specific socket object.
+
+The returned value is a subtype of `stream-server-usocket'."
+  (make-instance 'stream-server-usocket
+                 :socket socket
+                 :element-type element-type))
 
 (defgeneric socket-close (usocket)
   (:documentation "Close a previously opened `usocket'."))
@@ -62,13 +76,19 @@ object."
    "Returns the IP address of the peer the socket is connected to."))
 
 (defgeneric get-local-port (socket)
-  (:documentation "Returns the IP port of the socket."))
+  (:documentation "Returns the IP port of the socket.
+
+This function applies to both `stream-usocket' and `server-stream-usocket'
+type objects."))
 
 (defgeneric get-peer-port (socket)
   (:documentation "Returns the IP port of the peer the socket to."))
 
 (defgeneric get-local-name (socket)
-  (:documentation "Returns the IP address and port of the socket as values."))
+  (:documentation "Returns the IP address and port of the socket as values.
+
+This function applies to both `stream-usocket' and `server-stream-usocket'
+type objects."))
 
 (defgeneric get-peer-name (socket)
   (:documentation
@@ -78,13 +98,24 @@ the socket is connected to as values."))
 (defmacro with-connected-socket ((var socket) &body body)
   "Bind `socket' to `var', ensuring socket destruction on exit.
 
+`body' is only evaluated when `var' is bound to a non-null value.
+
 The `body' is an implied progn form."
   `(let ((,var ,socket))
      (unwind-protect
-         (progn
+         (when ,var
            ,@body)
        (when ,var
          (socket-close ,var)))))
+
+(defmacro with-server-socket ((var server-socket) &body body)
+  "Bind `server-socket' to `var', ensuring socket destruction on exit.
+
+`body' is only evaluated when `var' is bound to a non-null value.
+
+The `body' is an implied progn form."
+  `(with-connected-socket (var server-socket)
+      ,@body))
 
 ;;
 ;; IPv4 utility functions
@@ -201,11 +232,26 @@ Returns a usocket object.")
 
 ;; Documentation for the function
 ;;
-;; (defun SOCKET-LISTEN (host port &key local-ip local-port
-;;                                      reuseaddress backlog) ..)
+;; (defun SOCKET-LISTEN (host port &key reuseaddress backlog) ..)
+;;###FIXME: extend with default-element-type
+(setf (documentation 'socket-listen 'function)
+      "Bind to interface `host' on `port'. `host' should be the
+representation of an interface address.  The implementation is not
+required to do an address lookup, making no guarantees that hostnames
+will be correctly resolved.  If `*wildcard-host*' is passed for `host',
+the socket will be bound to all available interfaces for the IPv4
+protocol in the system.  `port' can be selected by the IP stack by
+passing `*auto-port*'.
 
+Returns an object of type `stream-server-usocket'.
+
+`reuseaddress' and `backlog' are advisory parameters for setting socket
+options at creation time.
+")
 
 ;; Documentation for the function
 ;;
-;; (defun SOCKET-ACCEPT (socket &key element-type external-format
+;; (defun SOCKET-ACCEPT (socket &key element-type
 ;;                                   buffered timeout) ..)
+(setf (documentation 'socket-accept 'function)
+      "")

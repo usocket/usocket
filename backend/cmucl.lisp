@@ -69,6 +69,23 @@
       (let ((err (unix:unix-errno)))
         (when err (cmucl-map-socket-error err))))))
 
+(defun socket-listen (host port &key reuseaddress (backlog 5))
+ (let ((server-sock (apply #'ext:create-inet-listener
+                           (append (list port :stream
+                                         :backlog backlog
+                                         :reuse-address reuseaddress)
+                                   (when (not (eql host *wildcard-host*))
+                                     (list :host
+                                           (host-to-hbo host)))))))
+   (make-stream-server-socket server-sock)))
+
+(defmethod socket-accept ((usocket stream-server-usocket))
+  (let* ((sock (ext:accept-tcp-connection (socket usocket)))
+         (stream (sys:make-fd-stream sock :input t :output t
+                                     :element-type (element-type usocket)
+                                     :buffering :full)))
+    (make-stream-socket :socket sock :stream stream)))
+
 (defmethod socket-close ((usocket usocket))
   "Close socket."
   (with-mapped-conditions (usocket)

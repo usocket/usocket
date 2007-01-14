@@ -11,6 +11,8 @@
   (defpackage :usocket
       (:use :cl)
     (:export #:socket-connect ; socket constructors and methods
+             #:socket-listen
+             #:socket-accept
              #:socket-close
              #:get-local-address
              #:get-peer-address
@@ -22,6 +24,8 @@
              #:with-connected-socket ; macros
 
              #:usocket ; socket object and accessors
+             #:stream-usocket
+             #:stream-server-usocket
              #:socket
              #:socket-stream
 

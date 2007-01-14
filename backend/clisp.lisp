@@ -48,13 +48,29 @@
                                     :buffered t)))
     (make-stream-socket :socket socket
                         :stream socket))) ;; the socket is a stream too
-;;                 :host host
-;;                 :port port))
+
+(defun socket-listen (host port &key reuseaddress (backlog 5))
+  ;; clisp 2.39 sets SO_REUSEADDRESS to 1 by default; no need to
+  ;; to explicitly turn it on.
+   (let ((sock (apply #'socket:socket-server
+                     (append (list port
+                                   :backlog backlog)
+                             (when (not (eql host *wildcard-host*))
+                               (list :interface host))))))
+    (make-stream-server-socket sock)))
+
+(defmethod socket-accept ((socket stream-server-usocket))
+  (let ((stream (socket:socket-accept (socket socket))))
+    (make-stream-socket :socket stream
+                        :stream stream)))
 
 (defmethod socket-close ((usocket usocket))
   "Close socket."
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
+
+(defmethod socket-close ((usocket stream-server-usocket))
+  (socket:socket-server-close (socket usocket)))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind
