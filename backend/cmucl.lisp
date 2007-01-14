@@ -72,7 +72,7 @@
 (defmethod socket-close ((usocket usocket))
   "Close socket."
   (with-mapped-conditions (usocket)
-    (ext:close-socket (socket usocket))))
+    (close (socket-stream usocket))))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind
