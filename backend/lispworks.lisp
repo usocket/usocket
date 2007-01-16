@@ -65,9 +65,10 @@
   ;; backlog ignored; I've mailed LispWorks support, but
   ;; don't have an answer yet
   (let* ((comm::*use_so_reuseaddr* reuseaddress)
-         (sock #-lispworks4.1 (comm::create-tcp-socket-for-service
-                               port :address host :backlog backlog)
-               #+lispworks4.1 (comm::create-tcp-socket-for-service port)))
+         (sock (with-mapped-conditions ()
+                  #-lispworks4.1 (comm::create-tcp-socket-for-service
+                                  port :address host :backlog backlog)
+                  #+lispworks4.1 (comm::create-tcp-socket-for-service port))))
     (make-stream-server-socket sock)))
 
 (defmethod socket-accept ((usocket stream-server-usocket))
@@ -83,7 +84,8 @@
   (close (socket-stream usocket)))
 
 (defmethod socket-close ((usocket stream-server-usocket))
-  (comm::close-socket (socket usocket)))
+  (with-mapped-conditions (usocket)
+     (comm::close-socket (socket usocket))))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind
