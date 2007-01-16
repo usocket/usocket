@@ -108,3 +108,7 @@
 
 (defmethod get-peer-port ((usocket usocket))
   (nth-value 1 (get-peer-name usocket)))
+
+(defun get-hosts-by-name (name)
+  (with-mapped-conditions ()
+     (comm:get-host-entry name :fields '(:addresses))))
