@@ -42,9 +42,12 @@
 
 (defun socket-connect (host port &key (element-type 'character))
   (with-mapped-conditions ()
-     (let ((mcl-sock (openmcl-socket:make-socket :remote-host
-                                                 (host-to-hostname host)
-                                                 :remote-port port)))
+     (let ((mcl-sock
+	     (openmcl-socket:make-socket :remote-host (host-to-hostname host)
+                                         :remote-port port
+					 :format (if (subtypep element-type
+							       'character)
+						   :text :binary))))
         (openmcl-socket:socket-connect mcl-sock)
         (make-stream-socket :stream mcl-sock :socket mcl-sock))))
 
