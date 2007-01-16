@@ -94,11 +94,12 @@
 
 (defun get-host-by-address (address)
   (with-mapped-conditions ()
-    (socket:ipaddr-to-hostname address)))
+    (socket:ipaddr-to-hostname (host-to-hbo address))))
 
 (defun get-hosts-by-name (name)
   ;;###FIXME: ACL has the acldns module which returns all A records
   ;; only problem: it doesn't fall back to tcp (from udp) if the returned
   ;; structure is too long.
   (with-mapped-conditions ()
-    (list (hbo-to-vector-quad (socket:lookup-hostname name)))))
+    (list (hbo-to-vector-quad (socket:lookup-hostname
+                               (host-to-hostname name)))))
