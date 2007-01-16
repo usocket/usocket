@@ -51,24 +51,43 @@
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
+(defun socket-listen (host port &key reuseaddress (backlog 5))
+  ;; Allegro and OpenMCL socket interfaces bear very strong resemblence
+  ;; whatever you change here, change it also for OpenMCL
+  (let ((sock (with-mapped-conditions ()
+                 (apply #'socket:make-socket
+                        (append (list :connect :passive
+                                      :reuse-address reuseaddress
+                                      :local-port port
+                                      :backlog backlog
+                                      :format :bivalent
+                                      ;; allegro now ignores :format
+                                      )
+                                (when (not (eql host *wildcard-host*))
+                                           (list :local-host host)))))))
+    (make-stream-server-socket :socket socket)))
+
+(defmethod socket-accept ((socket stream-server-usocket))
+  (let ((stream-sock (socket:accept-connection (socket socket))))
+    (make-stream-socket :socket stream-sock :stream stream-sock)))
 
 (defmethod get-local-address ((usocket usocket))
   (hbo-to-vector-quad (socket:local-host (socket usocket))))
 
-(defmethod get-peer-address ((usocket usocket))
+(defmethod get-peer-address ((usocket stream-server-usocket))
   (hbo-to-vector-quad (socket:remote-host (socket usocket))))
 
 (defmethod get-local-port ((usocket usocket))
   (socket:local-port (socket usocket)))
 
-(defmethod get-peer-port ((usocket usocket))
+(defmethod get-peer-port ((usocket stream-server-usocket))
   (socket:remote-port (socket usocket)))
 
 (defmethod get-local-name ((usocket usocket))
   (values (get-local-address usocket)
           (get-local-port usocket)))
 
-(defmethod get-peer-name ((usocket usocket))
+(defmethod get-peer-name ((usocket stream-server-usocket))
   (values (get-peer-address usocket)
           (get-peer-port usocket)))
 
