@@ -43,9 +43,6 @@
                         (error 'unknown-error
                                :socket socket
                                :real-error condition)))))))
-;;     (condition (error 'usocket-error
-;;                       :real-condition condition
-;;                       :socket socket))))
 
 (defun socket-connect (host port &key (element-type 'base-char))
   (let ((hostname (host-to-hostname host))
@@ -58,12 +55,8 @@
         (make-stream-socket :socket (comm:socket-stream-socket stream)
                             :stream stream)
       (error 'unknown-error))))
-;;                 :host host
-;;                 :port port))
 
 (defun socket-listen (host port &key reuseaddress (backlog 5))
-  ;; backlog ignored; I've mailed LispWorks support, but
-  ;; don't have an answer yet
   (let* ((comm::*use_so_reuseaddr* reuseaddress)
          (sock (with-mapped-conditions ()
                   #-lispworks4.1 (comm::create-tcp-socket-for-service
