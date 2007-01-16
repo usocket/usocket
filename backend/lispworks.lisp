@@ -106,4 +106,5 @@
 
 (defun get-hosts-by-name (name)
   (with-mapped-conditions ()
-     (comm:get-host-entry name :fields '(:addresses))))
+     (mapcar #'hbo-to-vector-quad
+             (comm:get-host-entry name :fields '(:addresses)))))
