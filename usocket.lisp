@@ -177,7 +177,7 @@ such as 3232235777."
 ;; DNS helper functions
 ;;
 
-#-(or clisp openmcl armedbear)
+#-(or clisp armedbear)
 (progn
   (defun get-host-by-name (name)
     (let ((hosts (get-hosts-by-name name)))

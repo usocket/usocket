@@ -89,3 +89,12 @@
 (defmethod get-peer-name ((usocket usocket))
   (values (get-peer-address usocket)
           (get-peer-port usocket)))
+
+(defun get-host-by-address (address)
+  (with-mapped-conditions ()
+     (openmcl-socket:ipaddr-to-hostname (host-to-hbo address))))
+
+(defun get-hosts-by-name (name)
+  (with-mapped-conditions ()
+     (list (hbo-to-vector-quad (openmcl-socket:lookup-hostname
+                                (host-to-hostname name))))))
