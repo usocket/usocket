@@ -61,9 +61,29 @@
 ;;                 :host host
 ;;                 :port port))
 
-(defmethod socket-close ((usocket usocket))
+(defun socket-listen (host port &key reuseaddress (backlog 5))
+  ;; backlog ignored; I've mailed LispWorks support, but
+  ;; don't have an answer yet
+  (let* ((comm::*use_so_reuseaddr* reuseaddress)
+         (sock #-lispworks4.1 (comm::create-tcp-socket-for-service
+                               port :address host :backlog backlog)
+               #+lispworks4.1 (comm::create-tcp-socket-for-service port)))
+    (make-stream-server-socket sock)))
+
+(defmethod socket-accept ((usocket stream-server-usocket))
+  (let* ((sock (comm::get-fd-from-socket (socket usocket)))
+         (stream (make-instance 'comm:socket-stream
+                                :socket sock
+                                :direction :io
+                                :element-type (element-type usocket))))
+    (make-stream-socket :socket sock :stream stream)))
+
+(defmethod socket-close ((usocket stream-usocket))
   "Close socket."
   (close (socket-stream usocket)))
+
+(defmethod socket-close ((usocket stream-server-usocket))
+  (comm::close-socket (socket usocket)))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind

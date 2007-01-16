@@ -33,7 +33,8 @@ specific."))
 (defclass stream-server-usocket (usocket)
   ((element-type
     :initarg :element-type
-    :initform 'character
+    :initform #-lispworks 'character
+              #+lispworks 'base-char
     :reader element-type
     :documentation "Default element type for streams created by
 `socket-accept'."))
@@ -56,7 +57,9 @@ and stream objects."
                  :socket socket
                  :stream stream))
 
-(defun make-stream-server-socket (socket &key (element-type 'character))
+(defun make-stream-server-socket (socket &key (element-type
+                                               #-lispworks 'character
+                                               #+lispworks 'base-char))
   "Create a usocket-server socket type from an
 implementation-specific socket object.
 
