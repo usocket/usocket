@@ -36,7 +36,7 @@
                 :real-error condition
                 :socket socket))))))
 
-(defun socket-connect (host port &key (element-type 'character)
+(defun socket-connect (host port &key (element-type 'character))
   (let ((socket))
     (setf socket
           (with-mapped-conditions (socket)
@@ -102,4 +102,4 @@
   ;; structure is too long.
   (with-mapped-conditions ()
     (list (hbo-to-vector-quad (socket:lookup-hostname
-                               (host-to-hostname name)))))
+                               (host-to-hostname name))))))
