@@ -39,7 +39,7 @@
 (defparameter *soc1* (usocket::make-stream-socket :socket :my-socket
                                                   :stream :my-stream))
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defparameter +common-lisp-net+ #(80 68 86 115)))
+  (defparameter +common-lisp-net+ #(80 68 86 115))) ;; common-lisp.net IP
 
 (deftest make-socket.1 (usocket:socket *soc1*) :my-socket)
 (deftest make-socket.2 (usocket:socket-stream *soc1*) :my-stream)
