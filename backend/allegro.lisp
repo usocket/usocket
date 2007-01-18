@@ -65,7 +65,7 @@
                                       )
                                 (when (not (eql host *wildcard-host*))
                                            (list :local-host host)))))))
-    (make-stream-server-socket :socket socket)))
+    (make-stream-server-socket :socket sock)))
 
 (defmethod socket-accept ((socket stream-server-usocket))
   (let ((stream-sock (socket:accept-connection (socket socket))))
