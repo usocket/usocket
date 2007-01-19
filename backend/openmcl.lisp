@@ -40,27 +40,33 @@
     (error (error 'unknown-error :socket socket :real-error condition))
     (condition (signal 'unknown-condition :real-condition condition))))
 
+(defun to-format (element-type)
+  (if (subtypep element-type 'character)
+      :text
+    :binary))
+
 (defun socket-connect (host port &key (element-type 'character))
   (with-mapped-conditions ()
      (let ((mcl-sock
 	     (openmcl-socket:make-socket :remote-host (host-to-hostname host)
                                          :remote-port port
-					 :format (if (subtypep element-type
-							       'character)
-						   :text :binary))))
+					 :format (to-format element-type))))
         (openmcl-socket:socket-connect mcl-sock)
         (make-stream-socket :stream mcl-sock :socket mcl-sock))))
 
-(defun socket-listen (host port &key reuseaddress (backlog 5))
+(defun socket-listen (host port
+                           &key reuseaddress
+                           (backlog 5)
+                           (element-type 'character))
   (let* ((sock (apply #'openmcl-socket:make-socket
                       (append (list :connect :passive
                                     :reuse-address reuseaddress
                                     :local-port port
                                     :backlog backlog
-                                    :format :bivalent)
+                                    :format (to-format element-type))
                               (when (not (eql host *wildcard-host*))
                                 (list :local-host host))))))
-    (make-stream-server-socket sock)))
+    (make-stream-server-socket sock :element-type element-type)))
 
 (defmethod socket-accept ((usocket stream-server-usocket))
   (let ((sock (openmcl-socket:accept-connection (socket usocket))))

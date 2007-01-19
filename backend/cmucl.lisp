@@ -69,7 +69,10 @@
       (let ((err (unix:unix-errno)))
         (when err (cmucl-map-socket-error err))))))
 
-(defun socket-listen (host port &key reuseaddress (backlog 5))
+(defun socket-listen (host port
+                           &key reuseaddress
+                           (backlog 5)
+                           (element-type 'character))
  (let ((server-sock (apply #'ext:create-inet-listener
                            (append (list port :stream
                                          :backlog backlog
@@ -77,7 +80,7 @@
                                    (when (not (eql host *wildcard-host*))
                                      (list :host
                                            (host-to-hbo host)))))))
-   (make-stream-server-socket server-sock)))
+   (make-stream-server-socket server-sock :element-type element-type)))
 
 (defmethod socket-accept ((usocket stream-server-usocket))
   (let* ((sock (ext:accept-tcp-connection (socket usocket)))

@@ -249,7 +249,8 @@ passing `*auto-port*'.
 Returns an object of type `stream-server-usocket'.
 
 `reuseaddress' and `backlog' are advisory parameters for setting socket
-options at creation time.
+options at creation time. `element-type' is the element type of the
+streams to be created by `socket-accept'.
 ")
 
 ;; Documentation for the function

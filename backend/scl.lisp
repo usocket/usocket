@@ -41,7 +41,10 @@
                                      :buffering :full)))
     (make-stream-socket :socket socket :stream stream)))
 
-(defun socket-listen (host port &key reuseaddress (backlog 5))
+(defun socket-listen (host port
+                           &key reuseaddress
+                           (backlog 5)
+                           (element-type 'character))
   (let* ((host (if (eql host *wildcard-host*)
                   0
                   (host-to-hbo host)))
@@ -49,7 +52,7 @@
                                                :host host
                                                :reuse-address reuseaddress
                                                :backlog backlog)))
-   (make-stream-server-socket server-sock)))
+   (make-stream-server-socket server-sock :element-type element-type)))
 
 (defmethod socket-accept ((usocket stream-server-usocket))
   (let* ((sock (ext:accept-tcp-connection (socket usocket)))
