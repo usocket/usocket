@@ -58,7 +58,7 @@
    (let ((sock (apply #'socket:socket-server
                      (append (list port
                                    :backlog backlog)
-                             (when (not (eql host *wildcard-host*))
+                             (when (ip/= host *wildcard-host*)
                                (list :interface host))))))
     (make-stream-server-socket sock :element-type element-type)))
 

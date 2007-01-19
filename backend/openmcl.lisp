@@ -64,7 +64,7 @@
                                     :local-port port
                                     :backlog backlog
                                     :format (to-format element-type))
-                              (when (not (eql host *wildcard-host*))
+                              (when (ip/= host *wildcard-host*)
                                 (list :local-host host))))))
     (make-stream-server-socket sock :element-type element-type)))
 

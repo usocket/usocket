@@ -70,8 +70,8 @@
                                       :format (to-format element-type)
                                       ;; allegro now ignores :format
                                       )
-                                (when (not (eql host *wildcard-host*))
-                                           (list :local-host host)))))))
+                                (when (ip/= host *wildcard-host*)
+                                  (list :local-host host)))))))
     (make-stream-server-socket sock :element-type element-type)))
 
 (defmethod socket-accept ((socket stream-server-usocket))

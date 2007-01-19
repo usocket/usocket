@@ -45,7 +45,7 @@
                            &key reuseaddress
                            (backlog 5)
                            (element-type 'character))
-  (let* ((host (if (eql host *wildcard-host*)
+  (let* ((host (if (ip= host *wildcard-host*)
                   0
                   (host-to-hbo host)))
         (server-sock (ext:create-inet-listener port :stream

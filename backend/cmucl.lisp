@@ -78,7 +78,7 @@
                            (append (list port :stream
                                          :backlog backlog
                                          :reuse-address reuseaddress)
-                                   (when (not (eql host *wildcard-host*))
+                                   (when (ip/= host *wildcard-host*)
                                      (list :host
                                            (host-to-hbo host)))))))
    (make-stream-server-socket server-sock :element-type element-type)))
