@@ -20,7 +20,7 @@ The library currently supports:
 
  - SBCL
  - CMUCL
- - ArmedBear
+ - ArmedBear (post feb 11th, 2006 versions)
  - clisp
  - Allegro Common Lisp
  - LispWorks
@@ -59,17 +59,30 @@ API definition
 ==============
 
  - usocket (class)
+ - stream-usocket (class; usocket derivative)
+ - stream-server-usocket (class; usocket derivative)
  - socket-connect (function) [ to create an active/connected socket ]
     socket-connect host port &key element-type
       where `host' is a vectorized ip
                       or a string representation of a dotted ip address
                       or a hostname for lookup in the DNS system
+ - socket-listen (function) [ to create a passive/listening socket ]
+     socket-listen host port &key reuseaddress backlog element-type
+       where `host' has the same definition as above
+ - socket-accept (method) [ to create an active/connected socket ]
+     socket-accept socket
+       returns (server side) a connected socket derived from a
+       listening/passive socket.
  - socket-close (method)
     socket-close socket
       where socket a previously returned socket
+ - socket (usocket slot accessor),
+      the internal/implementation defined socket representation
  - socket-stream (usocket slot accessor),
     socket-stream socket
       the return value of which satisfies the normal stream interface
+
+
 
 
 Errors:
@@ -110,4 +123,14 @@ Known problems
 - When running the test suite through the run-usocket-tests.sh shell
   script, ArmedBear 0.0.9 will report failure - even when it didn't.
   You need a CVS version later than 2006-02-11, or later than 0.0.9
-  for the script to work correctly.
+  release version for the script to work correctly.
+
+- The ArmedBear backend doesn't do any error mapping (yet). Java
+  defines exceptions at the wrong level (IMO), since the exception
+  reported bares a relation to the function failing, not the actual
+  error that occurred: for example 'Address already in use' (when
+  creating a passive socket) is reported as a BindException with
+  an error text of 'Address already in use'. There's no way to sanely
+  map 'BindException' to a meaningfull error in usocket. [This does not
+  mean the backend should not at least map to 'unknown-error'!]
+
