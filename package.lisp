@@ -22,6 +22,7 @@
              #:get-peer-name
 
              #:with-connected-socket ; macros
+             #:with-server-socket
 
              #:usocket ; socket object and accessors
              #:stream-usocket
