@@ -24,7 +24,6 @@
   "Dispatch correct usocket condition."
   (etypecase condition
     (ext::socket-error
-     (format t "erron:  ~D~%" (ext::socket-errno condition))
      (scl-map-socket-error (ext::socket-errno condition)
                :socket socket
                :condition condition))
@@ -34,14 +33,30 @@
         :socket socket))))
 
 (defun socket-connect (host port &key (element-type 'character))
-  (let* ((socket
-      (with-mapped-conditions (nil)
-        (ext:connect-to-inet-socket (host-to-hbo host) port :kind :stream)))
-     (stream (sys:make-fd-stream socket :input t :output t
-                     :element-type element-type
-                     :buffering :full)))
-    ;;###FIXME the above line probably needs an :external-format
+  (let* ((socket (with-mapped-conditions ()
+                  (ext:connect-to-inet-socket (host-to-hbo host) port
+                                              :kind :stream)))
+         (stream (sys:make-fd-stream socket :input t :output t
+                                     :element-type element-type
+                                     :buffering :full)))
     (make-stream-socket :socket socket :stream stream)))
+
+(defun socket-listen (host port &key reuseaddress (backlog 5))
+  (let* ((host (if (eql host *wildcard-host*)
+                  0
+                  (host-to-hbo host)))
+        (server-sock (ext:create-inet-listener port :stream
+                                               :host host
+                                               :reuse-address reuseaddress
+                                               :backlog backlog)))
+   (make-stream-server-socket server-sock)))
+
+(defmethod socket-accept ((usocket stream-server-usocket))
+  (let* ((sock (ext:accept-tcp-connection (socket usocket)))
+         (stream (sys:make-fd-stream sock :input t :output t
+                                     :element-type (element-type usocket)
+                                     :buffering :full)))
+    (make-stream-socket :socket sock :stream stream)))
 
 (defmethod socket-close ((usocket usocket))
   "Close socket."
@@ -51,13 +66,13 @@
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind (address port)
       (with-mapped-conditions (usocket)
-    (ext:get-socket-host-and-port (socket usocket)))
+        (ext:get-socket-host-and-port (socket usocket)))
     (values (hbo-to-vector-quad address) port)))
 
 (defmethod get-peer-name ((usocket usocket))
   (multiple-value-bind (address port)
       (with-mapped-conditions (usocket)
-    (ext:get-peer-host-and-port (socket usocket)))
+        (ext:get-peer-host-and-port (socket usocket)))
     (values (hbo-to-vector-quad address) port)))
 
 (defmethod get-local-address ((usocket usocket))
@@ -77,25 +92,25 @@
   (multiple-value-bind (host errno)
       (ext:lookup-host-entry (host-byte-order address))
     (cond (host
-       (ext:host-entry-name host))
-      (t
-       (let ((condition (cdr (assoc errno +unix-ns-error-map+))))
-         (cond (condition
-            (error condition :host-or-ip address))
-           (t
-            (error 'ns-unknown-error :host-or-ip address
-               :real-error errno))))))))
+           (ext:host-entry-name host))
+          (t
+           (let ((condition (cdr (assoc errno +unix-ns-error-map+))))
+             (cond (condition
+                    (error condition :host-or-ip address))
+                   (t
+                    (error 'ns-unknown-error :host-or-ip address
+                           :real-error errno))))))))
 
 (defun get-hosts-by-name (name)
   (multiple-value-bind (host errno)
       (ext:lookup-host-entry name)
     (cond (host
-       (mapcar #'hbo-to-vector-quad
-           (ext:host-entry-addr-list host)))
-      (t
-       (let ((condition (cdr (assoc errno +unix-ns-error-map+))))
-         (cond (condition
-            (error condition :host-or-ip name))
-           (t
-            (error 'ns-unknown-error :host-or-ip name
-               :real-error errno))))))))
+           (mapcar #'hbo-to-vector-quad
+                   (ext:host-entry-addr-list host)))
+          (t
+           (let ((condition (cdr (assoc errno +unix-ns-error-map+))))
+             (cond (condition
+                    (error condition :host-or-ip name))
+                   (t
+                    (error 'ns-unknown-error :host-or-ip name
+                           :real-error errno))))))))
