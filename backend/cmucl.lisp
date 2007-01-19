@@ -51,7 +51,8 @@
                                                :condition condition))
     (simple-error (error 'unknown-error
                          :real-condition condition
-                         :socket socket))))
+                         :socket socket))
+    (condition (error condition))))
 
 (defun socket-connect (host port &key (element-type 'character))
   (let* ((socket))
@@ -119,14 +120,29 @@
   (nth-value 1 (get-peer-name usocket)))
 
 
+(defun lookup-host-entry (host)
+  (multiple-value-bind
+      (entry errno)
+      (ext:lookup-host-entry host)
+    (if entry
+        entry
+      ;;###The constants below work on *most* OSes, but are defined as the
+      ;; constants mentioned in C
+      (error
+       (second (assoc errno '((1 ns-host-not-found-error) ;; HOST_NOT_FOUND
+                              (2 ns-no-recovery-error)    ;; NO_DATA
+                              (3 ns-no-recovery-error)    ;; NO_RECOVERY
+                              (4 ns-try-again))))))))      ;; TRY_AGAIN
+
+
 (defun get-host-by-address (address)
   (handler-case (ext:host-entry-name
-                 (ext::lookup-host-entry (host-byte-order address)))
+                 (lookup-host-entry (host-byte-order address)))
     (condition (condition) (handle-condition condition))))
 
 (defun get-hosts-by-name (name)
   (handler-case (mapcar #'hbo-to-vector-quad
                         (ext:host-entry-addr-list
-                         (ext:lookup-host-entry name)))
+                         (lookup-host-entry name)))
     (condition (condition) (handle-condition condition))))
 
