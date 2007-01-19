@@ -121,7 +121,7 @@ The `body' is an implied progn form."
       ,@body))
 
 ;;
-;; IPv4 utility functions
+;; IP(v4) utility functions
 ;;
 
 (defun list-of-strings-to-integers (list)
@@ -173,6 +173,29 @@ such as 3232235777."
   (+ (* (aref vector 0) 256 256 256) (* (aref vector 1) 256 256)
      (* (aref vector 2) 256) (aref vector 3)))
 
+(defmethod host-byte-order ((int integer))
+  int)
+
+(defun host-to-hostname (host)
+  "Translate a string or vector quad to a stringified hostname."
+  (etypecase host
+    (string host)
+    ((vector t 4) (vector-quad-to-dotted-quad host))
+    (integer (hbo-to-dotted-quad host))))
+
+(defun ip= (ip1 ip2)
+  (etypecase ip1
+    (string (string= ip1 (host-to-hostname ip2)))
+    ((vector t 4) (or (eq ip1 ip2)
+                      (and (= (aref ip1 0) (aref ip2 0))
+                           (= (aref ip1 1) (aref ip2 1))
+                           (= (aref ip1 2) (aref ip2 2))
+                           (= (aref ip1 3) (aref ip2 3)))))
+    (integer (= ip1 (host-byte-order ip2)))))
+
+(defun ip/= (ip1 ip2)
+  (not (ip= ip1 ip2)))
+
 ;;
 ;; DNS helper functions
 ;;
@@ -209,13 +232,6 @@ to a vector quad."
             (host-to-hbo (get-host-by-name host)))))
       ((vector t 4) (host-byte-order host))
       (integer host))))
-
-(defun host-to-hostname (host)
-  "Translate a string or vector quad to a stringified hostname."
-  (etypecase host
-    (string host)
-    ((vector t 4) (vector-quad-to-dotted-quad host))
-    (integer (hbo-to-dotted-quad host))))
 
 ;;
 ;; Setting of documentation for backend defined functions

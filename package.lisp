@@ -30,11 +30,13 @@
              #:socket
              #:socket-stream
 
-             #:host-byte-order ; IPv4 utility functions
+             #:host-byte-order ; IP(v4) utility functions
              #:hbo-to-dotted-quad
              #:hbo-to-vector-quad
              #:vector-quad-to-dotted-quad
              #:dotted-quad-to-vector-quad
+             #:ip=
+             #:ip/=
 
              #:socket-condition ; conditions
              #:socket-error ; errors
