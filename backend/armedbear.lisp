@@ -48,12 +48,13 @@
                   sock-addr backlog)
     (make-stream-server-socket sock :element-type element-type)))
 
-(defmethod socket-accept ((socket stream-server-usocket))
+(defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (let* ((jsock (socket socket))
          (jacc-sock (jmethod-call jsock ("accept")))
          (jacc-stream
           (ext:get-socket-stream jacc-sock
-                                 :element-type (element-type socket))))
+                                 :element-type (or element-type
+                                                   (element-type socket)))))
     (make-stream-socket :socket jacc-sock
                         :stream jacc-stream)))
 

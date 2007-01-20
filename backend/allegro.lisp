@@ -74,7 +74,8 @@
                                   (list :local-host host)))))))
     (make-stream-server-socket sock :element-type element-type)))
 
-(defmethod socket-accept ((socket stream-server-usocket))
+(defmethod socket-accept ((socket stream-server-usocket) &key element-type)
+  (declare (ignore element-type)) ;; allegro streams are multivalent
   (let ((stream-sock (socket:accept-connection (socket socket))))
     (make-stream-socket :socket stream-sock :stream stream-sock)))
 

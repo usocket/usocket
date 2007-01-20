@@ -70,7 +70,7 @@ API definition
      socket-listen host port &key reuseaddress backlog element-type
        where `host' has the same definition as above
  - socket-accept (method) [ to create an active/connected socket ]
-     socket-accept socket
+     socket-accept socket &key element-type
        returns (server side) a connected socket derived from a
        listening/passive socket.
  - socket-close (method)

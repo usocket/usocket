@@ -68,7 +68,8 @@
                                 (list :local-host host))))))
     (make-stream-server-socket sock :element-type element-type)))
 
-(defmethod socket-accept ((usocket stream-server-usocket))
+(defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
+  (declare (ignore element-type)) ;; openmcl streams are bi/multivalent
   (let ((sock (openmcl-socket:accept-connection (socket usocket))))
     (make-stream-socket :socket sock :stream sock)))
 

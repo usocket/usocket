@@ -94,12 +94,13 @@
     (sb-bsd-sockets:socket-listen sock backlog)
     (make-stream-server-socket sock :element-type element-type)))
 
-(defmethod socket-accept ((socket stream-server-usocket))
+(defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (let ((sock (sb-bsd-sockets:socket-accept (socket socket))))
     (make-stream-socket :socket sock
                         :stream (sb-bsd-sockets:socket-make-stream sock
                                  :input t :output t :buffering :full
-                                 :element-type (element-type socket)))))
+                                 :element-type (or element-type
+                                                   (element-type socket))))))
 
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)

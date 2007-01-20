@@ -67,12 +67,13 @@
                   #+lispworks4.1 (comm::create-tcp-socket-for-service port))))
     (make-stream-server-socket sock :element-type element-type)))
 
-(defmethod socket-accept ((usocket stream-server-usocket))
+(defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
   (let* ((sock (comm::get-fd-from-socket (socket usocket)))
          (stream (make-instance 'comm:socket-stream
                                 :socket sock
                                 :direction :io
-                                :element-type (element-type usocket))))
+                                :element-type (or element-type
+                                                  (element-type usocket)))))
     (make-stream-socket :socket sock :stream stream)))
 
 (defmethod socket-close ((usocket stream-usocket))

@@ -62,9 +62,11 @@
                                (list :interface host))))))
     (make-stream-server-socket sock :element-type element-type)))
 
-(defmethod socket-accept ((socket stream-server-usocket))
-  (let ((stream (socket:socket-accept (socket socket)
-                                      :element-type (element-type socket))))
+(defmethod socket-accept ((socket stream-server-usocket) &key element-type)
+  (let ((stream
+         (socket:socket-accept (socket socket)
+                               :element-type (or element-type
+                                                 (element-type socket)))))
     (make-stream-socket :socket stream
                         :stream stream)))
 

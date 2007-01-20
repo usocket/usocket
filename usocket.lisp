@@ -271,7 +271,9 @@ streams to be created by `socket-accept'.
 
 ;; Documentation for the function
 ;;
-;; (defun SOCKET-ACCEPT (socket &key element-type
-;;                                   buffered timeout) ..)
+;; (defun SOCKET-ACCEPT (socket &key element-type)
 (setf (documentation 'socket-accept 'function)
-      "")
+      "Accepts a connection from `socket', returning a `stream-socket'.
+
+The stream associated with the socket returned has `element-type' when
+explicitly specified, or the element-type passed to `socket-listen' otherwise.")
