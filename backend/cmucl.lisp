@@ -83,10 +83,11 @@
                                            (host-to-hbo host)))))))
    (make-stream-server-socket server-sock :element-type element-type)))
 
-(defmethod socket-accept ((usocket stream-server-usocket))
+(defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
   (let* ((sock (ext:accept-tcp-connection (socket usocket)))
          (stream (sys:make-fd-stream sock :input t :output t
-                                     :element-type (element-type usocket)
+                                     :element-type (or element-type
+                                                       (element-type usocket))
                                      :buffering :full)))
     (make-stream-socket :socket sock :stream stream)))
 
