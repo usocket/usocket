@@ -128,11 +128,14 @@
         entry
       ;;###The constants below work on *most* OSes, but are defined as the
       ;; constants mentioned in C
-      (error
-       (second (assoc errno '((1 ns-host-not-found-error) ;; HOST_NOT_FOUND
+      (let ((exception
+             (second (assoc errno
+                            '((1 ns-host-not-found-error) ;; HOST_NOT_FOUND
                               (2 ns-no-recovery-error)    ;; NO_DATA
                               (3 ns-no-recovery-error)    ;; NO_RECOVERY
-                              (4 ns-try-again))))))))      ;; TRY_AGAIN
+                              (4 ns-try-again))))))       ;; TRY_AGAIN
+        (when exception
+          (error exception))))))
 
 
 (defun get-host-by-address (address)
