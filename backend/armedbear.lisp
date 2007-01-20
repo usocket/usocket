@@ -31,7 +31,10 @@
                 :stream (ext:get-socket-stream sock
                                                :element-type element-type)))))))
 
-(defun socket-listen (host port &key reuseaddress (backlog 5))
+(defun socket-listen (host port
+                           &key reuseaddress
+                           (backlog 5)
+                           (element-type 'character))
   (let* ((sock-addr (jnew-call ("java.net.InetSocketAddress"
                                 "java.lang.String" "int")
                                (host-to-hostname host) port))
@@ -43,14 +46,15 @@
     (jmethod-call sock
                   ("bind" "java.net.SocketAddress" "int")
                   sock-addr backlog)
-    (make-stream-server-socket sock)))
+    (make-stream-server-socket sock :element-type element-type)))
 
-(defmethod socket-accept ((socket stream-server-usocket))
+(defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (let* ((jsock (socket socket))
          (jacc-sock (jmethod-call jsock ("accept")))
          (jacc-stream
           (ext:get-socket-stream jacc-sock
-                                 :element-type (element-type socket))))
+                                 :element-type (or element-type
+                                                   (element-type socket)))))
     (make-stream-socket :socket jacc-sock
                         :stream jacc-stream)))
 

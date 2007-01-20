@@ -51,7 +51,8 @@
                                                :condition condition))
     (simple-error (error 'unknown-error
                          :real-condition condition
-                         :socket socket))))
+                         :socket socket))
+    (condition (error condition))))
 
 (defun socket-connect (host port &key (element-type 'character))
   (let* ((socket))
@@ -69,20 +70,24 @@
       (let ((err (unix:unix-errno)))
         (when err (cmucl-map-socket-error err))))))
 
-(defun socket-listen (host port &key reuseaddress (backlog 5))
+(defun socket-listen (host port
+                           &key reuseaddress
+                           (backlog 5)
+                           (element-type 'character))
  (let ((server-sock (apply #'ext:create-inet-listener
                            (append (list port :stream
                                          :backlog backlog
                                          :reuse-address reuseaddress)
-                                   (when (not (eql host *wildcard-host*))
+                                   (when (ip/= host *wildcard-host*)
                                      (list :host
                                            (host-to-hbo host)))))))
-   (make-stream-server-socket server-sock)))
+   (make-stream-server-socket server-sock :element-type element-type)))
 
-(defmethod socket-accept ((usocket stream-server-usocket))
+(defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
   (let* ((sock (ext:accept-tcp-connection (socket usocket)))
          (stream (sys:make-fd-stream sock :input t :output t
-                                     :element-type (element-type usocket)
+                                     :element-type (or element-type
+                                                       (element-type usocket))
                                      :buffering :full)))
     (make-stream-socket :socket sock :stream stream)))
 
@@ -116,14 +121,32 @@
   (nth-value 1 (get-peer-name usocket)))
 
 
+(defun lookup-host-entry (host)
+  (multiple-value-bind
+      (entry errno)
+      (ext:lookup-host-entry host)
+    (if entry
+        entry
+      ;;###The constants below work on *most* OSes, but are defined as the
+      ;; constants mentioned in C
+      (let ((exception
+             (second (assoc errno
+                            '((1 ns-host-not-found-error) ;; HOST_NOT_FOUND
+                              (2 ns-no-recovery-error)    ;; NO_DATA
+                              (3 ns-no-recovery-error)    ;; NO_RECOVERY
+                              (4 ns-try-again))))))       ;; TRY_AGAIN
+        (when exception
+          (error exception))))))
+
+
 (defun get-host-by-address (address)
   (handler-case (ext:host-entry-name
-                 (ext::lookup-host-entry (host-byte-order address)))
+                 (lookup-host-entry (host-byte-order address)))
     (condition (condition) (handle-condition condition))))
 
 (defun get-hosts-by-name (name)
   (handler-case (mapcar #'hbo-to-vector-quad
                         (ext:host-entry-addr-list
-                         (ext:lookup-host-entry name)))
+                         (lookup-host-entry name)))
     (condition (condition) (handle-condition condition))))
 

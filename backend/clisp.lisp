@@ -49,18 +49,24 @@
     (make-stream-socket :socket socket
                         :stream socket))) ;; the socket is a stream too
 
-(defun socket-listen (host port &key reuseaddress (backlog 5))
+(defun socket-listen (host port
+                           &key reuseaddress
+                           (backlog 5)
+                           (element-type 'character))
   ;; clisp 2.39 sets SO_REUSEADDRESS to 1 by default; no need to
   ;; to explicitly turn it on.
    (let ((sock (apply #'socket:socket-server
                      (append (list port
                                    :backlog backlog)
-                             (when (not (eql host *wildcard-host*))
+                             (when (ip/= host *wildcard-host*)
                                (list :interface host))))))
-    (make-stream-server-socket sock)))
+    (make-stream-server-socket sock :element-type element-type)))
 
-(defmethod socket-accept ((socket stream-server-usocket))
-  (let ((stream (socket:socket-accept (socket socket))))
+(defmethod socket-accept ((socket stream-server-usocket) &key element-type)
+  (let ((stream
+         (socket:socket-accept (socket socket)
+                               :element-type (or element-type
+                                                 (element-type socket)))))
     (make-stream-socket :socket stream
                         :stream stream)))
 

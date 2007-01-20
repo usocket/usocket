@@ -36,14 +36,18 @@
                 :real-error condition
                 :socket socket))))))
 
+(defun to-format (element-type)
+  (if (subtypep element-type 'character)
+      :text
+    :binary))
+
 (defun socket-connect (host port &key (element-type 'character))
   (let ((socket))
     (setf socket
           (with-mapped-conditions (socket)
              (socket:make-socket :remote-host (host-to-hostname host)
                                  :remote-port port
-                                 :format (if (subtypep element-type 'character)
-                                             :text :binary))))
+                                 :format (to-format element-type))))
     (make-stream-socket :socket socket :stream socket)))
 
 (defmethod socket-close ((usocket usocket))
@@ -51,7 +55,10 @@
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
-(defun socket-listen (host port &key reuseaddress (backlog 5))
+(defun socket-listen (host port
+                           &key reuseaddress
+                           (backlog 5)
+                           (element-type 'character))
   ;; Allegro and OpenMCL socket interfaces bear very strong resemblence
   ;; whatever you change here, change it also for OpenMCL
   (let ((sock (with-mapped-conditions ()
@@ -60,14 +67,15 @@
                                       :reuse-address reuseaddress
                                       :local-port port
                                       :backlog backlog
-                                      :format :bivalent
+                                      :format (to-format element-type)
                                       ;; allegro now ignores :format
                                       )
-                                (when (not (eql host *wildcard-host*))
-                                           (list :local-host host)))))))
-    (make-stream-server-socket sock)))
+                                (when (ip/= host *wildcard-host*)
+                                  (list :local-host host)))))))
+    (make-stream-server-socket sock :element-type element-type)))
 
-(defmethod socket-accept ((socket stream-server-usocket))
+(defmethod socket-accept ((socket stream-server-usocket) &key element-type)
+  (declare (ignore element-type)) ;; allegro streams are multivalent
   (let ((stream-sock (socket:accept-connection (socket socket))))
     (make-stream-socket :socket stream-sock :stream stream-sock)))
 
