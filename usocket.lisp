@@ -48,11 +48,17 @@ be initiated from remote sockets."))
 
 (defun make-socket (&key socket)
   "Create a usocket socket type from implementation specific socket."
+  (unless socket
+    (error 'invalid-socket))
   (make-stream-socket :socket socket))
 
 (defun make-stream-socket (&key socket stream)
   "Create a usocket socket type from implementation specific socket
 and stream objects."
+  (unless socket
+    (error 'invalid-socket-error))
+  (unless stream
+    (error 'invalid-socket-stream-error))
   (make-instance 'stream-usocket
                  :socket socket
                  :stream stream))
