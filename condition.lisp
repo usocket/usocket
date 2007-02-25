@@ -77,7 +77,9 @@ condition available."))
    host-down-error
    host-unreachable-error
    shutdown-error
-   timeout-error)
+   timeout-error
+   invalid-socket-error
+   invalid-socket-stream-error)
   (socket-error))
 
 (define-condition unknown-error (socket-error)
