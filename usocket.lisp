@@ -134,7 +134,7 @@ non-nil, bind the associated socket stream to it."
 `body' is only evaluated when `var' is bound to a non-null value.
 
 The `body' is an implied progn form."
-  `(with-connected-socket (var server-socket)
+  `(with-connected-socket (,var ,server-socket)
       ,@body))
 
 (defmacro with-socket-listener ((socket-var &rest socket-listen-args)
