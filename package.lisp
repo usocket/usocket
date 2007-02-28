@@ -21,8 +21,10 @@
              #:get-local-name
              #:get-peer-name
 
-             #:with-connected-socket ; macros
+             #:with-connected-socket ; convenience macros
              #:with-server-socket
+             #:with-client-socket
+             #:with-socket-listener
 
              #:usocket ; socket object and accessors
              #:stream-usocket
