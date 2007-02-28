@@ -117,6 +117,17 @@ The `body' is an implied progn form."
        (when ,var
          (socket-close ,var)))))
 
+(defmacro with-client-socket ((socket-var stream-var &rest socket-connect-args)
+                              &body body)
+  "Bind the socket resulting from a call to `socket-connect' with
+the arguments `socket-connect-args' to `socket-var' and if `stream-var' is
+non-nil, bind the associated socket stream to it."
+  `(with-connected-socket (,socket-var (socket-connect ,@socket-connect-args))
+       ,(if (null stream-var)
+           `(progn ,@body)
+          `(let ((,stream-var (socket-stream ,socket-var)))
+             ,@body))))
+
 (defmacro with-server-socket ((var server-socket) &body body)
   "Bind `server-socket' to `var', ensuring socket destruction on exit.
 
@@ -125,6 +136,14 @@ The `body' is an implied progn form."
 The `body' is an implied progn form."
   `(with-connected-socket (var server-socket)
       ,@body))
+
+(defmacro with-socket-listener ((socket-var &rest socket-listen-args)
+                                &body body)
+  "Bind the socket resulting from a call to `socket-listen' with arguments
+`socket-listen-args' to `socket-var'."
+  `(with-server-socket (,socket-var (socket-listen ,@socket-listen-args))
+      ,@body))
+
 
 ;;
 ;; IP(v4) utility functions
