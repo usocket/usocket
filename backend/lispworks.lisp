@@ -76,11 +76,14 @@
                                                   (element-type usocket)))))
     (make-stream-socket :socket sock :stream stream)))
 
+;; Sockets and their streams are different objects
+;; close the stream in order to make sure buffers
+;; are correctly flushed and the socket closed.
 (defmethod socket-close ((usocket stream-usocket))
   "Close socket."
   (close (socket-stream usocket)))
 
-(defmethod socket-close ((usocket stream-server-usocket))
+(defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)
      (comm::close-socket (socket usocket))))
 

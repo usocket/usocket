@@ -102,9 +102,16 @@
                                  :element-type (or element-type
                                                    (element-type socket))))))
 
+;; Sockets and their associated streams are modelled as
+;; different objects. Be sure to close the stream (which
+;; closes the socket too) when closing a stream-socket.
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)
     (sb-bsd-sockets:socket-close (socket usocket))))
+
+(defmethod socket-close ((usocket stream-usocket))
+  (with-mapped-conditions (usocket)
+    (close (socket-stream usocket))))
 
 (defmethod get-local-name ((usocket usocket))
   (sb-bsd-sockets:socket-name (socket usocket)))

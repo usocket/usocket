@@ -50,6 +50,9 @@
                                  :format (to-format element-type))))
     (make-stream-socket :socket socket :stream socket)))
 
+
+;; One socket close method is sufficient,
+;; because socket-streams are also sockets.
 (defmethod socket-close ((usocket usocket))
   "Close socket."
   (with-mapped-conditions (usocket)

@@ -73,6 +73,9 @@
   (let ((sock (openmcl-socket:accept-connection (socket usocket))))
     (make-stream-socket :socket sock :stream sock)))
 
+;; One close method is sufficient because sockets
+;; and their associated objects are represented
+;; by the same object.
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
