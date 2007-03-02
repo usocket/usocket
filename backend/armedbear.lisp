@@ -66,6 +66,12 @@
   (with-mapped-conditions (usocket)
     (ext:socket-close (socket usocket))))
 
+;; Socket streams are different objects than
+;; socket streams. Closing the stream flushes
+;; its buffers *and* closes the socket.
+(defmethod socket-close ((usocket stream-usocket))
+  (with-mapped-conditions (usocket)
+    (close (socket-stream usocket))))
 
 (defmethod get-local-address ((usocket usocket))
   (dotted-quad-to-vector-quad (ext:socket-local-address (socket usocket))))

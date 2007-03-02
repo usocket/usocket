@@ -62,10 +62,19 @@
                                      :buffering :full)))
     (make-stream-socket :socket sock :stream stream)))
 
+;; Sockets and their associated streams are modelled as
+;; different objects. Be sure to close the socket stream
+;; when closing stream-sockets; it makes sure buffers
+;; are flushed and the socket is closed correctly afterwards.
 (defmethod socket-close ((usocket usocket))
   "Close socket."
   (with-mapped-conditions (usocket)
     (ext:close-socket (socket usocket))))
+
+(defmethod socket-close ((usocket stream-usocket))
+  "Close socket."
+  (with-mapped-conditions (usocket)
+    (close (socket-stream usocket))))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind (address port)

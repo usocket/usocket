@@ -70,6 +70,9 @@
     (make-stream-socket :socket stream
                         :stream stream)))
 
+;; Only one close method required:
+;; sockets and their associated streams
+;; are the same object
 (defmethod socket-close ((usocket usocket))
   "Close socket."
   (with-mapped-conditions (usocket)
