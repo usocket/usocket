@@ -61,9 +61,10 @@
                            (backlog 5)
                            (element-type 'base-char))
   (let* ((comm::*use_so_reuseaddr* reuseaddress)
+         (hostname (host-to-hostname host))
          (sock (with-mapped-conditions ()
                   #-lispworks4.1 (comm::create-tcp-socket-for-service
-                                  port :address host :backlog backlog)
+                                  port :address hostname :backlog backlog)
                   #+lispworks4.1 (comm::create-tcp-socket-for-service port))))
     (make-stream-server-socket sock :element-type element-type)))
 
