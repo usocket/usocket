@@ -14,7 +14,7 @@
 (defsystem usocket
     :name "usocket"
     :author "Erik Enge & Erik Huelsmann"
-    :version "0.3.2-dev"
+    :version "0.3.3-dev"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (:split-sequence
