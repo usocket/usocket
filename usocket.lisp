@@ -83,6 +83,8 @@ implementation-specific socket object.
 
 The returned value is a subtype of `stream-server-usocket'.
 "
+  (unless socket
+    (error 'invalid-socket-error))
   (make-instance 'stream-server-usocket
                  :socket socket
                  :element-type element-type))
