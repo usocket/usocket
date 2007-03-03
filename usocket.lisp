@@ -17,18 +17,26 @@
     :accessor socket
     :documentation "Implementation specific socket object instance."))
   (:documentation
-"The main socket class."))
+"The main socket class.
+
+Sockets should be closed using the `socket-close' method."))
 
 (defclass stream-usocket (usocket)
    ((stream
      :initarg :stream
      :accessor socket-stream
-     :documentation "Stream instance associated with the socket.
+     :documentation "Stream instance associated with the socket."
+;;
+;;Iff an external-format was passed to `socket-connect' or `socket-listen'
+;;the stream is a flexi-stream. Otherwise the stream is implementation
+;;specific."
+))
+   (:documentation
+"Stream socket class.
 
-Iff an external-format was passed to `socket-connect' or `socket-listen'
-the stream is a flexi-stream. Otherwise the stream is implementation
-specific."))
-   (:documentation ""))
+Contrary to other sockets, these sockets may be closed either
+with the `socket-close' method or by closing the associated stream
+(which can be retrieved with the `socket-stream' accessor)."))
 
 (defclass stream-server-usocket (usocket)
   ((element-type
@@ -54,7 +62,11 @@ be initiated from remote sockets."))
 
 (defun make-stream-socket (&key socket stream)
   "Create a usocket socket type from implementation specific socket
-and stream objects."
+and stream objects.
+
+Sockets returned should be closed using the `socket-close' method or
+by closing the stream associated with the socket.
+"
   (unless socket
     (error 'invalid-socket-error))
   (unless stream
@@ -69,7 +81,8 @@ and stream objects."
   "Create a usocket-server socket type from an
 implementation-specific socket object.
 
-The returned value is a subtype of `stream-server-usocket'."
+The returned value is a subtype of `stream-server-usocket'.
+"
   (make-instance 'stream-server-usocket
                  :socket socket
                  :element-type element-type))
@@ -276,7 +289,7 @@ Returns a usocket object.")
 
 ;; Documentation for the function
 ;;
-;; (defun SOCKET-LISTEN (host port &key reuseaddress backlog) ..)
+;; (defun SOCKET-LISTEN (host port &key reuseaddress backlog element-type) ..)
 ;;###FIXME: extend with default-element-type
 (setf (documentation 'socket-listen 'function)
       "Bind to interface `host' on `port'. `host' should be the
