@@ -87,7 +87,7 @@
       (socket:socket-stream-local (socket usocket) nil)
     (values (dotted-quad-to-vector-quad address) port)))
 
-(defmethod get-peer-name ((usocket usocket))
+(defmethod get-peer-name ((usocket stream-usocket))
   (multiple-value-bind
       (address port)
       (socket:socket-stream-peer (socket usocket) nil)
@@ -96,12 +96,12 @@
 (defmethod get-local-address ((usocket usocket))
   (nth-value 0 (get-local-name usocket)))
 
-(defmethod get-peer-address ((usocket usocket))
+(defmethod get-peer-address ((usocket stream-usocket))
   (nth-value 0 (get-peer-name usocket)))
 
 (defmethod get-local-port ((usocket usocket))
   (nth-value 1 (get-local-name usocket)))
 
-(defmethod get-peer-port ((usocket usocket))
+(defmethod get-peer-port ((usocket stream-usocket))
   (nth-value 1 (get-peer-name usocket)))
 
