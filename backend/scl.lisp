@@ -1,5 +1,5 @@
-;;;; $Id: scl.lisp$
-;;;; $URL: svn://common-lisp.net/project/usocket/svn/usocket/trunk/backend/scl.lisp $
+;;;; $Id$
+;;;; $URL$
 
 ;;;; See LICENSE for licensing information.
 
@@ -43,15 +43,17 @@
 
 (defun socket-listen (host port
                            &key reuseaddress
+                           (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
-  (let* ((host (if (ip= host *wildcard-host*)
-                  0
-                  (host-to-hbo host)))
-        (server-sock (ext:create-inet-listener port :stream
-                                               :host host
-                                               :reuse-address reuseaddress
-                                               :backlog backlog)))
+  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+         (host (if (ip= host *wildcard-host*)
+                   0
+                 (host-to-hbo host)))
+         (server-sock (ext:create-inet-listener port :stream
+                                                :host host
+                                                :reuse-address reuseaddress
+                                                :backlog backlog)))
    (make-stream-server-socket server-sock :element-type element-type)))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
@@ -82,7 +84,7 @@
         (ext:get-socket-host-and-port (socket usocket)))
     (values (hbo-to-vector-quad address) port)))
 
-(defmethod get-peer-name ((usocket usocket))
+(defmethod get-peer-name ((usocket stream-usocket))
   (multiple-value-bind (address port)
       (with-mapped-conditions (usocket)
         (ext:get-peer-host-and-port (socket usocket)))
@@ -91,13 +93,13 @@
 (defmethod get-local-address ((usocket usocket))
   (nth-value 0 (get-local-name usocket)))
 
-(defmethod get-peer-address ((usocket usocket))
+(defmethod get-peer-address ((usocket stream-usocket))
   (nth-value 0 (get-peer-name usocket)))
 
 (defmethod get-local-port ((usocket usocket))
   (nth-value 1 (get-local-name usocket)))
 
-(defmethod get-peer-port ((usocket usocket))
+(defmethod get-peer-port ((usocket stream-usocket))
   (nth-value 1 (get-peer-name usocket)))
 
 

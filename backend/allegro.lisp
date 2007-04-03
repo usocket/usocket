@@ -60,11 +60,13 @@
 
 (defun socket-listen (host port
                            &key reuseaddress
+                           (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
   ;; Allegro and OpenMCL socket interfaces bear very strong resemblence
   ;; whatever you change here, change it also for OpenMCL
-  (let ((sock (with-mapped-conditions ()
+  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+         (sock (with-mapped-conditions ()
                  (apply #'socket:make-socket
                         (append (list :connect :passive
                                       :reuse-address reuseaddress
@@ -85,20 +87,20 @@
 (defmethod get-local-address ((usocket usocket))
   (hbo-to-vector-quad (socket:local-host (socket usocket))))
 
-(defmethod get-peer-address ((usocket stream-server-usocket))
+(defmethod get-peer-address ((usocket stream-usocket))
   (hbo-to-vector-quad (socket:remote-host (socket usocket))))
 
 (defmethod get-local-port ((usocket usocket))
   (socket:local-port (socket usocket)))
 
-(defmethod get-peer-port ((usocket stream-server-usocket))
+(defmethod get-peer-port ((usocket stream-usocket))
   (socket:remote-port (socket usocket)))
 
 (defmethod get-local-name ((usocket usocket))
   (values (get-local-address usocket)
           (get-local-port usocket)))
 
-(defmethod get-peer-name ((usocket stream-server-usocket))
+(defmethod get-peer-name ((usocket stream-usocket))
   (values (get-peer-address usocket)
           (get-peer-port usocket)))
 

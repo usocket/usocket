@@ -51,11 +51,13 @@
 
 (defun socket-listen (host port
                            &key reuseaddress
+                           (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
   ;; clisp 2.39 sets SO_REUSEADDRESS to 1 by default; no need to
-  ;; to explicitly turn it on.
-   (let ((sock (apply #'socket:socket-server
+  ;; to explicitly turn it on; unfortunately, there's no way to turn it off...
+  (declare (ignore reuseaddress reuse-address))
+  (let ((sock (apply #'socket:socket-server
                      (append (list port
                                    :backlog backlog)
                              (when (ip/= host *wildcard-host*)
@@ -87,7 +89,7 @@
       (socket:socket-stream-local (socket usocket) nil)
     (values (dotted-quad-to-vector-quad address) port)))
 
-(defmethod get-peer-name ((usocket usocket))
+(defmethod get-peer-name ((usocket stream-usocket))
   (multiple-value-bind
       (address port)
       (socket:socket-stream-peer (socket usocket) nil)
@@ -96,12 +98,12 @@
 (defmethod get-local-address ((usocket usocket))
   (nth-value 0 (get-local-name usocket)))
 
-(defmethod get-peer-address ((usocket usocket))
+(defmethod get-peer-address ((usocket stream-usocket))
   (nth-value 0 (get-peer-name usocket)))
 
 (defmethod get-local-port ((usocket usocket))
   (nth-value 1 (get-local-name usocket)))
 
-(defmethod get-peer-port ((usocket usocket))
+(defmethod get-peer-port ((usocket stream-usocket))
   (nth-value 1 (get-peer-name usocket)))
 

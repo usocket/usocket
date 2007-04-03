@@ -56,9 +56,11 @@
 
 (defun socket-listen (host port
                            &key reuseaddress
+                           (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
-  (let* ((sock (apply #'openmcl-socket:make-socket
+  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+         (sock (apply #'openmcl-socket:make-socket
                       (append (list :connect :passive
                                     :reuse-address reuseaddress
                                     :local-port port
@@ -83,20 +85,20 @@
 (defmethod get-local-address ((usocket usocket))
   (hbo-to-vector-quad (openmcl-socket:local-host (socket usocket))))
 
-(defmethod get-peer-address ((usocket usocket))
+(defmethod get-peer-address ((usocket stream-usocket))
   (hbo-to-vector-quad (openmcl-socket:remote-host (socket usocket))))
 
 (defmethod get-local-port ((usocket usocket))
   (openmcl-socket:local-port (socket usocket)))
 
-(defmethod get-peer-port ((usocket usocket))
+(defmethod get-peer-port ((usocket stream-usocket))
   (openmcl-socket:remote-port (socket usocket)))
 
 (defmethod get-local-name ((usocket usocket))
   (values (get-local-address usocket)
           (get-local-port usocket)))
 
-(defmethod get-peer-name ((usocket usocket))
+(defmethod get-peer-name ((usocket stream-usocket))
   (values (get-peer-address usocket)
           (get-peer-port usocket)))
 

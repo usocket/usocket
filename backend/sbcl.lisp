@@ -84,9 +84,11 @@
 
 (defun socket-listen (host port
                            &key reuseaddress
+                           (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
-  (let* ((ip (host-to-vector-quad host))
+  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+         (ip (host-to-vector-quad host))
          (sock (make-instance 'sb-bsd-sockets:inet-socket
                               :type :stream :protocol :tcp)))
     (setf (sb-bsd-sockets:sockopt-reuse-address sock) reuseaddress)
@@ -116,19 +118,19 @@
 (defmethod get-local-name ((usocket usocket))
   (sb-bsd-sockets:socket-name (socket usocket)))
 
-(defmethod get-peer-name ((usocket usocket))
+(defmethod get-peer-name ((usocket stream-usocket))
   (sb-bsd-sockets:socket-peername (socket usocket)))
 
 (defmethod get-local-address ((usocket usocket))
   (nth-value 0 (get-local-name usocket)))
 
-(defmethod get-peer-address ((usocket usocket))
+(defmethod get-peer-address ((usocket stream-usocket))
   (nth-value 0 (get-peer-name usocket)))
 
 (defmethod get-local-port ((usocket usocket))
   (nth-value 1 (get-local-name usocket)))
 
-(defmethod get-peer-port ((usocket usocket))
+(defmethod get-peer-port ((usocket stream-usocket))
   (nth-value 1 (get-peer-name usocket)))
 
 

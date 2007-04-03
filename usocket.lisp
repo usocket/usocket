@@ -304,9 +304,11 @@ passing `*auto-port*'.
 
 Returns an object of type `stream-server-usocket'.
 
-`reuseaddress' and `backlog' are advisory parameters for setting socket
+`reuse-address' and `backlog' are advisory parameters for setting socket
 options at creation time. `element-type' is the element type of the
-streams to be created by `socket-accept'.
+streams to be created by `socket-accept'.  `reuseaddress' is supported for
+backward compatibility (but deprecated); when both `reuseaddress' and
+`reuse-address' have been specified, the latter takes precedence.
 ")
 
 ;; Documentation for the function
