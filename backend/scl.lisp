@@ -43,15 +43,17 @@
 
 (defun socket-listen (host port
                            &key reuseaddress
+                           (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
-  (let* ((host (if (ip= host *wildcard-host*)
-                  0
-                  (host-to-hbo host)))
-        (server-sock (ext:create-inet-listener port :stream
-                                               :host host
-                                               :reuse-address reuseaddress
-                                               :backlog backlog)))
+  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+         (host (if (ip= host *wildcard-host*)
+                   0
+                 (host-to-hbo host)))
+         (server-sock (ext:create-inet-listener port :stream
+                                                :host host
+                                                :reuse-address reuseaddress
+                                                :backlog backlog)))
    (make-stream-server-socket server-sock :element-type element-type)))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)

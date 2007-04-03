@@ -51,11 +51,13 @@
 
 (defun socket-listen (host port
                            &key reuseaddress
+                           (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
   ;; clisp 2.39 sets SO_REUSEADDRESS to 1 by default; no need to
-  ;; to explicitly turn it on.
-   (let ((sock (apply #'socket:socket-server
+  ;; to explicitly turn it on; unfortunately, there's no way to turn it off...
+  (declare (ignore reuseaddress reuse-address))
+  (let ((sock (apply #'socket:socket-server
                      (append (list port
                                    :backlog backlog)
                              (when (ip/= host *wildcard-host*)

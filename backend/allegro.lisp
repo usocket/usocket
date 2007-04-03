@@ -60,11 +60,13 @@
 
 (defun socket-listen (host port
                            &key reuseaddress
+                           (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
   ;; Allegro and OpenMCL socket interfaces bear very strong resemblence
   ;; whatever you change here, change it also for OpenMCL
-  (let ((sock (with-mapped-conditions ()
+  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+         (sock (with-mapped-conditions ()
                  (apply #'socket:make-socket
                         (append (list :connect :passive
                                       :reuse-address reuseaddress

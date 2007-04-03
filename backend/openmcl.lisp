@@ -56,9 +56,11 @@
 
 (defun socket-listen (host port
                            &key reuseaddress
+                           (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
-  (let* ((sock (apply #'openmcl-socket:make-socket
+  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+         (sock (apply #'openmcl-socket:make-socket
                       (append (list :connect :passive
                                     :reuse-address reuseaddress
                                     :local-port port

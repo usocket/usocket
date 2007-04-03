@@ -58,9 +58,11 @@
 
 (defun socket-listen (host port
                            &key reuseaddress
+                           (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'base-char))
-  (let* ((comm::*use_so_reuseaddr* reuseaddress)
+  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+         (comm::*use_so_reuseaddr* reuseaddress)
          (hostname (host-to-hostname host))
          (sock (with-mapped-conditions ()
                   #-lispworks4.1 (comm::create-tcp-socket-for-service

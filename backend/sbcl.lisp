@@ -84,9 +84,11 @@
 
 (defun socket-listen (host port
                            &key reuseaddress
+                           (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
-  (let* ((ip (host-to-vector-quad host))
+  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+         (ip (host-to-vector-quad host))
          (sock (make-instance 'sb-bsd-sockets:inet-socket
                               :type :stream :protocol :tcp)))
     (setf (sb-bsd-sockets:sockopt-reuse-address sock) reuseaddress)

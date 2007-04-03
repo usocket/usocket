@@ -33,9 +33,11 @@
 
 (defun socket-listen (host port
                            &key reuseaddress
+                           (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
-  (let* ((sock-addr (jnew-call ("java.net.InetSocketAddress"
+  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+         (sock-addr (jnew-call ("java.net.InetSocketAddress"
                                 "java.lang.String" "int")
                                (host-to-hostname host) port))
          (sock (jnew-call ("java.net.ServerSocket"))))
