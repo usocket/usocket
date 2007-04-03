@@ -1,5 +1,5 @@
-;;;; $Id: scl.lisp$
-;;;; $URL: svn://common-lisp.net/project/usocket/svn/usocket/trunk/backend/scl.lisp $
+;;;; $Id$
+;;;; $URL$
 
 ;;;; See LICENSE for licensing information.
 
