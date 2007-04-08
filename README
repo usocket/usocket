@@ -8,6 +8,7 @@ Content
  * Introduction
  * Non-support for :external-format
  * API definition
+ * Test suite
  * Known problems
 
 Introduction
@@ -112,6 +113,20 @@ Non-fatal conditions:
  - unkown-condition
 
 
+Test suite
+==========
+
+The test suite unfortunately isn't mature enough yet to run without
+some manual configuration.  Several elements are required which are
+hard to programatically detect.  Please adjust the test file before
+running the tests, for these variables:
+
+- +non-existing-host+: The stringified IP address of a host on the
+     same subnet.  No physical host may be present.
+- +unused-local-port+: A port number of a port not in use on the
+     machine the tests run on.
+- +common-lisp-net+: A vector with 4 integer elements which make up
+     an IP address. This must be the IP "common-lisp.net" resolves to.
 
 
 Known problems
