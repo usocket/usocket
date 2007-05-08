@@ -6,6 +6,7 @@ Content
 =======
 
  * Introduction
+ * Remarks on licensing
  * Non-support for :external-format
  * API definition
  * Test suite
@@ -21,7 +22,7 @@ The library currently supports:
 
  - SBCL
  - CMUCL
- - ArmedBear (post feb 11th, 2006 versions)
+ - ArmedBear (post feb 11th, 2006 CVS or 0.0.10 and higher)
  - clisp
  - Allegro Common Lisp
  - LispWorks
@@ -38,6 +39,16 @@ The library has been ASDF (http://cliki.net/ASDF) enabled, meaning
 that you can tar up a checkout and use that to ASDF-INSTALL:INSTALL
 the package in your system package site.  (Or use your usual ASDF
 tricks to use the checkout directly.)
+
+
+Remarks on licensing
+====================
+
+Even though the source code has an MIT style license attached to it,
+when compiling this code with some of the supported lisp implementations
+you may not end up with an MIT style binary version due to the licensing
+of the implementations themselves.  ECL is such an example and - when
+it will become supported - GCL is like that too.
 
 
 Non-support of :external-format
