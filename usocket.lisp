@@ -279,13 +279,16 @@ to a vector quad."
 
 ;; Documentation for the function
 ;;
-;; (defun SOCKET-CONNECT (host port) ..)
+;; (defun SOCKET-CONNECT (host port &key element-type) ..)
 ;;
 
 (setf (documentation 'socket-connect 'function)
       "Connect to `host' on `port'.  `host' is assumed to be a string or
 an IP address represented in vector notation, such as #(192 168 1 1).
 `port' is assumed to be an integer.
+
+`element-type' specifies the element type to use when constructing the
+stream associated with the socket.  The default is 'character.
 
 Returns a usocket object.")
 
