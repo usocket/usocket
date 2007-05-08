@@ -89,6 +89,13 @@ The returned value is a subtype of `stream-server-usocket'.
                  :socket socket
                  :element-type element-type))
 
+(defgeneric socket-accept (socket &key element-type)
+  (:documentation
+      "Accepts a connection from `socket', returning a `stream-socket'.
+
+The stream associated with the socket returned has `element-type' when
+explicitly specified, or the element-type passed to `socket-listen' otherwise."))
+
 (defgeneric socket-close (usocket)
   (:documentation "Close a previously opened `usocket'."))
 
@@ -314,11 +321,3 @@ backward compatibility (but deprecated); when both `reuseaddress' and
 `reuse-address' have been specified, the latter takes precedence.
 ")
 
-;; Documentation for the function
-;;
-;; (defun SOCKET-ACCEPT (socket &key element-type)
-(setf (documentation 'socket-accept 'function)
-      "Accepts a connection from `socket', returning a `stream-socket'.
-
-The stream associated with the socket returned has `element-type' when
-explicitly specified, or the element-type passed to `socket-listen' otherwise.")
