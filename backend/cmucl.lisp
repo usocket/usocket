@@ -160,3 +160,5 @@
                          (lookup-host-entry name)))
     (condition (condition) (handle-condition condition))))
 
+(defun get-host-name ()
+  (unix:unix-gethostname))
