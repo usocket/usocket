@@ -9,6 +9,22 @@
   (require "comm"))
 
 #+win32
+(fli:register-module "ws2_32")
+
+(fli:define-foreign-function (get-host-name-internal "gethostname" :source)
+      ((return-string (:reference-return (:ef-mb-string :limit 257)))
+       (namelen :int))
+      :lambda-list (&aux (namelen 256) return-string)
+      :result-type :int
+      #+win32 :module #+win32 "ws2_32")
+
+(defun get-host-name ()
+  (multiple-value-bind (retcode name)
+      (get-host-name-internal)
+    (when (= 0 retcode)
+      name)))
+
+#+win32
 (defun remap-maybe-for-win32 (z)
   (mapcar #'(lambda (x)
               (cons (mapcar #'(lambda (y)
