@@ -129,3 +129,6 @@
                    (t
                     (error 'ns-unknown-error :host-or-ip name
                            :real-error errno))))))))
+
+(defun get-host-name ()
+  (unix:unix-gethostname))
