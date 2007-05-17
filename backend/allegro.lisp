@@ -6,7 +6,13 @@
 (in-package :usocket)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (require :sock))
+  (require :sock)
+  ;; note: the line below requires ACL 6.2+
+  (require :osi))
+
+(defun get-host-name ()
+  ;; note: the line below requires ACL 7.0+ to actually *work* on windows
+  (excl.osi:gethostname))
 
 (defparameter +allegro-identifier-error-map+
   '((:address-in-use . address-in-use-error)
