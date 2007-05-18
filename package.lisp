@@ -3,14 +3,15 @@
 
 ;;;; See the LICENSE file for licensing information.
 
-(in-package :cl-user)
+#+lispworks (cl:require "comm")
 
-#+lispworks (require "comm")
-
-(eval-when (:execute :load-toplevel :compile-toplevel)
-  (defpackage :usocket
+(cl:eval-when (:execute :load-toplevel :compile-toplevel)
+  (cl:defpackage :usocket
       (:use :cl)
-    (:export #:socket-connect ; socket constructors and methods
+    (:export #:*wildcard-host*
+             #:*auto-port*
+
+             #:socket-connect ; socket constructors and methods
              #:socket-listen
              #:socket-accept
              #:socket-close
