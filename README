@@ -123,6 +123,8 @@ Non-fatal conditions:
  - interrupted-condition
  - unkown-condition
 
+(for a description of the API methods and functions see
+  http://common-lisp.net/project/usocket/api-docs.shtml.)
 
 Test suite
 ==========
@@ -146,11 +148,6 @@ Known problems
   meaning there's no way to tell different error conditions apart.
   All errors are mapped to unknown-error on CMUCL.
 
-- When running the test suite through the run-usocket-tests.sh shell
-  script, ArmedBear 0.0.9 will report failure - even when it didn't.
-  You need a CVS version later than 2006-02-11, or later than 0.0.9
-  release version for the script to work correctly.
-
 - The ArmedBear backend doesn't do any error mapping (yet). Java
   defines exceptions at the wrong level (IMO), since the exception
   reported bares a relation to the function failing, not the actual
@@ -160,3 +157,21 @@ Known problems
   map 'BindException' to a meaningfull error in usocket. [This does not
   mean the backend should not at least map to 'unknown-error'!]
 
+- When using the library with ECL, you need the C compiler installed
+  to be able to compile and load the Foreign Function Interface.
+  Not all ECL targets support DFFI yet, so on some targets this would
+  be the case anyway.  By depending on this technique, usocket can
+  reuse the FFI code on all platforms (including Windows).  This benefit
+  currently outweighs the additional requirement. (hey, it's *Embeddable*
+  Common Lisp, so, you probably wanted to embed it all along, right?)
+
+- LispWorks has a bug(?) in wait-for-input-streams which make it
+  unsuited for waiting for input on stream socket servers, making it
+  necessary to resort to different  means.  With the absence of notice-fd
+  on Windows, that currenty leaves Windows unsupported.
+
+- SBCL can't use select() on Windows because it would mean porting
+  the FD_* macros and the select structures which I'm not sure
+  is the right way yet (if I need to write custom Win32 code anyway...)
+  The alternative is to use WSAEventSelect() and friends (which don't
+  have a limited number of sockets).
