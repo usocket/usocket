@@ -37,12 +37,20 @@
 
 #+ecl
 (progn
+  #-:wsock
   (ffi:clines
-   #-:wsock
-   "#include <sys/socket.h>"
-   #+:wsock
+   "#include <sys/socket.h>")
+  #+:wsock
+  (ffi:clines
+   "#ifndef FD_SETSIZE"
+   "#define FD_SETSIZE 1024"
+   "#endif"
    "#include <winsock2.h>"
    )
+
+  (defun fd-setsize ()
+    (ffi:c-inline () () fixnum
+     "FD_SETSIZE" :one-liner t))
 
   (defun get-host-name ()
     (ffi:c-inline
@@ -54,7 +62,62 @@
            @(return) = make_simple_base_string(&buf);
         else
            @(return) = Cnil;
-      }")))
+      }"))
+
+  (defun read-select (read-fds to-secs &optional (to-musecs 0))
+    (ffi:c-inline (read-fds to-secs to-musecs) (t t :unsigned-int) t
+      "{
+          fd_set rfds;
+          cl_object cur_fd = #0;
+          int count;
+          int max_fd = -1;
+          struct timeval tv;
+
+          FD_ZERO(&rfds);
+          while (CONSP(cur_fd)) {
+            int fd = fixint(cur_fd->cons.car);
+            max_fd = (max_fd > fd) ? max_fd : fd;
+            FD_SET(fd, &rfds);
+            cur_fd = cur_fd->cons.cdr;
+          }
+
+          if (#1 != Cnil) {
+            tv.tv_sec = fixnnint(#1);
+            tv.tv_usec = #2;
+          }
+          count = select(max_fd + 1, &rfds, NULL, NULL,
+                         (#1 != Cnil) ? &tv : NULL);
+
+          if (count == 0)
+            @(return) = Cnil;
+          else if (count < 0)
+            /*###FIXME: We should be raising an error here...
+
+              except, ofcourse in case of EINTR or EAGAIN */
+
+            @(return) = Cnil;
+          else
+            {
+              cl_object rv = Cnil;
+              cur_fd = #0;
+
+              /* when we're going to use the same code on Windows,
+                 as well as unix, we can't be sure it'll fit into
+                 a fixnum: these aren't unix filehandle bitmaps sets on
+                 Windows... */
+
+              while (CONSP(cur_fd)) {
+                int fd = fixint(cur_fd->cons.car);
+                if (FD_ISSET(fd, &rfds))
+                  rv = make_cons(make_integer(fd), rv);
+
+                cur_fd = cur_fd->cons.cdr;
+              }
+              @(return) = rv;
+            }
+}"))
+
+)
 
 (defun map-socket-error (sock-err)
   (map-errno-error (sb-bsd-sockets::socket-error-errno sock-err)))
@@ -187,3 +250,53 @@
      (sb-bsd-sockets::host-ent-addresses
          (sb-bsd-sockets:get-host-by-name name))))
 
+#+sbcl
+(progn
+  #-win32
+  (defun wait-for-input-internal (sockets &key timeout)
+    (sb-alien:with-alien ((rfds (sb-alien:struct sb-unix:fd-set)))
+     (dolist (socket sockets)
+       (sb-unix:fd-set (sb-bsd-sockets:socket-file-descriptor (socket socket))
+                       rfds))
+     (multiple-value-bind
+         (secs musecs)
+         (split-timeout (or timeout 1))
+       (multiple-value-bind
+           (count err)
+           (sb-unix:unix-fast-select
+               (1+ (reduce #'max (mapcar #'socket sockets)
+                           :key #'sb-bsd-sockets:socket-file-descriptor))
+               (sb-alien:addr rfds) nil nil
+               (when timeout secs) musecs)
+         (if (= 0 err)
+             ;; process the result...
+             (unless (= 0 count)
+               (remove-if
+                #'(lambda (x)
+                    (not (sb-unix:fd-isset
+                          (sb-bsd-sockets:socket-file-descriptor (socket x))
+                          rfds)))
+                sockets))
+           (progn
+             ;;###FIXME generate an error, except for EINTR
+             ))))))
+
+  #+win32
+  (warn "wait-for-input not (yet!) supported...")
+  )
+
+#+ecl
+(progn
+  (defun wait-for-input-internal (sockets &key timeout)
+    (multiple-value-bind
+        (secs usecs)
+        (split-timeout (or timeout 1))
+      (let* ((sock-fds (mapcar #'sb-bsd-sockets:socket-file-descriptor
+                               (mapcar #'socket sockets)))
+             (result-fds (read-select sock-fds (when timeout secs) usecs)))
+        (remove-if #'(lambda (s)
+                       (not (member
+                             (sb-bsd-sockets:socket-file-descriptor (socket s))
+                             result-fds)))
+                   sockets))))
+  )

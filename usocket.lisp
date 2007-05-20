@@ -49,6 +49,15 @@ with the `socket-close' method or by closing the associated stream
   (:documentation "Socket which listens for stream connections to
 be initiated from remote sockets."))
 
+(defun usocket-p (socket)
+  (typep socket 'usocket))
+
+(defun stream-usocket-p (socket)
+  (typep socket 'stream-usocket))
+
+(defun stream-server-usocket-p (socket)
+  (typep socket 'stream-server-usocket))
+
 ;;Not in use yet:
 ;;(defclass datagram-usocket (usocket)
 ;;  ()
@@ -167,6 +176,38 @@ The `body' is an implied progn form."
       ,@body))
 
 
+(defgeneric wait-for-input (socket-or-sockets
+                            &key timeout)
+  (:documentation
+"Waits for one or more streams to become ready for reading from
+the socket.  When `timeout' (a non-negative real number) is
+specified, wait `timeout' seconds, or wait indefinitely when
+it isn't specified.  A `timeout' value of 0 (zero) means polling.
+
+Returns two values: the first value is the list of streams which
+are readable (or in case of server streams acceptable).  NIL may
+be returned for this value either when waiting timed out or when
+it was interrupted (EINTR).  The second value is a real number
+indicating the time remaining within the timeout period or NIL if
+none."))
+
+
+(defmethod wait-for-input (socket-or-sockets &key timeout)
+  (let* ((start (get-internal-real-time))
+         ;; the internal routine is responsibe for
+         ;; making sure the wait doesn't block on socket-streams of
+         ;; which the socket isn't ready, but there's space left in the
+         ;; buffer
+         (result (wait-for-input-internal
+                  (if (listp socket-or-sockets) socket-or-sockets
+                    (list socket-or-sockets))
+                  :timeout timeout)))
+    (values result
+            (let ((elapsed (/ (- (get-internal-real-time) start)
+                              internal-time-units-per-second)))
+              (when (< elapsed timeout)
+                (- timeout elapsed))))))
+
 ;;
 ;; IP(v4) utility functions
 ;;
@@ -281,6 +322,22 @@ to a vector quad."
       (integer host))))
 
 ;;
+;; Other utility functions
+;;
+
+(defun split-timeout (timeout &optional (fractional 1000000))
+  "Split real value timeout into seconds and microseconds.
+Optionally, a different fractional part can be specified."
+  (multiple-value-bind
+      (secs sec-frac)
+      (truncate timeout 1)
+    (values secs
+            (truncate (* fractional sec-frac) 1))))
+
+
+
+
+;;
 ;; Setting of documentation for backend defined functions
 ;;
 
@@ -320,4 +377,3 @@ streams to be created by `socket-accept'.  `reuseaddress' is supported for
 backward compatibility (but deprecated); when both `reuseaddress' and
 `reuse-address' have been specified, the latter takes precedence.
 ")
-

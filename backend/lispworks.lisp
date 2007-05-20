@@ -16,7 +16,8 @@
        (namelen :int))
       :lambda-list (&aux (namelen 256) return-string)
       :result-type :int
-      #+win32 :module #+win32 "ws2_32")
+      #+win32 :module
+      #+win32 "ws2_32")
 
 (defun get-host-name ()
   (multiple-value-bind (retcode name)
@@ -134,3 +135,33 @@
   (with-mapped-conditions ()
      (mapcar #'hbo-to-vector-quad
              (comm:get-host-entry name :fields '(:addresses)))))
+
+(defun os-socket-handle (usocket)
+  (if (stream-usocket-p usocket)
+      (comm:socket-stream-socket (socket usocket))
+    (socket usocket)))
+
+(defun usocket-listen (usocket)
+  (if (stream-usocket-p usocket)
+      (when (listen (socket usocket))
+        usocket)
+    (when (comm::socket-listen (socket usocket))
+      usocket)))
+
+#-win32
+(defun wait-for-input-internal (sockets &key timeout)
+  ;; unfortunately, it's impossible to share code between
+  ;; non-win32 and win32 platforms...
+  ;; Can we have a sane -pref. complete [UDP!?]- API next time, please?
+  (mapcar #'mp:notice-fd sockets
+          :key #'os-socket-handle)
+  (mp:process-wait-with-timeout "Waiting for a socket to become active"
+                                (truncate timeout)
+                                #'(lambda (socks)
+                                    (some #'usocket-listen socks))
+                                sockets)
+  (mapcar #'mp:unnotice-fd sockets
+          :key #'os-socket-handle)
+  (loop for r in (mapcar #'usocket-listen sockets)
+        if r
+        collect r))

@@ -15,6 +15,7 @@
              #:socket-listen
              #:socket-accept
              #:socket-close
+             #:wait-for-input
              #:get-local-address
              #:get-peer-address
              #:get-local-port

@@ -124,3 +124,22 @@
 (defmethod get-peer-port ((usocket stream-usocket))
   (nth-value 1 (get-peer-name usocket)))
 
+
+(defmethod wait-for-input-internal (sockets &key timeout)
+  (multiple-value-bind
+      (secs musecs)
+      (split-timeout (or timeout 1))
+    (let* ((musecs (truncate (* 1000000 sec-frac) 1))
+           (request-list (mapcar #'(lambda (x)
+                                     (if (stream-server-usocket-p x)
+                                         (socket x)
+                                       (list (socket x) :input)))
+                                 sockets))
+           (status-list (if timeout
+                            (socket:socket-status request-list secs musecs)
+                          (socket:socket-status request-list))))
+      (remove nil
+              (mapcar #'(lambda (x y)
+                          (when y x))
+                      sockets status-list)))))
+

@@ -5,6 +5,13 @@
 
 (in-package :usocket)
 
+(eval-when (:compile-toplevel :execute)
+  ;; also present in OpenMCL l1-sockets.lisp
+  #+linuxppc-target
+  (require "LINUX-SYSCALLS")
+  #+darwinppc-target
+  (require "DARWIN-SYSCALLS"))
+
 (defun get-host-name ()
   (ccl::%stack-block ((resultbuf 256))
     (when (zerop (#_gethostname resultbuf 256))
@@ -36,24 +43,20 @@
                         (errfds ccl::*fd-set-size*))
       (ccl::fd-zero infds)
       (ccl::fd-zero errfds)
-      (dolist (sock sockets)
-        (ccl::fd-set (socket-os-fd sock infds))
-        (ccl::fd-set (socket-os-fd sock errfds)))
-      (let* ((res (ccl::syscall syscalls::select
-                                (1+ (apply #'max fds))
-                                infds (ccl::%null-ptr) errfds
-                                (if ticks-to-wait tv (ccl::%null-ptr)))))
-        (when (> res 0)
-          (remove-if #'(lambda (x)
-                         (not (ccl::fd-is-set (socket-os-fd x) infds)))
-                     sockets))))))
-
-(defun wait-for-input (sockets &optional ticks-to-wait)
-  (let ((wait-end (when ticks-to-wait (+ ticks-to-wait (ccl::get-tick-count)))))
-    (do ((res (input-available-p sockets ticks-to-wait)
-              (input-available-p sockets ticks-to-wait)))
-        ((or res (< wait-end (ccl::get-tick-count)))
-         res))))
+      (let ((max-fd -1))
+        (dolist (sock sockets)
+          (let ((fd (openmcl-socket:socket-os-fd sock)))
+            (setf max-fd (max max-fd fd))
+            (ccl::fd-set fd infds)
+            (ccl::fd-set fd errfds)))
+        (let* ((res (ccl::syscall syscalls::select (1+ max-fd)
+                                  infds (ccl::%null-ptr) errfds
+                                  (if ticks-to-wait tv (ccl::%null-ptr)))))
+          (when (> res 0)
+            (remove-if #'(lambda (x)
+                           (not (ccl::fd-is-set (openmcl-socket:socket-os-fd x)
+                                                infds)))
+                       sockets)))))))
 
 (defun raise-error-from-id (condition-id socket real-condition)
   (let ((usock-err (cdr (assoc condition-id +openmcl-error-map+))))
@@ -142,3 +145,19 @@
   (with-mapped-conditions ()
      (list (hbo-to-vector-quad (openmcl-socket:lookup-hostname
                                 (host-to-hostname name))))))
+
+(defun wait-for-input-internal (sockets &key timeout)
+  (let* ((ticks-timeout (truncate (* (or timeout 1) ccl::*ticks-per-second*)))
+         (active-internal-sockets
+          (input-available-p (mapcar #'socket sockets)
+                             (when timeout ticks-timeout))))
+    ;; this is quadratic, but hey, the active-internal-sockets
+    ;; list is very short and it's only quadratic in the length of that one.
+    ;; When I have more time I could recode it to something of linear
+    ;; complexity.
+    ;; [Same code is also used in lispworks.lisp, allegro.lisp]
+    (remove-if #'(lambda (x)
+                   (not (member (socket x) active-internal-sockets)))
+               sockets)))
+
+

@@ -162,3 +162,26 @@
 
 (defun get-host-name ()
   (unix:unix-gethostname))
+
+(defun wait-for-input-internal (sockets &key timeout)
+  (alien:with-alien ((rfds (alien:struct unix:fd-set)))
+     (dolist (socket sockets)
+       (unix:fd-set (socket socket) rfds))
+     (multiple-value-bind
+         (secs musecs)
+         (split-timeout (or timeout 1))
+       (multiple-value-bind
+           (count err)
+           (unix:unix-fast-select (1+ (reduce #'max sockets
+                                              :key #'socket))
+                                  (alien:addr rfds) nil nil
+                                  (when timeout secs) musecs)
+         (if (= 0 err)
+             ;; process the result...
+             (unless (= 0 count)
+               (remove-if #'(lambda (x)
+                              (not (unix:fd-isset (socket x) rfds)))
+                          sockets))
+           (progn
+             ;;###FIXME generate an error, except for EINTR
+             ))))))

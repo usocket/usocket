@@ -7,6 +7,8 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require :sock)
+  ;; for wait-for-input:
+  (require :process)
   ;; note: the line below requires ACL 6.2+
   (require :osi))
 
@@ -122,3 +124,18 @@
   (with-mapped-conditions ()
     (list (hbo-to-vector-quad (socket:lookup-hostname
                                (host-to-hostname name))))))
+
+(defun wait-for-input-internal (sockets &key timeout)
+  (let ((active-internal-sockets
+         (if timeout
+             (mp:wait-for-input-available (mapcar #'socket sockets)
+                                          :timeout timeout)
+           (mp:wait-for-input-available (mapcar #'socket sockets)))))
+    ;; this is quadratic, but hey, the active-internal-sockets
+    ;; list is very short and it's only quadratic in the length of that one.
+    ;; When I have more time I could recode it to something of linear
+    ;; complexity.
+    ;; [Same code is also used in lispworks.lisp, openmcl.lisp]
+    (remove-if #'(lambda (x)
+                   (not (member (socket x) active-internal-sockets)))
+               sockets)))
