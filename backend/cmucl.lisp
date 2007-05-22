@@ -165,6 +165,7 @@
 
 (defun wait-for-input-internal (sockets &key timeout)
   (alien:with-alien ((rfds (alien:struct unix:fd-set)))
+     (unix:fd-zero rfds)
      (dolist (socket sockets)
        (unix:fd-set (socket socket) rfds))
      (multiple-value-bind
@@ -176,12 +177,11 @@
                                               :key #'socket))
                                   (alien:addr rfds) nil nil
                                   (when timeout secs) musecs)
-         (if (= 0 err)
+         (if (<= 0 count)
              ;; process the result...
-             (unless (= 0 count)
-               (remove-if #'(lambda (x)
-                              (not (unix:fd-isset (socket x) rfds)))
-                          sockets))
+             (remove-if #'(lambda (x)
+                            (not (unix:fd-isset (socket x) rfds)))
+                        sockets)
            (progn
              ;;###FIXME generate an error, except for EINTR
              ))))))
