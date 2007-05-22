@@ -129,8 +129,7 @@
   (multiple-value-bind
       (secs musecs)
       (split-timeout (or timeout 1))
-    (let* ((musecs (truncate (* 1000000 sec-frac) 1))
-           (request-list (mapcar #'(lambda (x)
+    (let* ((request-list (mapcar #'(lambda (x)
                                      (if (stream-server-usocket-p x)
                                          (socket x)
                                        (list (socket x) :input)))
