@@ -6,6 +6,142 @@
 (in-package :usocket)
 
 
+;;;;; Proposed contribution to the JAVA package
+
+(defpackage :jdi
+  (:use :cl)
+  (:export #:jcoerce
+           #:jop-deref
+           #:do-jmethod-call
+           #:do-jmethod
+           #:do-jstatic-call
+           #:do-jstatic
+           #:do-jnew-call
+           #:do-jfield
+           #:jequals))
+;; but still requires the :java package.
+
+(in-package :jdi)
+
+(defstruct (java-object-proxy (:conc-name :jop-)
+                              :copier)
+  value
+  class)
+
+(defvar *jm-get-return-type*
+  (java:jmethod "java.lang.reflect.Method" "getReturnType"))
+
+(defvar *jf-get-type*
+  (java:jmethod "java.lang.reflect.Field" "getType"))
+
+(defvar *jc-get-declaring-class*
+  (java:jmethod "java.lang.reflect.Constructor" "getDeclaringClass"))
+
+(declaim (inline make-return-type-proxy))
+(defun make-return-type-proxy (jmethod jreturned-value)
+  (if (java:java-object-p jreturned-value)
+      (let ((rt (java:jcall *jm-get-return-type* jmethod)))
+        (make-java-object-proxy :value jreturned-value
+                                :class rt))
+    jreturned-value))
+
+(defun make-field-type-proxy (jfield jreturned-value)
+  (if (java:java-object-p jreturned-value)
+      (let ((rt (java:jcall *jf-get-type* jfield)))
+        (make-java-object-proxy :value jreturned-value
+                                :class rt))
+    jreturned-value))
+
+(defun make-constructor-type-proxy (jconstructor jreturned-value)
+  (if (java:java-object-p jreturned-value)
+      (let ((rt (java:jcall *jc-get-declaring-class* jconstructor)))
+        (make-java-object-proxy :value jreturned-value
+                                :class rt))
+    jreturned-value))
+
+(defun jcoerce (instance &optional output-type-spec)
+  (cond
+   ((java-object-proxy-p instance)
+    (let ((new-instance (copy-structure (the java-object-proxy instance))))
+      (setf (jop-class new-instance)
+            (java:jclass output-type-spec))
+      new-instance))
+   ((java:java-object-p instance)
+    (make-java-object-proxy :class (java:jclass output-type-spec)
+                            :value instance))
+   ((stringp instance)
+    (make-java-object-proxy :class "java.lang.String"
+                            :value instance))
+   ((keywordp output-type-spec)
+    ;; all that remains is creating an immediate type...
+    (let ((jval (java:make-immediate-object instance output-type-spec)))
+      (make-java-object-proxy :class output-type-spec
+                              :value jval)))
+   ))
+
+(defun jtype-of (instance) ;;instance must be a jop
+  (cond
+   ((stringp instance)
+    "java.lang.String")
+   ((keywordp (jop-class instance))
+    (string-downcase (symbol-name (jop-class instance))))
+   (t
+    (java:jclass-name (jop-class instance)))))
+
+(defun jop-deref (instance)
+  (if (java-object-proxy-p instance)
+      (jop-value instance)
+    instance))
+
+(defun java-value-and-class (object)
+  (values (jop-deref object)
+          (jtype-of object)))
+
+(defun do-jmethod-call (object method-name &rest arguments)
+  (multiple-value-bind
+      (instance class-name)
+      (java-value-and-class object)
+    (let* ((argument-types (mapcar #'jtype-of arguments))
+           (jm (apply #'java:jmethod class-name method-name argument-types))
+           (rv (apply #'java:jcall jm instance
+                      (mapcar #'jop-deref arguments))))
+      (make-return-type-proxy jm rv))))
+
+(defun do-jstatic-call (class-name method-name &rest arguments)
+  (let* ((argument-types (mapcar #'jtype-of arguments))
+         (jm (apply #'java:jmethod class-name method-name argument-types))
+         (rv (apply #'java:jstatic jm (java:jclass class-name)
+                    (mapcar #'jop-deref arguments))))
+    (make-return-type-proxy jm rv)))
+
+(defun do-jnew-call (class-name &rest arguments)
+  (let* ((argument-types (mapcar #'jtype-of arguments))
+         (jm (apply #'java:jconstructor class-name argument-types))
+         (rv (apply #'java:jnew jm (mapcar #'jop-deref arguments))))
+    (make-constructor-type-proxy jm rv)))
+
+(defun do-jfield (class-or-instance-or-name field-name)
+  (let* ((class (cond
+                 ((stringp class-or-instance-or-name)
+                  (java:jclass class-or-instance-or-name))
+                 ((java:java-object-p class-or-instance-or-name)
+                  (java:jclass-of class-or-instance-or-name))
+                 ((java-object-proxy-p class-or-instance-or-name)
+                  (java:jclass (jtype-of class-or-instance-or-name)))))
+         (jf (java:jcall (java:jmethod "java.lang.Class" "getField"
+                                       "java.lang.String")
+                         class field-name)))
+    (make-field-type-proxy jf
+                           (java:jfield class field-name)))) ;;class))))
+
+(defmacro do-jstatic (&rest arguments)
+  `(do-jstatic-call ,@arguments))
+
+(defmacro do-jmethod (&rest arguments)
+  `(do-jmethod-call ,@arguments))
+
+;;
+
 (defmacro jstatic-call (class-name (method-name &rest arg-spec)
                                    &rest args)
   (let ((class-sym (gensym)))
@@ -29,21 +165,21 @@
                      ,isym ,@args)))))
 
 (defun jequals (x y)
-  (jmethod-call (x "java.lang.Object")
-                ("equals" "java.lang.Object")
-                y))
+  (do-jmethod-call (jcoerce x "java.lang.Object") "equals"
+                   (jcoerce y "java.lang.Object")))
 
 (defmacro jnew-call ((class &rest arg-spec) &rest args)
   `(java:jnew (java:jconstructor ,class ,@arg-spec)
          ,@args))
 
+
+
+(in-package :usocket)
+
 (defun get-host-name ()
-  (let ((localAddress (java:jstatic
-                       (java:jmethod "java.net.InetAddress"
-                                     "getLocalHost")
-                       (java:jclass "java.net.InetAddress"))))
-    (java:jcall (java:jmethod "java.net.InetAddress" "getHostName")
-                localAddress)))
+  (jdi:do-jmethod-call (jdi:do-jstatic-call "java.net.InetAddress"
+                                            "getLocalHost")
+                       "getHostName"))
 
 (defun handle-condition (condition &optional socket)
   (typecase condition
@@ -52,11 +188,19 @@
 (defun socket-connect (host port &key (element-type 'character))
   (let ((usock))
     (with-mapped-conditions (usock)
-       (let ((sock (ext:make-socket (host-to-hostname host) port)))
+      (let* ((sock-addr (jdi:jcoerce
+                         (jdi:do-jnew-call "java.net.InetSocketAddress"
+                                           (host-to-hostname host)
+                                           (jdi:jcoerce port :int))
+                         "java.net.SocketAddress"))
+             (jchan (jdi:do-jstatic-call "java.nio.channels.SocketChannel"
+                                         "open" sock-addr))
+             (sock (jdi:do-jmethod-call jchan "socket")))
+        (describe sock)
          (setf usock
                (make-stream-socket
                 :socket sock
-                :stream (ext:get-socket-stream sock
+                :stream (ext:get-socket-stream (jdi:jop-deref sock)
                                                :element-type element-type)))))))
 
 (defun socket-listen (host port
@@ -65,27 +209,28 @@
                            (backlog 5)
                            (element-type 'character))
   (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
-         (sock-addr (jnew-call ("java.net.InetSocketAddress"
-                                "java.lang.String" "int")
-                               (host-to-hostname host) port))
-         (chan (jstatic-call "java.nio.channels.ServerSocketChannel" ("open")))
-         (sock (java:jcall
-                (java:jmethod "java.nio.channels.ServerSocketChannel"
-                              "socket") chan)))
+         (sock-addr (jdi:do-jnew-call "java.net.InetSocketAddress"
+                                      (host-to-hostname host)
+                                      (jdi:jcoerce port :int)))
+         (chan (jdi:do-jstatic-call "java.nio.channels.ServerSocketChannel"
+                                    "open"))
+         (sock (jdi:do-jmethod-call chan "socket")))
     (when reuseaddress
-      (jmethod-call sock
-                    ("setReuseAddress" "boolean")
-                    (java:make-immediate-object reuseaddress :boolean)))
-    (jmethod-call sock
-                  ("bind" "java.net.SocketAddress" "int")
-                  sock-addr backlog)
+      (jdi:do-jmethod-call sock
+                           "setReuseAddress"
+                           (jdi:jcoerce reuseaddress :boolean)))
+    (jdi:do-jmethod-call sock
+                         "bind"
+                         (jdi:jcoerce sock-addr
+                                      "java.net.SocketAddress")
+                         (jdi:jcoerce backlog :int))
     (make-stream-server-socket sock :element-type element-type)))
 
 (defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (let* ((jsock (socket socket))
-         (jacc-sock (jmethod-call jsock ("accept")))
+         (jacc-sock (jdi:do-jmethod-call jsock "accept"))
          (jacc-stream
-          (ext:get-socket-stream jacc-sock
+          (ext:get-socket-stream (jdi:jop-deref jacc-sock)
                                  :element-type (or element-type
                                                    (element-type socket)))))
     (make-stream-socket :socket jacc-sock
@@ -167,59 +312,20 @@ return the function result list.
 
 |#
 
-(defun jsocket-channel (jsocket)
-  (jmethod-call jsocket ("getChannel")))
-
-(defun jselkey-channel (jselectionkey)
-  (jmethod-call (jselectionkey "java.nio.channels.SelectionKey")
-                ("channel")))
-
 (defun op-read ()
-  (java:jfield (java:jclass "java.nio.channels.SelectionKey")
-               "OP_READ"))
+  (jdi:do-jfield "java.nio.channels.SelectionKey"
+                 "OP_READ"))
 
 (defun op-accept ()
-  (java:jfield (java:jclass "java.nio.channels.SelectionKey")
-               "OP_ACCEPT"))
+  (jdi:do-jfield "java.nio.channels.SelectionKey"
+                 "OP_ACCEPT"))
 
 (defun op-connect ()
-  (java:jfield (java:jclass "java.nio.channels.SelectionKey")
-               "OP_CONNECT"))
+  (jdi:do-jfield "java.nio.channels.SelectionKey"
+                 "OP_CONNECT"))
 
 (defun valid-ops (jchannel)
-  (jmethod-call (jchannel "java.nio.channels.SelectableChannel")
-                ("validOps")))
-
-(defun register (jchannel jselector ops)
-  (jmethod-call (jchannel "java.nio.channels.SelectableChannel")
-                ("register" "java.nio.channels.Selector" "int")
-                jselector ops))
-
-(defun toggle-blocking (jchannel mode)
-  (jmethod-call (jchannel "java.nio.channels.SelectableChannel")
-                ("configureBlocking" "boolean")
-                mode))
-
-(defun jselector-select (jselector timeout)
-  (let ((to (truncate (* (or timeout 0) 1000))))
-    (if (/= timeout 0)
-        (jmethod-call (jselector "java.nio.channels.Selector")
-                      ("select" "long") to)
-      (jmethod-call (jselector "java.nio.channels.Selector")
-                    ("selectNow")))))
-
-(defun jselector-selected-keys (jselector)
-  (jmethod-call (jselector "java.nio.channels.Selector")
-                ("selectedKeys")))
-
-(defun jset-iterator (jset)
-  (jmethod-call (jset "java.util.Set") ("iterator")))
-
-(defun jiterator-has-next (jiterator)
-  (jmethod-call (jiterator "java.util.Iterator") ("hasNext")))
-
-(defun jiterator-next (jiterator)
-  (jmethod-call (jiterator "java.util.Iterator") ("next")))
+  (jdi:do-jmethod-call jchannel "validOps"))
 
 (defun channel-class (jchannel)
   (let ((valid-ops (valid-ops jchannel)))
@@ -232,46 +338,56 @@ return the function result list.
 
 (defun wait-for-input-internal (sockets &key timeout)
   (let* ((ops (logior (op-read) (op-accept)))
-         (selector (jstatic-call "java.nio.channels.Selector" ("open")))
+         (selector (jdi:do-jstatic "java.nio.channels.Selector" "open"))
          (channels
           (mapcar #'(lambda (s)
-                      (jsocket-channel (socket s)))
+                      (jdi:jcoerce (jdi:do-jmethod-call (socket s) "getChannel")
+                                   "java.nio.channels.SocketChannel"))
                   sockets)))
     (unwind-protect
-        (progn
-          (let ((jfalse (java:make-immediate-object nil :boolean)))
+       (with-mapped-conditions ()
+          (let ((jfalse (jdi:jcoerce nil :boolean)))
             (dolist (channel channels)
-              (toggle-blocking channel jfalse)
-              (register channel selector (logand ops (valid-ops channel)))))
+              (jdi:do-jmethod channel "configureBlocking" jfalse)
+              (jdi:do-jmethod channel "register"
+                              selector
+                              (jdi:jcoerce (logand ops (valid-ops channel))
+                                           :int))))
           (let ((ready-count
-                 (jselector-select selector timeout)))
+                 (jdi:do-jmethod selector "select" (jdi:jcoerce
+                                                    (truncate (* timeout 1000))
+                                                    :long))))
             (when (< 0 ready-count)
               ;; we actually have work to do
-              (let* ((selkeys (jselector-selected-keys selector))
-                     (selkey-iterator (jset-iterator selkeys))
+              (let* ((selkeys (jdi:do-jmethod selector "selectedKeys"))
+                     (selkey-iterator (jdi:do-jmethod selkeys "iterator"))
                      ready-sockets)
-                (loop while (jiterator-has-next selkey-iterator)
-                      do (let* ((key (jiterator-next selkey-iterator))
-                                (chan (jselkey-channel key)))
-                           (push (jmethod-call (chan (channel-class chan))
-                                               ("socket"))
+                (loop while (jdi:do-jmethod selkey-iterator "hasNext")
+                      do (let* ((key (jdi:jcoerce
+                                      (jdi:do-jmethod selkey-iterator "next")
+                                      "java.nio.channels.SelectionKey"))
+                                (chan (jdi:do-jmethod key "channel")))
+                           (push (jdi:do-jmethod
+                                  (jdi:jcoerce chan
+                                               (channel-class chan))
+                                             "socket")
                                  ready-sockets)))
-                (print ready-sockets)
-                (print (remove-if #'(lambda (s)
-                                      (not (member (socket s) ready-sockets
-                                                   :test #'jequals)))
-                                  sockets))))))
+                (remove-if #'(lambda (s)
+                               (not (member (socket s) ready-sockets
+                                            :key #'jdi:jop-deref
+                                            :test #'jdi:jequals)))
+                                  sockets)))))
       ;; cancel all Selector registrations
-      (let* ((keys (jmethod-call (selector "java.nio.channels.Selector")
-                                 ("keys")))
-             (iter (jset-iterator keys)))
-        (loop while (jiterator-has-next iter)
-              do (jmethod-call ((jiterator-next iter)
-                                "java.nio.channels.SelectionKey")
-                               ("cancel"))))
-      ;; close the selectorx
-      (jmethod-call (selector "java.nio.channels.Selector") ("close"))
+      (let* ((keys (jdi:do-jmethod selector "keys"))
+             (iter (jdi:do-jmethod keys "iterator")))
+        (loop while (jdi:do-jmethod iter "hasNext")
+              do (jdi:do-jmethod (jdi:jcoerce (jdi:do-jmethod iter "next")
+                                              "java.nio.channels.SelectionKey")
+                                 "cancel")))
+      ;; close the selector
+      (jdi:do-jmethod selector "close")
       ;; make all sockets blocking again.
-      (let ((jtrue (java:make-immediate-object t :boolean)))
+      (let ((jtrue (jdi:jcoerce t :boolean)))
         (dolist (chan channels)
-          (toggle-blocking chan jtrue))))))
+          (jdi:do-jmethod chan "configureBlocking" jtrue))))))
+
