@@ -199,7 +199,7 @@
         (describe sock)
          (setf usock
                (make-stream-socket
-                :socket sock
+                :socket jchan
                 :stream (ext:get-socket-stream (jdi:jop-deref sock)
                                                :element-type element-type)))))))
 
@@ -224,16 +224,17 @@
                          (jdi:jcoerce sock-addr
                                       "java.net.SocketAddress")
                          (jdi:jcoerce backlog :int))
-    (make-stream-server-socket sock :element-type element-type)))
+    (make-stream-server-socket chan :element-type element-type)))
 
 (defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (let* ((jsock (socket socket))
-         (jacc-sock (jdi:do-jmethod-call jsock "accept"))
+         (jacc-chan (jdi:do-jmethod-call jsock "accept"))
          (jacc-stream
-          (ext:get-socket-stream (jdi:jop-deref jacc-sock)
+          (ext:get-socket-stream (jdi:jop-deref
+                                  (jdi:do-jmethod-call jacc-chan "socket"))
                                  :element-type (or element-type
                                                    (element-type socket)))))
-    (make-stream-socket :socket jacc-sock
+    (make-stream-socket :socket jacc-chan
                         :stream jacc-stream)))
 
 ;;(defun print-java-exception (e)
@@ -242,7 +243,7 @@
 
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)
-    (ext:socket-close (socket usocket))))
+    (jdi:do-method (socket usocket) "close")))
 
 ;; Socket streams are different objects than
 ;; socket streams. Closing the stream flushes
@@ -336,58 +337,79 @@ return the function result list.
           (t
            "java.nio.channels.DatagramChannel"))))
 
+(defun socket-channel-class (socket)
+  (cond
+   ((stream-usocket-p socket)
+    "java.nio.channels.SocketChannel")
+   ((stream-server-usocket-p socket)
+    "java.nio.channels.ServerSocketChannel")
+   ((datagram-usocket-p socket)
+    "java.nio.channels.DatagramChannel")))
+
 (defun wait-for-input-internal (sockets &key timeout)
   (let* ((ops (logior (op-read) (op-accept)))
          (selector (jdi:do-jstatic "java.nio.channels.Selector" "open"))
-         (channels
-          (mapcar #'(lambda (s)
-                      (jdi:jcoerce (jdi:do-jmethod-call (socket s) "getChannel")
-                                   "java.nio.channels.SocketChannel"))
-                  sockets)))
+         (channels (mapcar #'socket sockets)))
     (unwind-protect
-       (with-mapped-conditions ()
-          (let ((jfalse (jdi:jcoerce nil :boolean)))
+;;       (with-mapped-conditions ()
+        (progn
+          (let ((jfalse (java:make-immediate-object nil :boolean))
+                (sel (jdi:jop-deref selector)))
             (dolist (channel channels)
-              (jdi:do-jmethod channel "configureBlocking" jfalse)
-              (jdi:do-jmethod channel "register"
-                              selector
-                              (jdi:jcoerce (logand ops (valid-ops channel))
-                                           :int))))
-          (let ((ready-count
-                 (jdi:do-jmethod selector "select" (jdi:jcoerce
-                                                    (truncate (* timeout 1000))
-                                                    :long))))
-            (when (< 0 ready-count)
-              ;; we actually have work to do
-              (let* ((selkeys (jdi:do-jmethod selector "selectedKeys"))
-                     (selkey-iterator (jdi:do-jmethod selkeys "iterator"))
-                     ready-sockets)
-                (loop while (jdi:do-jmethod selkey-iterator "hasNext")
-                      do (let* ((key (jdi:jcoerce
-                                      (jdi:do-jmethod selkey-iterator "next")
-                                      "java.nio.channels.SelectionKey"))
-                                (chan (jdi:do-jmethod key "channel")))
-                           (push (jdi:do-jmethod
-                                  (jdi:jcoerce chan
-                                               (channel-class chan))
-                                             "socket")
-                                 ready-sockets)))
-                (remove-if #'(lambda (s)
-                               (not (member (socket s) ready-sockets
-                                            :key #'jdi:jop-deref
-                                            :test #'jdi:jequals)))
-                                  sockets)))))
+              (let ((chan (jdi:jop-deref channel)))
+                (java:jcall (java:jmethod "java.nio.channels.SelectableChannel"
+                                          "configureBlocking"
+                                          "boolean")
+                            chan jfalse)
+                (java:jcall (java:jmethod "java.nio.channels.SelectableChannel"
+                                          "register"
+                                          "java.nio.channels.Selector" "int")
+                            chan sel (logand ops (valid-ops channel)))))
+            (let ((ready-count
+                   (java:jcall (java:jmethod "java.nio.channels.Selector"
+                                             "select"
+                                             "long")
+                               sel (truncate (* timeout 1000)))))
+              (when (< 0 ready-count)
+                ;; we actually have work to do
+                (let* ((selkeys (jdi:do-jmethod selector "selectedKeys"))
+                       (selkey-iterator (jdi:do-jmethod selkeys "iterator"))
+                       ready-sockets)
+                  (loop while (java:jcall
+                               (java:jmethod "java.util.Iterator" "hasNext")
+                               (jdi:jop-deref selkey-iterator))
+                        do (let* ((key (jdi:jcoerce
+                                        (jdi:do-jmethod selkey-iterator "next")
+                                        "java.nio.channels.SelectionKey"))
+                                  (chan (jdi:jop-deref
+                                         (jdi:do-jmethod key "channel"))))
+                             (push chan ready-sockets)))
+                  (remove-if #'(lambda (s)
+                                 (not (member (jdi:jop-deref (socket s))
+                                              ready-sockets
+                                              :test #'(lambda (x y)
+                                                        (java:jcall (java:jmethod "java.lang.Object"
+                                                                             "equals"
+                                                                             "java.lang.Object")
+                                                                    x y)))))
+                             sockets))))))
       ;; cancel all Selector registrations
       (let* ((keys (jdi:do-jmethod selector "keys"))
              (iter (jdi:do-jmethod keys "iterator")))
-        (loop while (jdi:do-jmethod iter "hasNext")
-              do (jdi:do-jmethod (jdi:jcoerce (jdi:do-jmethod iter "next")
-                                              "java.nio.channels.SelectionKey")
-                                 "cancel")))
+        (loop while (java:jcall (java:jmethod "java.util.Iterator" "hasNext")
+                                (jdi:jop-deref iter))
+              do (java:jcall
+                  (java:jmethod "java.nio.channels.SelectionKey" "cancel")
+                  (java:jcall (java:jmethod "java.util.Iterator" "next")
+                              (jdi:jop-deref iter)))))
       ;; close the selector
-      (jdi:do-jmethod selector "close")
+      (java:jcall (java:jmethod "java.nio.channels.Selector" "close")
+                  (jdi:jop-deref selector))
       ;; make all sockets blocking again.
-      (let ((jtrue (jdi:jcoerce t :boolean)))
+      (let ((jtrue (java:make-immediate-object t :boolean)))
         (dolist (chan channels)
-          (jdi:do-jmethod chan "configureBlocking" jtrue))))))
+          (java:jcall (java:jmethod "java.nio.channels.SelectableChannel"
+                                          "configureBlocking"
+                                          "boolean")
+                      (jdi:jop-deref chan) jtrue))))))
 
