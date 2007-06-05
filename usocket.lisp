@@ -296,7 +296,8 @@ such as 3232235777."
 
   (defun get-random-host-by-name (name)
     (let ((hosts (get-hosts-by-name name)))
-      (elt hosts (random (length hosts)))))
+      (when hosts
+        (elt hosts (random (length hosts))))))
 
   (defun host-to-vector-quad (host)
     "Translate a host specification (vector quad, dotted quad or domain name)
