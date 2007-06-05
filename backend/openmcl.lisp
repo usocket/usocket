@@ -144,17 +144,18 @@
                                 (host-to-hostname name))))))
 
 (defun wait-for-input-internal (sockets &key timeout)
-  (let* ((ticks-timeout (truncate (* (or timeout 1) ccl::*ticks-per-second*)))
-         (active-internal-sockets
-          (input-available-p (mapcar #'socket sockets)
-                             (when timeout ticks-timeout))))
-    ;; this is quadratic, but hey, the active-internal-sockets
-    ;; list is very short and it's only quadratic in the length of that one.
-    ;; When I have more time I could recode it to something of linear
-    ;; complexity.
-    ;; [Same code is also used in lispworks.lisp, allegro.lisp]
-    (remove-if #'(lambda (x)
-                   (not (member (socket x) active-internal-sockets)))
-               sockets)))
+  (with-mapped-conditions ()
+    (let* ((ticks-timeout (truncate (* (or timeout 1) ccl::*ticks-per-second*)))
+           (active-internal-sockets
+            (input-available-p (mapcar #'socket sockets)
+                               (when timeout ticks-timeout))))
+      ;; this is quadratic, but hey, the active-internal-sockets
+      ;; list is very short and it's only quadratic in the length of that one.
+      ;; When I have more time I could recode it to something of linear
+      ;; complexity.
+      ;; [Same code is also used in lispworks.lisp, allegro.lisp]
+      (remove-if #'(lambda (x)
+                     (not (member (socket x) active-internal-sockets)))
+                 sockets))))
 
 

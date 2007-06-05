@@ -254,34 +254,36 @@
 (progn
   #-win32
   (defun wait-for-input-internal (sockets &key timeout)
-    (sb-alien:with-alien ((rfds (sb-alien:struct sb-unix:fd-set)))
-     (sb-unix:fd-zero rfds)
-     (dolist (socket sockets)
-       (sb-unix:fd-set (sb-bsd-sockets:socket-file-descriptor (socket socket))
-                       rfds))
-     (multiple-value-bind
-         (secs musecs)
-         (split-timeout (or timeout 1))
-       (multiple-value-bind
-           (count err)
-           (sb-unix:unix-fast-select
-               (1+ (reduce #'max (mapcar #'socket sockets)
-                           :key #'sb-bsd-sockets:socket-file-descriptor))
-               (sb-alien:addr rfds) nil nil
-               (when timeout secs) musecs)
-         (if (<= 0 count)
-             ;; process the result...
-             (remove-if
-              #'(lambda (x)
-                  (not (sb-unix:fd-isset
-                        (sb-bsd-sockets:socket-file-descriptor (socket x))
-                        rfds)))
-              sockets)
-           (progn
-             (unless (= err sb-unix:EINTR)
-               (error (map-errno-error err))))
-             ;;###FIXME generate an error, except for EINTR
-             )))))
+    (with-mapped-conditions ()
+      (sb-alien:with-alien ((rfds (sb-alien:struct sb-unix:fd-set)))
+         (sb-unix:fd-zero rfds)
+         (dolist (socket sockets)
+           (sb-unix:fd-set
+            (sb-bsd-sockets:socket-file-descriptor (socket socket))
+            rfds))
+         (multiple-value-bind
+             (secs musecs)
+             (split-timeout (or timeout 1))
+           (multiple-value-bind
+               (count err)
+               (sb-unix:unix-fast-select
+                (1+ (reduce #'max (mapcar #'socket sockets)
+                            :key #'sb-bsd-sockets:socket-file-descriptor))
+                (sb-alien:addr rfds) nil nil
+                (when timeout secs) musecs)
+             (if (<= 0 count)
+                 ;; process the result...
+                 (remove-if
+                  #'(lambda (x)
+                      (not (sb-unix:fd-isset
+                            (sb-bsd-sockets:socket-file-descriptor (socket x))
+                            rfds)))
+                  sockets)
+               (progn
+                 (unless (= err sb-unix:EINTR)
+                   (error (map-errno-error err))))
+               ;;###FIXME generate an error, except for EINTR
+               ))))))
 
   #+win32
   (warn "wait-for-input not (yet!) supported...")
@@ -290,15 +292,17 @@
 #+ecl
 (progn
   (defun wait-for-input-internal (sockets &key timeout)
-    (multiple-value-bind
-        (secs usecs)
-        (split-timeout (or timeout 1))
-      (let* ((sock-fds (mapcar #'sb-bsd-sockets:socket-file-descriptor
-                               (mapcar #'socket sockets)))
-             (result-fds (read-select sock-fds (when timeout secs) usecs)))
-        (remove-if #'(lambda (s)
-                       (not (member
-                             (sb-bsd-sockets:socket-file-descriptor (socket s))
-                             result-fds)))
-                   sockets))))
+    (with-mapped-conditions ()
+      (multiple-value-bind
+          (secs usecs)
+          (split-timeout (or timeout 1))
+        (let* ((sock-fds (mapcar #'sb-bsd-sockets:socket-file-descriptor
+                                 (mapcar #'socket sockets)))
+               (result-fds (read-select sock-fds (when timeout secs) usecs)))
+          (remove-if #'(lambda (s)
+                         (not
+                          (member
+                           (sb-bsd-sockets:socket-file-descriptor (socket s))
+                           result-fds)))
+                   sockets)))))
   )

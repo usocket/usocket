@@ -351,8 +351,7 @@ return the function result list.
          (selector (jdi:do-jstatic "java.nio.channels.Selector" "open"))
          (channels (mapcar #'socket sockets)))
     (unwind-protect
-;;       (with-mapped-conditions ()
-        (progn
+        (with-mapped-conditions ()
           (let ((jfalse (java:make-immediate-object nil :boolean))
                 (sel (jdi:jop-deref selector)))
             (dolist (channel channels)

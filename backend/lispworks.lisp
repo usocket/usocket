@@ -150,18 +150,17 @@
 
 #-win32
 (defun wait-for-input-internal (sockets &key timeout)
-  ;; unfortunately, it's impossible to share code between
-  ;; non-win32 and win32 platforms...
-  ;; Can we have a sane -pref. complete [UDP!?]- API next time, please?
-  (mapcar #'mp:notice-fd sockets
-          :key #'os-socket-handle)
-  (mp:process-wait-with-timeout "Waiting for a socket to become active"
-                                (truncate timeout)
-                                #'(lambda (socks)
-                                    (some #'usocket-listen socks))
-                                sockets)
-  (mapcar #'mp:unnotice-fd sockets
-          :key #'os-socket-handle)
-  (loop for r in (mapcar #'usocket-listen sockets)
-        if r
-        collect r))
+  (with-mapped-conditions ()
+    ;; unfortunately, it's impossible to share code between
+    ;; non-win32 and win32 platforms...
+    ;; Can we have a sane -pref. complete [UDP!?]- API next time, please?
+    (mapcar #'mp:notice-fd sockets
+            :key #'os-socket-handle)
+    (mp:process-wait-with-timeout "Waiting for a socket to become active"
+                                  (truncate timeout)
+                                  #'(lambda (socks)
+                                      (some #'usocket-listen socks))
+                                  sockets)
+    (mapcar #'mp:unnotice-fd sockets
+            :key #'os-socket-handle)
+    (remove nil (mapcar #'usocket-listen sockets))))
