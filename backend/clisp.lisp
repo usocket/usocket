@@ -6,6 +6,23 @@
 (in-package :usocket)
 
 
+;; utility routine for looking up the current host name
+(FFI:DEF-CALL-OUT get-host-name-internal
+         (:name "gethostname")
+         (:arguments (name (FFI:C-PTR (FFI:C-ARRAY-MAX ffi:character 256))
+                           :OUT :ALLOCA)
+                     (len ffi:int))
+         #+win32 (:library "WS2_32")
+         (:return-type ffi:int))
+
+
+(defun get-host-name ()
+  (multiple-value-bind (retcode name)
+      (get-host-name-internal)
+    (when (= retcode 0)
+      name)))
+
+
 #+win32
 (defun remap-maybe-for-win32 (z)
   (mapcar #'(lambda (x)

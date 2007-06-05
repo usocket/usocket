@@ -13,6 +13,49 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require :sockets))
 
+#+sbcl
+(progn
+  #-win32
+  (defun get-host-name ()
+    (sb-unix:unix-gethostname))
+
+  ;; we assume winsock has already been loaded, after all,
+  ;; we already loaded sb-bsd-sockets and sb-alien
+  #+win32
+  (defun get-host-name ()
+    (sb-alien:with-alien ((buf (sb-alien:array sb-alien:char 256)))
+       (let ((result (sb-alien:alien-funcall
+                      (sb-alien:extern-alien "gethostname"
+                                             (sb-alien:function sb-alien:int
+                                                                (* sb-alien:char)
+                                                                sb-alien:int))
+                      (sb-alien:cast buf (* sb-alien:char))
+                      256)))
+         (when (= result 0)
+           (cast buf sb-alien:c-string))))))
+
+
+#+ecl
+(progn
+  (ffi:clines
+   #-:wsock
+   "#include <sys/socket.h>"
+   #+:wsock
+   "#include <winsock2.h>"
+   )
+
+  (defun get-host-name ()
+    (ffi:c-inline
+     () () t
+     "{ char buf[256];
+        int r = gethostname(&buf,256);
+
+        if (r == 0)
+           @(return) = make_simple_base_string(&buf);
+        else
+           @(return) = Cnil;
+      }")))
+
 (defun map-socket-error (sock-err)
   (map-errno-error (sb-bsd-sockets::socket-error-errno sock-err)))
 

@@ -17,6 +17,14 @@
   `(java:jnew (java:jconstructor ,class ,@arg-spec)
          ,@args))
 
+(defun get-host-name ()
+  (let ((localAddress (java:jstatic
+                       (java:jmethod "java.net.InetAddress"
+                                     "getLocalHost")
+                       (java:jclass "java.net.InetAddress"))))
+    (java:jcall (java:jmethod "java.net.InetAddress" "getHostName")
+                localAddress)))
+
 (defun handle-condition (condition &optional socket)
   (typecase condition
     (error (error 'unknown-error :socket socket :real-error condition))))

@@ -5,7 +5,10 @@
 
 (in-package :usocket)
 
-
+(defun get-host-name ()
+  (ccl::%stack-block ((resultbuf 256))
+    (when (zerop (#_gethostname resultbuf 256))
+      (ccl::%get-cstring resultbuf))))
 
 (defparameter +openmcl-error-map+
   '((:address-in-use . address-in-use-error)
@@ -22,6 +25,35 @@
     (:shutdown . shutdown-error)
     (:access-denied . operation-not-permitted-error)))
 
+
+;; we need something which the openmcl implementors 'forgot' to do:
+;; wait for more than one socket-or-fd
+
+(defun input-available-p (sockets &optional ticks-to-wait)
+  (ccl::rletZ ((tv :timeval))
+    (ccl::ticks-to-timeval ticks-to-wait tv)
+    (ccl::%stack-block ((infds ccl::*fd-set-size*)
+                        (errfds ccl::*fd-set-size*))
+      (ccl::fd-zero infds)
+      (ccl::fd-zero errfds)
+      (dolist (sock sockets)
+        (ccl::fd-set (socket-os-fd sock infds))
+        (ccl::fd-set (socket-os-fd sock errfds)))
+      (let* ((res (ccl::syscall syscalls::select
+                                (1+ (apply #'max fds))
+                                infds (ccl::%null-ptr) errfds
+                                (if ticks-to-wait tv (ccl::%null-ptr)))))
+        (when (> res 0)
+          (remove-if #'(lambda (x)
+                         (not (ccl::fd-is-set (socket-os-fd x) infds)))
+                     sockets))))))
+
+(defun wait-for-input (sockets &optional ticks-to-wait)
+  (let ((wait-end (when ticks-to-wait (+ ticks-to-wait (ccl::get-tick-count)))))
+    (do ((res (input-available-p sockets ticks-to-wait)
+              (input-available-p sockets ticks-to-wait)))
+        ((or res (< wait-end (ccl::get-tick-count)))
+         res))))
 
 (defun raise-error-from-id (condition-id socket real-condition)
   (let ((usock-err (cdr (assoc condition-id +openmcl-error-map+))))
