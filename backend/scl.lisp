@@ -132,3 +132,37 @@
 
 (defun get-host-name ()
   (unix:unix-gethostname))
+
+(defun wait-for-input-internal (sockets &key timeout)
+  (let* ((pollfd-size (alien:alien-size (alien:struct unix::pollfd) :bytes))
+        (nfds (length sockets))
+        (bytes (* nfds pollfd-size)))
+    (alien:with-bytes (fds-sap bytes)
+      (do ((sockets sockets (rest sockets))
+          (base 0 (+ base 8)))
+         ((endp sockets))
+       (let ((fd (socket (first sockets))))
+         (setf (sys:sap-ref-32 fds-sap base) fd)
+         (setf (sys:sap-ref-16 fds-sap (+ base 4)) unix::pollin)))
+      (multiple-value-bind (result errno)
+         (let ((thread:*thread-whostate* "Poll wait")
+               (timeout (if timeout
+                            (truncate (* timeout 1000))
+                            -1)))
+           (declare (inline unix:unix-poll))
+           (unix:unix-poll (alien:sap-alien fds-sap
+                                            (* (alien:struct unix::pollfd)))
+                           nfds timeout))
+       (cond ((not result)
+              (error "~@<Polling error: ~A~:@>"
+                     (unix:get-unix-error-msg errno)))
+             (t
+              (do ((sockets sockets (rest sockets))
+                   (base 0 (+ base 8))
+                   (ready nil))
+                  ((endp sockets)
+                   (nreverse ready))
+                (let ((flags (sys:sap-ref-16 fds-sap (+ base 6))))
+                  (unless (zerop (logand flags unix::pollin))
+                    (push (first sockets) ready))))))))))
+
