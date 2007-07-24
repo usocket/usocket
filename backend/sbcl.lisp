@@ -47,6 +47,17 @@
    "#endif"
    "#include <winsock2.h>"
    )
+  (ffi:clines
+   "#include <ecl/ecl-inl.h>")
+  #+:prefixed-api
+  (ffi:clines
+   "#define CONS(x, y) ecl_cons((x), (y))"
+   "#define MAKE_INTEGER(x) ecl_make_integer((x))")
+  #-:prefixed-api
+  (ffi:clines
+   "#define CONS(x, y) make_cons((x), (y))"
+   "#define MAKE_INTEGER(x) make_integer((x))")
+   
 
   (defun fd-setsize ()
     (ffi:c-inline () () fixnum
@@ -109,7 +120,7 @@
               while (CONSP(cur_fd)) {
                 int fd = fixint(cur_fd->cons.car);
                 if (FD_ISSET(fd, &rfds))
-                  rv = make_cons(make_integer(fd), rv);
+                  rv = CONS(MAKE_INTEGER(fd), rv);
 
                 cur_fd = cur_fd->cons.cdr;
               }
