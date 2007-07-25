@@ -45,10 +45,12 @@
    "#ifndef FD_SETSIZE"
    "#define FD_SETSIZE 1024"
    "#endif"
-   "#include <winsock2.h>"
-   )
+   "#include <winsock2.h>")
+
   (ffi:clines
-   "#include <ecl/ecl-inl.h>")
+   "#include <ecl/ecl-inl.h>"
+   "#include <string.h>")
+
   #+:prefixed-api
   (ffi:clines
    "#define CONS(x, y) ecl_cons((x), (y))"
@@ -57,23 +59,22 @@
   (ffi:clines
    "#define CONS(x, y) make_cons((x), (y))"
    "#define MAKE_INTEGER(x) make_integer((x))")
-   
 
   (defun fd-setsize ()
-    (ffi:c-inline () () fixnum
+    (ffi:c-inline () () :fixnum
      "FD_SETSIZE" :one-liner t))
 
   (defun get-host-name ()
     (ffi:c-inline
-     () () t
+     () () :object
      "{ char buf[256];
         int r = gethostname(&buf,256);
 
         if (r == 0)
-           @(return) = make_simple_base_string(&buf);
+           @(return) = make_simple_base_string(strndup(&buf,255));
         else
            @(return) = Cnil;
-      }"))
+      }" :one-liner nil :side-effects nil))
 
   (defun read-select (read-fds to-secs &optional (to-musecs 0))
     (ffi:c-inline (read-fds to-secs to-musecs) (t t :unsigned-int) t
