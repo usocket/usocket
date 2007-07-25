@@ -42,19 +42,21 @@
    "#include <sys/socket.h>"
    #+:wsock
    "#include <winsock2.h>"
+
+   "#include <string.h>"
    )
 
   (defun get-host-name ()
     (ffi:c-inline
-     () () t
+     () () :object
      "{ char buf[256];
-        int r = gethostname(&buf,256);
+        int  = gethostname(&buf,256);
 
         if (r == 0)
-           @(return) = make_simple_base_string(&buf);
+           @(return) = make_simple_base_string(strndup(&buf,255));
         else
            @(return) = Cnil;
-      }")))
+      }" :one-liner nil :side-effects nil)))
 
 (defun map-socket-error (sock-err)
   (map-errno-error (sb-bsd-sockets::socket-error-errno sock-err)))
