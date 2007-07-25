@@ -18,7 +18,7 @@
 
 (defun get-host-name ()
   (multiple-value-bind (retcode name)
-      (get-host-name-internal)
+      (get-host-name-internal 256)
     (when (= retcode 0)
       name)))
 
