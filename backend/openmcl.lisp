@@ -10,7 +10,9 @@
   #+linuxppc-target
   (require "LINUX-SYSCALLS")
   #+darwinppc-target
-  (require "DARWIN-SYSCALLS"))
+  (require "DARWIN-SYSCALLS")
+  #+darwinx86-target
+  (require "DARWINX8664-SYSCALLS"))
 
 (defun get-host-name ()
   (ccl::%stack-block ((resultbuf 256))
