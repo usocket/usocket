@@ -203,10 +203,11 @@ none."))
                     (list socket-or-sockets))
                   :timeout timeout)))
     (values result
-            (let ((elapsed (/ (- (get-internal-real-time) start)
-                              internal-time-units-per-second)))
-              (when (< elapsed timeout)
-                (- timeout elapsed))))))
+            (when timeout
+              (let ((elapsed (/ (- (get-internal-real-time) start)
+                                internal-time-units-per-second)))
+                (when (< elapsed timeout)
+                  (- timeout elapsed)))))))
 
 ;;
 ;; IP(v4) utility functions
