@@ -5,7 +5,7 @@
 
 (in-package :usocket)
 
-(eval-when (:compile-toplevel :execute)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   ;; also present in OpenMCL l1-sockets.lisp
   #+linuxppc-target
   (require "LINUX-SYSCALLS")
