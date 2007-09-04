@@ -13,6 +13,8 @@
                            :OUT :ALLOCA)
                      (len ffi:int))
          #+win32 (:library "WS2_32")
+         (:language #-win32 :stdc
+                    #+win32 :stdc-stdcall)
          (:return-type ffi:int))
 
 
@@ -73,7 +75,7 @@
                            (element-type 'character))
   ;; clisp 2.39 sets SO_REUSEADDRESS to 1 by default; no need to
   ;; to explicitly turn it on; unfortunately, there's no way to turn it off...
-  (declare (ignore reuseaddress reuse-address))
+  (declare (ignore reuseaddress reuse-address reuse-address-supplied-p))
   (let ((sock (apply #'socket:socket-server
                      (append (list port
                                    :backlog backlog)
