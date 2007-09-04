@@ -32,7 +32,7 @@
                       (sb-alien:cast buf (* sb-alien:char))
                       256)))
          (when (= result 0)
-           (cast buf sb-alien:c-string))))))
+           (sb-alien:cast buf sb-alien:c-string))))))
 
 
 #+ecl
@@ -48,8 +48,7 @@
    "#include <winsock2.h>")
 
   (ffi:clines
-   "#include <ecl/ecl-inl.h>"
-   "#include <string.h>")
+   "#include <ecl/ecl-inl.h>")
 
   #+:prefixed-api
   (ffi:clines
@@ -67,13 +66,12 @@
   (defun get-host-name ()
     (ffi:c-inline
      () () :object
-     "{ char buf[256];
-        int r = gethostname(&buf,256);
+     "{ char *buf = GC_malloc(256);
 
-        if (r == 0)
-           @(return) = make_simple_base_string(strndup(&buf,255));
+        if (gethostname(buf,256) == 0)
+          @(return) = make_simple_base_string(buf);
         else
-           @(return) = Cnil;
+          @(return) = Cnil;
       }" :one-liner nil :side-effects nil))
 
   (defun read-select (read-fds to-secs &optional (to-musecs 0))
