@@ -76,22 +76,25 @@
                            (backlog 5)
                            (element-type 'character))
  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
-        (server-sock (apply #'ext:create-inet-listener
-                            (append (list port :stream
-                                          :backlog backlog
-                                          :reuse-address reuseaddress)
-                                    (when (ip/= host *wildcard-host*)
-                                      (list :host
-                                            (host-to-hbo host)))))))
+        (server-sock
+         (with-mapped-conditions ()
+           (apply #'ext:create-inet-listener
+                  (append (list port :stream
+                                :backlog backlog
+                                :reuse-address reuseaddress)
+                          (when (ip/= host *wildcard-host*)
+                            (list :host
+                                  (host-to-hbo host))))))))
    (make-stream-server-socket server-sock :element-type element-type)))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
-  (let* ((sock (ext:accept-tcp-connection (socket usocket)))
-         (stream (sys:make-fd-stream sock :input t :output t
-                                     :element-type (or element-type
-                                                       (element-type usocket))
-                                     :buffering :full)))
-    (make-stream-socket :socket sock :stream stream)))
+  (with-mapped-conditions (usocket)
+    (let* ((sock (ext:accept-tcp-connection (socket usocket)))
+           (stream (sys:make-fd-stream sock :input t :output t
+                                       :element-type (or element-type
+                                                         (element-type usocket))
+                                       :buffering :full)))
+      (make-stream-socket :socket sock :stream stream))))
 
 ;; Sockets and socket streams are represented
 ;; by different objects. Be sure to close the

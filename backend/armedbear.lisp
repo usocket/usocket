@@ -50,17 +50,20 @@
                                (host-to-hostname host) port))
          (sock (jnew-call ("java.net.ServerSocket"))))
     (when reuseaddress
+      (with-mapped-conditions ()
+         (jmethod-call sock
+                       ("setReuseAddress" "boolean")
+                       (java:make-immediate-object reuseaddress :boolean))))
+    (with-mapped-conditions ()
       (jmethod-call sock
-                    ("setReuseAddress" "boolean")
-                    (java:make-immediate-object reuseaddress :boolean)))
-    (jmethod-call sock
-                  ("bind" "java.net.SocketAddress" "int")
-                  sock-addr backlog)
+                    ("bind" "java.net.SocketAddress" "int")
+                    sock-addr backlog))
     (make-stream-server-socket sock :element-type element-type)))
 
 (defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (let* ((jsock (socket socket))
-         (jacc-sock (jmethod-call jsock ("accept")))
+         (jacc-sock (with-mapped-conditions (socket)
+                       (jmethod-call jsock ("accept")))
          (jacc-stream
           (ext:get-socket-stream jacc-sock
                                  :element-type (or element-type
