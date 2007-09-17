@@ -63,7 +63,7 @@
 (defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (let* ((jsock (socket socket))
          (jacc-sock (with-mapped-conditions (socket)
-                       (jmethod-call jsock ("accept")))
+                       (jmethod-call jsock ("accept"))))
          (jacc-stream
           (ext:get-socket-stream jacc-sock
                                  :element-type (or element-type
