@@ -50,19 +50,22 @@
          (host (if (ip= host *wildcard-host*)
                    0
                  (host-to-hbo host)))
-         (server-sock (ext:create-inet-listener port :stream
-                                                :host host
-                                                :reuse-address reuseaddress
-                                                :backlog backlog)))
+         (server-sock
+          (with-mapped-conditions ()
+            (ext:create-inet-listener port :stream
+                                      :host host
+                                      :reuse-address reuseaddress
+                                      :backlog backlog))))
    (make-stream-server-socket server-sock :element-type element-type)))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
-  (let* ((sock (ext:accept-tcp-connection (socket usocket)))
-         (stream (sys:make-fd-stream sock :input t :output t
-                                     :element-type (or element-type
-                                                       (element-type usocket))
-                                     :buffering :full)))
-    (make-stream-socket :socket sock :stream stream)))
+  (with-mapped-conditions (usocket)
+    (let* ((sock (ext:accept-tcp-connection (socket usocket)))
+           (stream (sys:make-fd-stream sock :input t :output t
+                                      :element-type (or element-type
+                                                        (element-type usocket))
+                                      :buffering :full)))
+      (make-stream-socket :socket sock :stream stream))))
 
 ;; Sockets and their associated streams are modelled as
 ;; different objects. Be sure to close the socket stream
