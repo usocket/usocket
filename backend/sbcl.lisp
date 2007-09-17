@@ -32,7 +32,7 @@
                       (sb-alien:cast buf (* sb-alien:char))
                       256)))
          (when (= result 0)
-           (cast buf sb-alien:c-string))))))
+           (sb-alien:cast buf sb-alien:c-string))))))
 
 
 #+ecl
@@ -49,10 +49,9 @@
   (defun get-host-name ()
     (ffi:c-inline
      () () :object
-     "{ char buf[256];
-        int  = gethostname(&buf,256);
+     "{ char *buf = GC_malloc(257);
 
-        if (r == 0)
+        if (gethostname(buf,256) == 0)
            @(return) = make_simple_base_string(strndup(&buf,255));
         else
            @(return) = Cnil;
