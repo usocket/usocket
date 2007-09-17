@@ -107,13 +107,13 @@
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind
       (address port)
-      (socket:socket-stream-local (socket usocket) nil)
+      (socket:socket-stream-local (socket usocket) t)
     (values (dotted-quad-to-vector-quad address) port)))
 
 (defmethod get-peer-name ((usocket stream-usocket))
   (multiple-value-bind
       (address port)
-      (socket:socket-stream-peer (socket usocket) nil)
+      (socket:socket-stream-peer (socket usocket) t)
     (values (dotted-quad-to-vector-quad address) port)))
 
 (defmethod get-local-address ((usocket usocket))
