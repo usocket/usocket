@@ -81,13 +81,15 @@
                                    :backlog backlog)
                              (when (ip/= host *wildcard-host*)
                                (list :interface host))))))
-    (make-stream-server-socket sock :element-type element-type)))
+    (with-mapped-conditions ()
+        (make-stream-server-socket sock :element-type element-type))))
 
 (defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (let ((stream
-         (socket:socket-accept (socket socket)
-                               :element-type (or element-type
-                                                 (element-type socket)))))
+         (with-mapped-conditions (socket)
+           (socket:socket-accept (socket socket)
+                                 :element-type (or element-type
+                                                   (element-type socket))))))
     (make-stream-socket :socket stream
                         :stream stream)))
 

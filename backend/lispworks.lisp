@@ -88,7 +88,8 @@
     (make-stream-server-socket sock :element-type element-type)))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
-  (let* ((sock (comm::get-fd-from-socket (socket usocket)))
+  (let* ((sock (with-mapped-conditions (usocket)
+                 (comm::get-fd-from-socket (socket usocket))))
          (stream (make-instance 'comm:socket-stream
                                 :socket sock
                                 :direction :io

@@ -216,19 +216,22 @@
                                     "open"))
          (sock (jdi:do-jmethod-call chan "socket")))
     (when reuseaddress
+      (with-mapped-conditions ()
+        (jdi:do-jmethod-call sock
+                             "setReuseAddress"
+                             (jdi:jcoerce reuseaddress :boolean))))
+    (with-mapped-conditions ()
       (jdi:do-jmethod-call sock
-                           "setReuseAddress"
-                           (jdi:jcoerce reuseaddress :boolean)))
-    (jdi:do-jmethod-call sock
-                         "bind"
-                         (jdi:jcoerce sock-addr
-                                      "java.net.SocketAddress")
-                         (jdi:jcoerce backlog :int))
+                           "bind"
+                           (jdi:jcoerce sock-addr
+                                        "java.net.SocketAddress")
+                           (jdi:jcoerce backlog :int)))
     (make-stream-server-socket chan :element-type element-type)))
 
 (defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (let* ((jsock (socket socket))
-         (jacc-chan (jdi:do-jmethod-call jsock "accept"))
+         (jacc-chan (with-mapped-conditions (socket)
+                       (jdi:do-jmethod-call jsock "accept")))
          (jacc-stream
           (ext:get-socket-stream (jdi:jop-deref
                                   (jdi:do-jmethod-call jacc-chan "socket"))
@@ -243,7 +246,7 @@
 
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)
-    (jdi:do-method (socket usocket) "close")))
+    (jdi:do-jmethod (socket usocket) "close")))
 
 ;; Socket streams are different objects than
 ;; socket streams. Closing the stream flushes

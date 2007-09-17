@@ -207,18 +207,22 @@
          (ip (host-to-vector-quad host))
          (sock (make-instance 'sb-bsd-sockets:inet-socket
                               :type :stream :protocol :tcp)))
-    (setf (sb-bsd-sockets:sockopt-reuse-address sock) reuseaddress)
-    (sb-bsd-sockets:socket-bind sock ip port)
-    (sb-bsd-sockets:socket-listen sock backlog)
-    (make-stream-server-socket sock :element-type element-type)))
+    (with-mapped-conditions ()
+       (setf (sb-bsd-sockets:sockopt-reuse-address sock) reuseaddress)
+       (sb-bsd-sockets:socket-bind sock ip port)
+       (sb-bsd-sockets:socket-listen sock backlog)
+       (make-stream-server-socket sock :element-type element-type))))
 
 (defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (let ((sock (sb-bsd-sockets:socket-accept (socket socket))))
-    (make-stream-socket :socket sock
-                        :stream (sb-bsd-sockets:socket-make-stream sock
-                                 :input t :output t :buffering :full
-                                 :element-type (or element-type
-                                                   (element-type socket))))))
+    (with-mapped-conditions (socket)
+       (make-stream-socket
+        :socket sock
+        :stream (sb-bsd-sockets:socket-make-stream
+                 sock
+                 :input t :output t :buffering :full
+                 :element-type (or element-type
+                                   (element-type socket)))))))
 
 ;; Sockets and their associated streams are modelled as
 ;; different objects. Be sure to close the stream (which

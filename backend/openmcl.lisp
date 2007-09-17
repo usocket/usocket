@@ -94,19 +94,21 @@
                            (backlog 5)
                            (element-type 'character))
   (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
-         (sock (apply #'openmcl-socket:make-socket
-                      (append (list :connect :passive
-                                    :reuse-address reuseaddress
-                                    :local-port port
-                                    :backlog backlog
-                                    :format (to-format element-type))
-                              (when (ip/= host *wildcard-host*)
-                                (list :local-host host))))))
+         (sock (with-mapped-conditions ()
+                  (apply #'openmcl-socket:make-socket
+                         (append (list :connect :passive
+                                       :reuse-address reuseaddress
+                                       :local-port port
+                                       :backlog backlog
+                                       :format (to-format element-type))
+                                 (when (ip/= host *wildcard-host*)
+                                   (list :local-host host)))))))
     (make-stream-server-socket sock :element-type element-type)))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
   (declare (ignore element-type)) ;; openmcl streams are bi/multivalent
-  (let ((sock (openmcl-socket:accept-connection (socket usocket))))
+  (let ((sock (with-mapped-conditions (usocket)
+                 (openmcl-socket:accept-connection (socket usocket)))))
     (make-stream-socket :socket sock :stream sock)))
 
 ;; One close method is sufficient because sockets

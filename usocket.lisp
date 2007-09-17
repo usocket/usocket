@@ -58,6 +58,10 @@ be initiated from remote sockets."))
 (defun stream-server-usocket-p (socket)
   (typep socket 'stream-server-usocket))
 
+(defun datagram-usocket-p (socket)
+  (declare (ignore socket))
+  nil)
+
 ;;Not in use yet:
 ;;(defclass datagram-usocket (usocket)
 ;;  ()

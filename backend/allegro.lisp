@@ -89,7 +89,9 @@
 
 (defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (declare (ignore element-type)) ;; allegro streams are multivalent
-  (let ((stream-sock (socket:accept-connection (socket socket))))
+  (let ((stream-sock
+         (with-mapped-conditions (socket)
+            (socket:accept-connection (socket socket)))))
     (make-stream-socket :socket stream-sock :stream stream-sock)))
 
 (defmethod get-local-address ((usocket usocket))
