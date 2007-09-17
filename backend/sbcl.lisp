@@ -214,8 +214,8 @@
        (make-stream-server-socket sock :element-type element-type))))
 
 (defmethod socket-accept ((socket stream-server-usocket) &key element-type)
-  (let ((sock (sb-bsd-sockets:socket-accept (socket socket))))
-    (with-mapped-conditions (socket)
+  (with-mapped-conditions (socket)
+     (let ((sock (sb-bsd-sockets:socket-accept (socket socket))))
        (make-stream-socket
         :socket sock
         :stream (sb-bsd-sockets:socket-make-stream
