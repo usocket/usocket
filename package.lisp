@@ -41,7 +41,11 @@
              #:ip/=
 
              #:socket-condition ; conditions
+             #:ns-condition
              #:socket-error ; errors
+             #:ns-error
              #:unknown-condition
-             #:unknown-error)))
+             #:ns-unknown-condition
+             #:unknown-error
+             #:ns-unknown-error)))
 
