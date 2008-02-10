@@ -42,7 +42,28 @@
   (append +unix-errno-condition-map+
           +unix-errno-error-map+))
 
+(defun raise-or-signal-socket-error (errno socket)
+  (let ((usock-err
+         (cdr (assoc errno +lispworks-error-map+ :test #'member))))
+    (if usock-err
+        (if (subtypep usock-err 'error)
+            (error usock-err :socket socket)
+          (signal usock-err :socket))
+      (error 'unknown-error
+             :socket socket
+             :real-condition nil))))
 
+(defun raise-usock-err (errno socket &optional condition)
+  (let* ((usock-err
+          (cdr (assoc errno +lispworks-error-map+
+                      :test #'member))))
+    (if usock-err
+        (if (subtypep usock-err 'error)
+            (error usock-err :socket socket)
+          (signal usock-err :socket))
+      (error 'unknown-error
+             :socket socket
+             :real-error condition))))
 
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
@@ -50,16 +71,7 @@
     (simple-error (destructuring-bind (&optional host port err-msg errno)
                       (simple-condition-format-arguments condition)
                     (declare (ignore host port err-msg))
-                    (let* ((usock-err
-                            (cdr (assoc errno +lispworks-error-map+
-                                        :test #'member))))
-                      (if usock-err
-                          (if (subtypep usock-err 'error)
-                              (error usock-err :socket socket)
-                            (signal usock-err :socket socket))
-                        (error 'unknown-error
-                               :socket socket
-                               :real-error condition)))))))
+                    (raise-usock-err errno socket condition)))))
 
 (defun socket-connect (host port &key (element-type 'base-char))
   (let ((hostname (host-to-hostname host))
@@ -149,6 +161,12 @@
     (when (comm::socket-listen (socket usocket))
       usocket)))
 
+;;;
+;;; Non Windows implementation
+;;;   The Windows implementation needs to resort to the Windows API in order
+;;;   to achieve what we want (what we want is waiting without busy-looping)
+;;;
+
 #-win32
 (defun wait-for-input-internal (sockets &key timeout)
   (with-mapped-conditions ()
@@ -165,3 +183,159 @@
     (mapcar #'mp:unnotice-fd sockets
             :key #'os-socket-handle)
     (remove nil (mapcar #'usocket-listen sockets))))
+
+
+;;;
+;;;  The Windows side of the story
+;;;    We want to wait without busy looping
+;;;    This code only works in threads which don't have (hidden)
+;;;    windows which need to receive messages. There are workarounds in the Windows API
+;;;    but are those available to 'us'.
+;;;
+
+
+#+win32
+(progn
+
+  ;; LispWorks doesn't provide an interface to wait for a socket
+  ;; to become ready (under Win32, that is) meaning that we need
+  ;; to resort to system calls to achieve the same thing.
+  ;; Luckily, it provides us access to the raw socket handles (as we 
+  ;; wrote the code above.
+  (defconstant fd-read 1)
+  (defconstant fd-read-bit 0)
+  (defconstant fd-write 2)
+  (defconstant fd-write-bit 1)
+  (defconstant fd-oob 4)
+  (defconstant fd-oob-bit 2)
+  (defconstant fd-accept 8)
+  (defconstant fd-accept-bit 3)
+  (defconstant fd-connect 16)
+  (defconstant fd-connect-bit 4)
+  (defconstant fd-close 32)
+  (defconstant fd-close-bit 5)
+  (defconstant fd-qos 64)
+  (defconstant fd-qos-bit 6)
+  (defconstant fd-group-qos 128)
+  (defconstant fd-group-qos-bit 7)
+  (defconstant fd-routing-interface 256)
+  (defconstant fd-routing-interface-bit 8)
+  (defconstant fd-address-list-change 512)
+  (defconstant fd-address-list-change-bit 9)
+  
+  (defconstant fd-max-events 10)
+
+  (fli:define-foreign-type ws-socket () '(:unsigned :int))
+  (fli:define-foreign-type win32-handle () '(:unsigned :int))
+  (fli:define-c-struct wsa-network-events (network-events :long)
+    (error-code (:c-array :int 10)))
+
+  (fli:define-foreign-function (wsa-event-create "WSACreateEvent" :source)
+      ()
+      :lambda-list nil
+    :result-type :int
+    :module "ws2_32")
+  (fli:define-foreign-function (wsa-event-close "WSACloseEvent" :source)
+      (event-object win32-handle)
+    :result-type :int
+    :module "ws2_32")
+  (fli:define-foreign-function (wsa-enum-network-events "WSAEnumNetworkEvents" :source)
+      ((socket ws-socket)
+       (event-object win32-handle)
+       (network-events (:reference-return wsa-network-events)))
+    :result-type :int
+    :module "ws2_32")
+  
+  (fli:define-foreign-function (wsa-event-select "WSAEventSelect" :source)
+      ((socket ws-socket)
+       (event-object win32-handle)
+       (network-events :long))
+    :result-type :int
+    :module "ws2_32")
+
+  (fli:define-foreign-function (wsa-get-last-error "WSAGetLastError" :source)
+      ()
+    :result-type :int
+    :module "ws2_32")
+
+  ;; Now that we have access to the system calls, this is the plan:
+
+  ;; 1. Receive a list of sockets to listen to
+  ;; 2. Add all those sockets to an event handle
+  ;; 3. Listen for an event on that handle (we have a LispWorks system:: internal for that)
+  ;; 4. After listening, detect if there are errors
+  ;;    (this step is different from Unix, where we can have only one error)
+  ;; 5. If so, raise one of them
+  ;; 6. If not so, return the sockets which have input waiting for them
+
+
+  (defun maybe-wsa-error (rv &optional socket)
+    (unless (zerop rv)
+      (raise-usock-err (wsa-get-last-error) socket)))
+
+  (defun add-socket-to-event (socket event-object)
+    (let ((events (etypecase socket
+                    (stream-server-usocket (logior fd-connect fd-accept fd-close))
+                    (stream-usocket (logior fd-connect fd-read fd-oob fd-close)))))
+      (maybe-wsa-error
+       (wsa-event-select (os-socket-handle socket) event-object events)
+       socket)))
+
+  (defun wait-for-sockets (sockets timeout)
+    (let ((event-object (wsa-event-create)))
+      (unwind-protect
+          (progn
+            (dolist (socket sockets)
+              (add-socket-to-event socket event-object))
+            (system:wait-for-single-object event-object
+                                           "Waiting for socket activity" timeout))
+        (maybe-wsa-error
+         (wsa-event-close event-object)
+         nil))))
+
+
+  (defun map-network-errors (func network-events)
+    (let ((event-map (fli:foreign-slot-value network-events 'network-events))
+          (error-array (fli:foreign-slot-value network-events 'error-code)))
+      (dotimes (i fd-max-events)
+        (unless (zerop (ldb (byte 1 i) event-map))
+          (funcall func (fli:foreign-aref error-array i))))))
+
+  (defun has-network-errors-p (network-events)
+    (let ((network-events (fli:foreign-slot-value network-events 'network-events))
+          (error-array (fli:foreign-slot-value network-events 'error-code)))
+      ;; We need to check the bits before checking the error:
+      ;; the api documents the consumer can only assume valid values for
+      ;; fields which have the corresponding bit set
+      (do ((i 0 (1+ i)))
+          ((and (< i fd-max-events)
+                (not (zerop (ldb (byte 1 i) network-events)))
+                (zerop (fli:foreign-aref error-array i)))
+           (< i fd-max-events)))))
+
+  (defun socket-ready-p (network-events)
+    (and (not (zerop (fli:foreign-slot-value network-events 'network-events)))
+         (not (has-network-errors-p network-events))))
+
+  (defun sockets-ready (sockets)
+    (remove-if-not #'(lambda (socket)
+                       (multiple-value-bind
+                           (rv network-events)
+                           (wsa-enum-network-events (os-socket-handle socket) 0)
+                         (if (zerop rv)
+                             (socket-ready-p network-events)
+                           (maybe-wsa-error rv socket))))
+                   sockets))
+
+  (defun wait-for-input-internal (sockets &key timeout)
+    (wait-for-sockets sockets
+                      (if (some #'(lambda (x)
+                                    (and (stream-usocket-p x)
+                                         (listen (socket-stream x))))
+                                sockets)
+                          0 ;; don't wait: there are streams which
+                            ;; can be read from, even if not from the socket
+                          timeout)
+    (sockets-ready sockets))
+
+  );; end of WIN32-block
