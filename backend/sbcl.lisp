@@ -148,6 +148,8 @@
      . operation-not-permitted-error)
     (sb-bsd-sockets:protocol-not-supported-error
      . protocol-not-supported-error)
+    (sb-bsd-sockets:protocol-unknown
+     . protocol-not-supported-error)
     (sb-bsd-sockets:socket-type-not-supported-error
      . socket-type-not-supported-error)
     (sb-bsd-sockets:network-unreachable-error . network-unreachable-error)
