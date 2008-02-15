@@ -280,14 +280,13 @@
          (multiple-value-bind
              (secs musecs)
              (split-timeout (or timeout 1))
-           (multiple-value-bind
-               (count err)
-               (sb-unix:unix-fast-select
-                (1+ (reduce #'max (mapcar #'socket sockets)
-                            :key #'sb-bsd-sockets:socket-file-descriptor))
-                (sb-alien:addr rfds) nil nil
-                (when timeout secs) musecs)
-             (if (<= 0 count)
+           (let ((count
+		  (sb-unix:unix-fast-select
+		   (1+ (reduce #'max (mapcar #'socket sockets)
+			       :key #'sb-bsd-sockets:socket-file-descriptor))
+		   (sb-alien:addr rfds) nil nil
+		   (when timeout secs) musecs)))
+             (if (=> count 0)
                  ;; process the result...
                  (remove-if
                   #'(lambda (x)
@@ -295,7 +294,7 @@
                             (sb-bsd-sockets:socket-file-descriptor (socket x))
                             rfds)))
                   sockets)
-               (progn
+               (let ((err (sb-alien:get-errno)))
                  (unless (= err sb-unix:EINTR)
                    (error (map-errno-error err))))
                ;;###FIXME generate an error, except for EINTR
