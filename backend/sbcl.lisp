@@ -148,7 +148,7 @@
      . operation-not-permitted-error)
     (sb-bsd-sockets:protocol-not-supported-error
      . protocol-not-supported-error)
-    (sb-bsd-sockets:protocol-unknown
+    (sb-bsd-sockets:unknown-protocol
      . protocol-not-supported-error)
     (sb-bsd-sockets:socket-type-not-supported-error
      . socket-type-not-supported-error)
