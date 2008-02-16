@@ -286,19 +286,19 @@
 			       :key #'sb-bsd-sockets:socket-file-descriptor))
 		   (sb-alien:addr rfds) nil nil
 		   (when timeout secs) musecs)))
-             (if (=> count 0)
-                 ;; process the result...
-                 (remove-if
-                  #'(lambda (x)
-                      (not (sb-unix:fd-isset
-                            (sb-bsd-sockets:socket-file-descriptor (socket x))
-                            rfds)))
-                  sockets)
-               (let ((err (sb-alien:get-errno)))
-                 (unless (= err sb-unix:EINTR)
-                   (error (map-errno-error err))))
-               ;;###FIXME generate an error, except for EINTR
-               ))))))
+	     (unless (= 0 count)  ;; 0 means timeout
+	       (if (=> count 0)
+		   ;; process the result...
+		   (remove-if
+		    #'(lambda (x)
+			(not
+			 (sb-unix:fd-isset
+			  (sb-bsd-sockets:socket-file-descriptor (socket x))
+			  rfds)))
+		    sockets)
+		   (let ((err (sb-alien:get-errno)))
+		     (unless (= err sb-unix:EINTR)
+		       (error (map-errno-error err)))))))))))
 
   #+win32
   (warn "wait-for-input not (yet!) supported...")

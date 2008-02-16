@@ -198,15 +198,23 @@ none."))
 
 (defmethod wait-for-input (socket-or-sockets &key timeout)
   (let* ((start (get-internal-real-time))
+	 (sockets (if (listp socket-or-sockets)
+		      socket-or-sockets
+		      (list socket-or-sockets)))
+	 ;; retrieve a list of all sockets which are ready without waiting
+	 (ready-sockets
+	  (remove-if (complement #'(lambda (x)
+				     (and (stream-usocket-p x)
+					  (listen (socket-stream x)))))
+		     sockets))
          ;; the internal routine is responsibe for
          ;; making sure the wait doesn't block on socket-streams of
          ;; which the socket isn't ready, but there's space left in the
          ;; buffer
          (result (wait-for-input-internal
-                  (if (listp socket-or-sockets) socket-or-sockets
-                    (list socket-or-sockets))
-                  :timeout timeout)))
-    (values result
+                  sockets
+                  :timeout (if (null ready-sockets) timeout 0))))
+    (values (union ready-sockets result)
             (when timeout
               (let ((elapsed (/ (- (get-internal-real-time) start)
                                 internal-time-units-per-second)))
