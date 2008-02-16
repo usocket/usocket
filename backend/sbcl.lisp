@@ -159,11 +159,11 @@
     (sb-bsd-sockets:network-unreachable-error . network-unreachable-error)
     (sb-bsd-sockets:operation-timeout-error . timeout-error)
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
+
     ;; Nameservice errors: mapped to unknown-error
-;;    (sb-bsd-sockets:no-recovery-error . network-reset-error)
-;;    (sb-bsd-sockets:try-again-condition ...)
-;;    (sb-bsd-sockets:host-not-found ...)
-    ))
+    (sb-bsd-sockets:no-recovery-error . ns-no-recovery-error)
+    (sb-bsd-sockets:try-again-condition . ns-try-again-condition)
+    (sb-bsd-sockets:host-not-found . ns-host-not-found-error)))
 
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
