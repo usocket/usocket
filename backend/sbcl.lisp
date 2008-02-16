@@ -39,6 +39,7 @@
 (progn
   #-:wsock
   (ffi:clines
+   "#include <errno.h>"
    "#include <sys/socket.h>")
   #+:wsock
   (ffi:clines
@@ -99,13 +100,15 @@
                          (#1 != Cnil) ? &tv : NULL);
 
           if (count == 0)
-            @(return) = Cnil;
+            @(return 0) = Cnil;
+            @(return 1) = Cnil;
           else if (count < 0)
             /*###FIXME: We should be raising an error here...
 
               except, ofcourse in case of EINTR or EAGAIN */
 
-            @(return) = Cnil;
+            @(return 0) = Cnil;
+            @(return 1) = MAKE_INTEGER(errno);
           else
             {
               cl_object rv = Cnil;
@@ -123,7 +126,8 @@
 
                 cur_fd = cur_fd->cons.cdr;
               }
-              @(return) = rv;
+              @(return 0) = rv;
+              @(return 1) = Cnil;
             }
 }"))
 
@@ -312,12 +316,17 @@
           (secs usecs)
           (split-timeout (or timeout 1))
         (let* ((sock-fds (mapcar #'sb-bsd-sockets:socket-file-descriptor
-                                 (mapcar #'socket sockets)))
-               (result-fds (read-select sock-fds (when timeout secs) usecs)))
-          (remove-if #'(lambda (s)
-                         (not
-                          (member
-                           (sb-bsd-sockets:socket-file-descriptor (socket s))
-                           result-fds)))
-                   sockets)))))
+                                 (mapcar #'socket sockets))))
+	  (multiple-value-bind
+		(result-fds err)
+	      (read-select sock-fds (when timeout secs) usecs)
+	    (if (null err)
+		(remove-if #'(lambda (s)
+			       (not
+				(member
+				 (sb-bsd-sockets:socket-file-descriptor
+				  (socket s))
+				 result-fds)))
+			   sockets)
+		(map-socket-error err)))))))
   )
