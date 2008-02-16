@@ -173,20 +173,15 @@
                   (usock-error (if (functionp usock-error)
                                    (funcall usock-error condition)
                                  usock-error)))
-             (if usock-error
-                 (error usock-error :socket socket)
-               (error 'unknown-error
-                      :socket socket
-                      :real-error condition))))
+             (when usock-error
+                 (error usock-error :socket socket))))
     (condition (let* ((usock-cond (cdr (assoc (type-of condition)
                                               +sbcl-condition-map+)))
                       (usock-cond (if (functionp usock-cond)
                                       (funcall usock-cond condition)
                                     usock-cond)))
                  (if usock-cond
-                     (signal usock-cond :socket socket)
-                   (signal 'unknown-condition
-                           :real-condition condition))))))
+                     (signal usock-cond :socket socket))))))
 
 
 (defun socket-connect (host port &key (element-type 'character))

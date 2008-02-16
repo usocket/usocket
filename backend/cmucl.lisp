@@ -48,11 +48,7 @@
   (typecase condition
     (ext::socket-error (cmucl-map-socket-error (ext::socket-errno condition)
                                                :socket socket
-                                               :condition condition))
-    (simple-error (error 'unknown-error
-                         :real-condition condition
-                         :socket socket))
-    (condition (error condition))))
+                                               :condition condition))))
 
 (defun socket-connect (host port &key (element-type 'character))
   (let* ((socket))

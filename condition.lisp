@@ -115,9 +115,8 @@ condition available."))
 error available."))
 
 (defmacro with-mapped-conditions ((&optional socket) &body body)
-  `(handler-case
-       (progn ,@body)
-     (condition (condition) (handle-condition condition ,socket))))
+  `(handler-bind ((condition #'(lambda (c) (handle-condition c ,socket))))
+    ,@body))
 
 (defparameter +unix-errno-condition-map+
   `(((11) . retry-condition) ;; EAGAIN

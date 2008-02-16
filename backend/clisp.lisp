@@ -49,13 +49,11 @@
        (let ((usock-err
               (cdr (assoc (car (simple-condition-format-arguments condition))
                           +clisp-error-map+ :test #'member))))
-         (if usock-err
+         (when usock-err ;; don't claim the error if we don't know
+	   ;; it's actually a socket error ...
              (if (subtypep usock-err 'error)
                  (error usock-err :socket socket)
-               (signal usock-err :socket socket))
-           (error 'unknown-error
-                  :socket socket
-                  :real-error condition))))))
+               (signal usock-err :socket socket)))))))
 
 (defun socket-connect (host port &key (element-type 'character))
   (let ((socket)

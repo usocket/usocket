@@ -45,13 +45,11 @@
 (defun raise-or-signal-socket-error (errno socket)
   (let ((usock-err
          (cdr (assoc errno +lispworks-error-map+ :test #'member))))
-    (if usock-err
+    (when usock-err  ;; don't claim the error when we're not sure
+      ;; it's actually sockets related
         (if (subtypep usock-err 'error)
             (error usock-err :socket socket)
-          (signal usock-err :socket))
-      (error 'unknown-error
-             :socket socket
-             :real-condition nil))))
+          (signal usock-err :socket)))))
 
 (defun raise-usock-err (errno socket &optional condition)
   (let* ((usock-err

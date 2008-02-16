@@ -69,10 +69,8 @@
      (raise-error-from-id (openmcl-socket:socket-error-identifier condition)
                           socket condition))
     (ccl::socket-creation-error #| ugh! |#
-     (raise-error-from-id (ccl::socket-creationg-error-identifier condition)
-                          socket condition))
-    (error (error 'unknown-error :socket socket :real-error condition))
-    (condition (signal 'unknown-condition :real-condition condition))))
+     (raise-error-from-id (ccl::socket-creation-error-identifier condition)
+                          socket condition))))
 
 (defun to-format (element-type)
   (if (subtypep element-type 'character)
