@@ -292,38 +292,50 @@
          nil))))
 
 
-  (defun map-network-errors (func network-events)
+  (defun map-network-events (func network-events)
     (let ((event-map (fli:foreign-slot-value network-events 'network-events))
           (error-array (fli:foreign-slot-value network-events 'error-code)))
-      (dotimes (i fd-max-events)
-        (unless (zerop (ldb (byte 1 i) event-map))
-          (funcall func (fli:foreign-aref error-array i))))))
+      (unless (zerop event-map)
+	(dotimes (i fd-max-events)
+	  (unless (zerop (ldb (byte 1 i) event-map))
+	    (funcall func (fli:foreign-aref error-array i)))))))
 
   (defun has-network-errors-p (network-events)
-    (let ((network-events (fli:foreign-slot-value network-events 'network-events))
-          (error-array (fli:foreign-slot-value network-events 'error-code)))
-      ;; We need to check the bits before checking the error:
-      ;; the api documents the consumer can only assume valid values for
-      ;; fields which have the corresponding bit set
-      (do ((i 0 (1+ i)))
-          ((and (< i fd-max-events)
-                (not (zerop (ldb (byte 1 i) network-events)))
-                (zerop (fli:foreign-aref error-array i)))
-           (< i fd-max-events)))))
+    (map-network-events #'(lambda (err-code)
+			    (unless (zerop err-code)
+			      (return-from has-network-errors-p t)))
+			network-events)
+    nil)
 
-  (defun socket-ready-p (network-events)
-    (and (not (zerop (fli:foreign-slot-value network-events 'network-events)))
-         (not (has-network-errors-p network-events))))
+  (defun has-non-error-state-p (network-events)
+    (map-network-events #'(lambda (err-code)
+			    (when (zerop err-code)
+			      (return-from has-non-error-state-p t)))
+			network-errors)
+    nil)
 
   (defun sockets-ready (sockets)
-    (remove-if-not #'(lambda (socket)
-                       (multiple-value-bind
-                           (rv network-events)
-                           (wsa-enum-network-events (os-socket-handle socket) 0)
-                         (if (zerop rv)
-                             (socket-ready-p network-events)
-                           (maybe-wsa-error rv socket))))
-                   sockets))
+    (remove-if-not
+     #'(lambda (socket)
+	 (multiple-value-bind
+	       (rv network-events)
+	     (wsa-enum-network-events (os-socket-handle socket) 0)
+	   (if (zerop rv)
+	       (let ((non-error-state-p nil))
+		 ;; raise any errors we find
+		 (map-network-events
+		  #'(lambda (err-code)
+		      (if (zerop err-code)
+			  (setf non-error-statep t)
+			  (let ((err-class (map-errno-error err-code)))
+			    (if (subtypep err-class 'socket-error)
+				(error err-class :socket socket)
+				(error err-class)))))
+		  network-events)
+		 ;; return whether we found non-error state
+		 non-error-state-p)
+	       (maybe-wsa-error rv socket))))
+     sockets))
 
   (defun wait-for-input-internal (sockets &key timeout)
     (wait-for-sockets sockets timeout)
