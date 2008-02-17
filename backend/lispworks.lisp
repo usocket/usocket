@@ -300,20 +300,6 @@
 	  (unless (zerop (ldb (byte 1 i) event-map))
 	    (funcall func (fli:foreign-aref error-array i)))))))
 
-  (defun has-network-errors-p (network-events)
-    (map-network-events #'(lambda (err-code)
-			    (unless (zerop err-code)
-			      (return-from has-network-errors-p t)))
-			network-events)
-    nil)
-
-  (defun has-non-error-state-p (network-events)
-    (map-network-events #'(lambda (err-code)
-			    (when (zerop err-code)
-			      (return-from has-non-error-state-p t)))
-			network-errors)
-    nil)
-
   (defun sockets-ready (sockets)
     (remove-if-not
      #'(lambda (socket)
