@@ -162,8 +162,8 @@
 
     ;; Nameservice errors: mapped to unknown-error
     (sb-bsd-sockets:no-recovery-error . ns-no-recovery-error)
-    (sb-bsd-sockets:try-again-condition . ns-try-again-condition)
-    (sb-bsd-sockets:host-not-found . ns-host-not-found-error)))
+    (sb-bsd-sockets:try-again-error . ns-try-again-condition)
+    (sb-bsd-sockets:host-not-found-error . ns-host-not-found-error)))
 
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
@@ -279,25 +279,24 @@
          (multiple-value-bind
              (secs musecs)
              (split-timeout (or timeout 1))
-           (let ((count
-		  (sb-unix:unix-fast-select
-		   (1+ (reduce #'max (mapcar #'socket sockets)
-			       :key #'sb-bsd-sockets:socket-file-descriptor))
-		   (sb-alien:addr rfds) nil nil
-		   (when timeout secs) musecs)))
-	     (unless (= 0 count)  ;; 0 means timeout
-	       (if (=> count 0)
+           (multiple-value-bind
+               (count err)
+               (sb-unix:unix-fast-select
+                (1+ (reduce #'max (mapcar #'socket sockets)
+                            :key #'sb-bsd-sockets:socket-file-descriptor))
+                (sb-alien:addr rfds) nil nil
+                (when timeout secs) musecs)
+	     (if (null count)
+		 (unless (= err sb-unix:EINTR)
+		   (error (map-errno-error err)))
+		 (when (< 0 count)
 		   ;; process the result...
 		   (remove-if
 		    #'(lambda (x)
-			(not
-			 (sb-unix:fd-isset
-			  (sb-bsd-sockets:socket-file-descriptor (socket x))
-			  rfds)))
-		    sockets)
-		   (let ((err (sb-alien:get-errno)))
-		     (unless (= err sb-unix:EINTR)
-		       (error (map-errno-error err)))))))))))
+			(not (sb-unix:fd-isset
+			      (sb-bsd-sockets:socket-file-descriptor (socket x))
+			      rfds)))
+		    sockets))))))))
 
   #+win32
   (warn "wait-for-input not (yet!) supported...")
