@@ -323,5 +323,5 @@
 				  (socket s))
 				 result-fds)))
 			   sockets)
-		(map-socket-error err)))))))
+		(error (map-errno-error err))))))))
   )
