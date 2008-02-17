@@ -326,14 +326,7 @@
                    sockets))
 
   (defun wait-for-input-internal (sockets &key timeout)
-    (wait-for-sockets sockets
-                      (if (some #'(lambda (x)
-                                    (and (stream-usocket-p x)
-                                         (listen (socket-stream x))))
-                                sockets)
-                          0 ;; don't wait: there are streams which
-                            ;; can be read from, even if not from the socket
-                          timeout)
+    (wait-for-sockets sockets timeout)
     (sockets-ready sockets))
 
   );; end of WIN32-block
