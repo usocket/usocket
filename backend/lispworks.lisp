@@ -45,11 +45,13 @@
 (defun raise-or-signal-socket-error (errno socket)
   (let ((usock-err
          (cdr (assoc errno +lispworks-error-map+ :test #'member))))
-    (when usock-err  ;; don't claim the error when we're not sure
-      ;; it's actually sockets related
+    (if usock-err
         (if (subtypep usock-err 'error)
             (error usock-err :socket socket)
-          (signal usock-err :socket)))))
+          (signal usock-err :socket))
+      (error 'unknown-error
+             :socket socket
+             :real-condition nil))))
 
 (defun raise-usock-err (errno socket &optional condition)
   (let* ((usock-err
@@ -105,6 +107,9 @@
                                 :direction :io
                                 :element-type (or element-type
                                                   (element-type usocket)))))
+    #+win32
+    (when sock
+      (setf (%ready-p usocket) nil))
     (make-stream-socket :socket sock :stream stream)))
 
 ;; Sockets and their streams are different objects
@@ -148,9 +153,7 @@
              (comm:get-host-entry name :fields '(:addresses)))))
 
 (defun os-socket-handle (usocket)
-  (if (stream-usocket-p usocket)
-      (comm:socket-stream-socket (socket usocket))
-    (socket usocket)))
+  (socket usocket))
 
 (defun usocket-listen (usocket)
   (if (stream-usocket-p usocket)
@@ -223,6 +226,8 @@
   
   (defconstant fd-max-events 10)
 
+  (defconstant fionread 1074030207)
+
   (fli:define-foreign-type ws-socket () '(:unsigned :int))
   (fli:define-foreign-type win32-handle () '(:unsigned :int))
   (fli:define-c-struct wsa-network-events (network-events :long)
@@ -234,7 +239,7 @@
     :result-type :int
     :module "ws2_32")
   (fli:define-foreign-function (wsa-event-close "WSACloseEvent" :source)
-      (event-object win32-handle)
+      ((event-object win32-handle))
     :result-type :int
     :module "ws2_32")
   (fli:define-foreign-function (wsa-enum-network-events "WSAEnumNetworkEvents" :source)
@@ -256,6 +261,15 @@
     :result-type :int
     :module "ws2_32")
 
+  (fli:define-foreign-function (wsa-ioctlsocket "ioctlsocket" :source)
+      ((socket :long) (cmd :long) (argp (:ptr :long)))
+    :result-type :int
+    :module "ws2_32")
+
+
+  ;; The Windows system 
+
+
   ;; Now that we have access to the system calls, this is the plan:
 
   ;; 1. Receive a list of sockets to listen to
@@ -271,6 +285,13 @@
     (unless (zerop rv)
       (raise-usock-err (wsa-get-last-error) socket)))
 
+  (defun bytes-available-for-read (socket)
+    (fli:with-dynamic-foreign-objects ((int-ptr :long))
+      (let ((rv (wsa-ioctlsocket (os-socket-handle socket) fionread int-ptr)))
+        (if (= 0 rv)
+            (fli:dereference int-ptr)
+          0))))
+
   (defun add-socket-to-event (socket event-object)
     (let ((events (etypecase socket
                     (stream-server-usocket (logior fd-connect fd-accept fd-close))
@@ -279,52 +300,51 @@
        (wsa-event-select (os-socket-handle socket) event-object events)
        socket)))
 
-  (defun wait-for-sockets (sockets timeout)
+  (defun socket-ready-p (socket)
+     (if (typep socket 'stream-usocket)
+       (< 0 (bytes-available-for-read socket))
+       (%ready-p socket)))
+
+  (defun waiting-required (sockets)
+    (notany #'socket-ready-p sockets))
+
+  (defun wait-for-input-internal (sockets &key timeout)
     (let ((event-object (wsa-event-create)))
       (unwind-protect
           (progn
-            (dolist (socket sockets)
-              (add-socket-to-event socket event-object))
-            (system:wait-for-single-object event-object
-                                           "Waiting for socket activity" timeout))
-        (maybe-wsa-error
-         (wsa-event-close event-object)
-         nil))))
-
+            (when (waiting-required sockets)
+              (dolist (socket sockets)
+                (add-socket-to-event socket event-object))
+              (system:wait-for-single-object event-object
+                                             "Waiting for socket activity" timeout))
+            (update-ready-slots sockets)
+            (sockets-ready sockets))
+        (wsa-event-close event-object))))
 
   (defun map-network-events (func network-events)
     (let ((event-map (fli:foreign-slot-value network-events 'network-events))
-          (error-array (fli:foreign-slot-value network-events 'error-code)))
+          (error-array (fli:foreign-slot-pointer network-events 'error-code)))
       (unless (zerop event-map)
-	(dotimes (i fd-max-events)
-	  (unless (zerop (ldb (byte 1 i) event-map))
-	    (funcall func (fli:foreign-aref error-array i)))))))
+	  (dotimes (i fd-max-events)
+	    (unless (zerop (ldb (byte 1 i) event-map))
+	      (funcall func (fli:foreign-aref error-array i)))))))
+
+  (defun update-ready-slots (sockets)
+     (dolist (socket sockets)
+        (unless (or (stream-usocket-p socket) ;; no need to check status for streams
+                    (%ready-p socket))        ;; and sockets already marked ready
+           (multiple-value-bind
+                 (rv network-events)
+                 (wsa-enum-network-events (os-socket-handle socket) 0 t)
+              (if (zerop rv)
+                 (map-network-events #'(lambda (err-code)
+                                          (if (zerop err-code)
+                                             (setf (%ready-p socket) t)
+                                             (raise-usock-err err-code socket)))
+                                     network-events)
+                 (maybe-wsa-error rv socket))))))
 
   (defun sockets-ready (sockets)
-    (remove-if-not
-     #'(lambda (socket)
-	 (multiple-value-bind
-	       (rv network-events)
-	     (wsa-enum-network-events (os-socket-handle socket) 0)
-	   (if (zerop rv)
-	       (let ((non-error-state-p nil))
-		 ;; raise any errors we find
-		 (map-network-events
-		  #'(lambda (err-code)
-		      (if (zerop err-code)
-			  (setf non-error-statep t)
-			  (let ((err-class (map-errno-error err-code)))
-			    (if (subtypep err-class 'socket-error)
-				(error err-class :socket socket)
-				(error err-class)))))
-		  network-events)
-		 ;; return whether we found non-error state
-		 non-error-state-p)
-	       (maybe-wsa-error rv socket))))
-     sockets))
-
-  (defun wait-for-input-internal (sockets &key timeout)
-    (wait-for-sockets sockets timeout)
-    (sockets-ready sockets))
-
+    (remove-if-not #'socket-ready-p sockets))
+  
   );; end of WIN32-block
