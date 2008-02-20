@@ -73,13 +73,11 @@ be initiated from remote sockets."))
   (typep socket 'stream-server-usocket))
 
 (defun datagram-usocket-p (socket)
-  (declare (ignore socket))
-  nil)
+  (typep socket 'datagram-usocket))
 
-;;Not in use yet:
-;;(defclass datagram-usocket (usocket)
-;;  ()
-;;  (:documentation ""))
+(defclass datagram-usocket (usocket)
+  ((connected-p :initarg :connected-p :accessor connected-p))
+  (:documentation ""))
 
 (defun make-socket (&key socket)
   "Create a usocket socket type from implementation specific socket."
@@ -234,6 +232,42 @@ none."))
                                 internal-time-units-per-second)))
                 (when (< elapsed timeout)
                   (- timeout elapsed)))))))
+
+
+;;
+;; Data utility functions
+;;
+
+(defun integer-to-octet-buffer (integer buffer octets &key (start 0))
+  (do ((b start (1+ b))
+       (i (ash (1- octets) 3) ;; * 8
+          (- i 8)))
+      ((> 0 i) buffer)
+    (setf (aref buffer b)
+          (ldb (byte 8 i) integer))))
+
+(defun octet-buffer-to-integer (buffer octets &key (start 0))
+  (let ((integer 0))
+    (do ((b start (1+ b))
+         (i (ash (1- octets) 3) ;; * 8
+            (- i 8)))
+        ((> 0 i)
+         integer)
+      (setf (ldb (byte 8 i) integer)
+            (aref buffer b)))))
+
+
+(defmacro port-to-octet-buffer (port buffer &key (start 0))
+  `(integer-to-octet-buffer ,port ,buffer 2 ,start))
+
+(defmacro ip-to-octet-buffer (ip buffer &key (start 0))
+  `(integer-to-octet-buffer (host-byte-order ,ip) ,buffer 4 ,start))
+
+(defmacro port-from-octet-buffer (buffer &key (start 0))
+  `(octet-buffer-to-integer ,buffer 2 ,start))
+
+(defmacro ip-from-octet-buffer (buffer &key (start 0))
+  `(octet-buffer-to-integer ,buffer 4 ,start))
 
 ;;
 ;; IP(v4) utility functions
