@@ -145,3 +145,69 @@
                             (when y x))
                         sockets status-list))))))
 
+
+;;
+;; UDP/Datagram sockets!
+;;
+
+#+rawsock
+(progn
+
+  (defun make-sockaddr_in ()
+    (make-array 16 :element-type '(unsigned-byte 8) :initial-element 0))
+
+  (declaim (inline fill-sockaddr_in))
+  (defun fill-sockaddr_in (sockaddr_in ip port)
+    (port-to-octet-buffer sockaddr_in port)
+    (ip-to-octet-buffer sockaddr_in ip :start 2)
+    sockaddr_in)
+
+  (defun socket-receive (socket buffer &key (size (length buffer)))
+    "Returns the buffer, the number of octets copied into the buffer (received)
+and the address of the sender as values."
+    (let* ((sock (socket socket))
+           (sockaddr (when (not (connected-p socket))
+                       (rawsock:make-sockaddr)))
+           (rv (if sockaddr
+                   (rawsock:recvfrom sock buffer sockaddr
+                                     :start 0
+                                     :end size)
+                   (rawsock:recv sock buffer
+                                 :start 0
+                                 :end size))))
+      (values buffer
+              rv
+              (list (ip-from-octet-buffer (sockaddr-data sockaddr) 4)
+                    (port-from-octet-buffer (sockaddr-data sockaddr) 2)))))
+
+  (defun socket-send (socket buffer &key address (size (length buffer)))
+    "Returns the number of octets sent."
+    (let* ((sock (socket socket))
+           (sockaddr (when address
+                       (rawsock:make-sockaddr :INET
+                                              (fill-sockaddr_in
+                                               (make-sockaddr_in)
+                                               (host-byte-order
+                                                (second address))
+                                               (first address)))))
+           (rv (if address
+                   (rawsock:sendto sock buffer sockaddr
+                                   :start 0
+                                   :end size)
+                   (rawsock:send sock buffer
+                                 :start 0
+                                 :end size))))
+      rv))
+
+  (defmethod socket-close ((usocket datagram-usocket))
+    (rawsock:socket-close (socket usocket)))
+  
+  )
+
+#-rawsock
+(progn
+  (warn "This image doesn't contain the RAWSOCK package.
+To enable UDP socket support, please be sure to use the -Kfull parameter
+at startup, or to enable RAWSOCK support during compilation.")
+
+  )
