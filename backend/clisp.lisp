@@ -200,7 +200,7 @@ and the address of the sender as values."
       rv))
 
   (defmethod socket-close ((usocket datagram-usocket))
-    (rawsock:socket-close (socket usocket)))
+    (rawsock:sock-close (socket usocket)))
   
   )
 
