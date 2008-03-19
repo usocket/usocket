@@ -114,6 +114,13 @@ The returned value is a subtype of `stream-server-usocket'.
                  :socket socket
                  :element-type element-type))
 
+(defun make-datagram-socket (socket &key connected-p)
+  (unless socket
+    (error 'invalid-socket-error))
+  (make-instance 'datagram-usocket
+                 :socket socket
+                 :connected-p connected-p))
+
 (defgeneric socket-accept (socket &key element-type)
   (:documentation
       "Accepts a connection from `socket', returning a `stream-socket'.

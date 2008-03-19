@@ -162,6 +162,22 @@
     (ip-to-octet-buffer sockaddr_in ip :start 2)
     sockaddr_in)
 
+  (defun socket-create-datagram (local-port
+                                 &key (local-host *wildcard-host*)
+                                      remote-host
+                                      remote-port)
+    (let ((sock (rawsock:socket :inet :dgram 0))
+          (lsock_addr (fill-sockaddr_in (make-sockaddr_in)
+                                        local-host local-port))
+          (rsock_addr (when remote-host
+                        (fill-sockaddr_in (make-sockaddr_in)
+                                          remote-host (or remote-port
+                                                          local-port)))))
+      (bind sock lsock_addr)
+      (when rsock_addr
+        (connect sock rsock_addr))
+      (make-datagram-socket sock :connected-p (if rsock_addr t nil))))
+
   (defun socket-receive (socket buffer &key (size (length buffer)))
     "Returns the buffer, the number of octets copied into the buffer (received)
 and the address of the sender as values."
