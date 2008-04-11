@@ -77,6 +77,7 @@ be initiated from remote sockets."))
 
 (defclass datagram-usocket (usocket)
   ((connected-p :initarg :connected-p :accessor connected-p))
+;; ###FIXME: documentation to be added.
   (:documentation ""))
 
 (defun make-socket (&key socket)

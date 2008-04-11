@@ -217,7 +217,7 @@ and the address of the sender as values."
 
   (defmethod socket-close ((usocket datagram-usocket))
     (rawsock:sock-close (socket usocket)))
-  
+
   )
 
 #-rawsock
