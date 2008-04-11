@@ -168,7 +168,8 @@ The `body' is an implied progn form."
   `(let ((,var ,socket))
      (unwind-protect
          (when ,var
-           ,@body)
+           (with-mapped-conditions (,var)
+             ,@body))
        (when ,var
          (socket-close ,var)))))
 
