@@ -50,6 +50,7 @@
              #:ip-to-octet-buffer
              #:ip-from-octet-buffer
 
+             #:with-mapped-conditions
              #:socket-condition ; conditions
              #:ns-condition
              #:socket-error ; errors
