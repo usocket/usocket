@@ -39,10 +39,10 @@
       (dolist (sock sockets)
         (ccl::fd-set (socket-os-fd sock infds))
         (ccl::fd-set (socket-os-fd sock errfds)))
-      (let* ((res (ccl::syscall syscalls::select
-                                (1+ (apply #'max fds))
-                                infds (ccl::%null-ptr) errfds
-                                (if ticks-to-wait tv (ccl::%null-ptr)))))
+      (let* ((res (#_select
+                   (1+ (apply #'max fds))
+                   infds (ccl::%null-ptr) errfds
+                   (if ticks-to-wait tv (ccl::%null-ptr)))))
         (when (> res 0)
           (remove-if #'(lambda (x)
                          (not (ccl::fd-is-set (socket-os-fd x) infds)))
