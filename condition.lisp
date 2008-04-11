@@ -148,7 +148,7 @@ error available."))
     ((50 100) . network-down-error)
     ((52 102) . network-reset-error)
     ((58 108) . already-shutdown-error)
-    ((60 110) . connection-timeout-error)
+    ((60 110) . timeout-error)
     ((64 112) . host-down-error)
     ((65 113) . host-unreachable-error)))
 
