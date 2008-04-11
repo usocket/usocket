@@ -5,15 +5,6 @@
 
 (in-package :usocket)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; also present in OpenMCL l1-sockets.lisp
-  #+linuxppc-target
-  (require "LINUX-SYSCALLS")
-  #+darwinppc-target
-  (require "DARWIN-SYSCALLS")
-  #+darwinx86-target
-  (require "DARWINX8664-SYSCALLS"))
-
 (defun get-host-name ()
   (ccl::%stack-block ((resultbuf 256))
     (when (zerop (#_gethostname resultbuf 256))
@@ -48,9 +39,9 @@
           (let ((fd (openmcl-socket:socket-os-fd sock)))
             (setf max-fd (max max-fd fd))
             (ccl::fd-set fd infds)))
-        (let* ((res (ccl::syscall syscalls::select (1+ max-fd)
-                                  infds (ccl::%null-ptr) (ccl::%null-ptr)
-                                  (if ticks-to-wait tv (ccl::%null-ptr)))))
+        (let* ((res (#_select (1+ max-fd)
+                              infds (ccl::%null-ptr) (ccl::%null-ptr)
+                              (if ticks-to-wait tv (ccl::%null-ptr)))))
           (when (> res 0)
             (remove-if #'(lambda (x)
                            (not (ccl::fd-is-set (openmcl-socket:socket-os-fd x)
