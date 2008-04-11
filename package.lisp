@@ -42,6 +42,7 @@
              #:ip=
              #:ip/=
 
+             #:with-mapped-conditions
              #:socket-condition ; conditions
              #:ns-condition
              #:socket-error ; errors
