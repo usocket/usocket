@@ -50,7 +50,9 @@
                                                :socket socket
                                                :condition condition))))
 
-(defun socket-connect (host port &key (element-type 'character))
+(defun socket-connect (host port &key (element-type 'character) timeout)
+  (when timeout
+    (warn "SOCKET-CONNECT timeout not supported in CMUCL"))
   (let* ((socket))
     (setf socket
           (with-mapped-conditions (socket)

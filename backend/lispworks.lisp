@@ -73,7 +73,9 @@
                     (declare (ignore host port err-msg))
                     (raise-usock-err errno socket condition)))))
 
-(defun socket-connect (host port &key (element-type 'base-char))
+(defun socket-connect (host port &key (element-type 'base-char) timeout)
+  (when timeout
+    (warn "SOCKET-CONNECT timeout not supported in Lispworks"))
   (let ((hostname (host-to-hostname host))
         (stream))
     (setf stream

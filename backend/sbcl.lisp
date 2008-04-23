@@ -184,7 +184,10 @@
                      (signal usock-cond :socket socket))))))
 
 
-(defun socket-connect (host port &key (element-type 'character))
+(defun socket-connect (host port &key (element-type 'character) timeout deadline)
+  (declare (ignore deadline))
+  (when timeout
+    (warn "SOCKET-CONNECT timeout not supported in SBCL"))
   (let* ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                 :type :stream :protocol :tcp))
          (stream (sb-bsd-sockets:socket-make-stream socket

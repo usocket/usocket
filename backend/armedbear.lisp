@@ -185,7 +185,9 @@
   (typecase condition
     (error (error 'unknown-error :socket socket :real-error condition))))
 
-(defun socket-connect (host port &key (element-type 'character))
+(defun socket-connect (host port &key (element-type 'character) timeout)
+  (when timeout
+    (warn "SOCKET-CONNECT timeout not supported in ABCL"))
   (let ((usock))
     (with-mapped-conditions (usock)
       (let* ((sock-addr (jdi:jcoerce
