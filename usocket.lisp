@@ -159,6 +159,13 @@ type objects."))
    "Returns the IP address and port of the peer
 the socket is connected to as values."))
 
+(defgeneric set-socket-timeouts (socket read-timeout write-timeout)
+  (:documentation "Set the SO_RCVTIMEO and SO_SNDTIMEO socket options
+for the SOCKET.  Both READ-TIMEOUT and WRITE-TIMEOUT are speficied in
+\(fractional) seconds.")
+  (:method ((usocket usocket) read-timeout write-timeout)
+    (set-socket-timeouts (socket usocket) read-timeout write-timeout)))
+
 (defmacro with-connected-socket ((var socket) &body body)
   "Bind `socket' to `var', ensuring socket destruction on exit.
 

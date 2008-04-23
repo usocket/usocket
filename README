@@ -95,8 +95,6 @@ API definition
       the return value of which satisfies the normal stream interface
 
 
-
-
 Errors:
  - address-in-use-error
  - address-not-available-error
