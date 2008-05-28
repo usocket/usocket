@@ -76,7 +76,7 @@
       }" :one-liner nil :side-effects nil))
 
   (defun read-select (read-fds to-secs &optional (to-musecs 0))
-    (ffi:c-inline (read-fds to-secs to-musecs) (t t :unsigned-int) t
+    (ffi:c-inline (read-fds to-secs to-musecs) (t t :unsigned-int) (values t t)
       "{
           fd_set rfds;
           cl_object cur_fd = #0;
@@ -86,10 +86,10 @@
 
           FD_ZERO(&rfds);
           while (CONSP(cur_fd)) {
-            int fd = fixint(cur_fd->cons.car);
+            int fd = fixint(CAR(cur_fd));
             max_fd = (max_fd > fd) ? max_fd : fd;
             FD_SET(fd, &rfds);
-            cur_fd = cur_fd->cons.cdr;
+            cur_fd = CDR(cur_fd);
           }
 
           if (#1 != Cnil) {
@@ -99,17 +99,17 @@
           count = select(max_fd + 1, &rfds, NULL, NULL,
                          (#1 != Cnil) ? &tv : NULL);
 
-          if (count == 0)
+          if (count == 0) {
             @(return 0) = Cnil;
             @(return 1) = Cnil;
-          else if (count < 0)
+          } else if (count < 0) {
             /*###FIXME: We should be raising an error here...
 
               except, ofcourse in case of EINTR or EAGAIN */
 
             @(return 0) = Cnil;
             @(return 1) = MAKE_INTEGER(errno);
-          else
+          } else
             {
               cl_object rv = Cnil;
               cur_fd = #0;
@@ -120,11 +120,11 @@
                  Windows... */
 
               while (CONSP(cur_fd)) {
-                int fd = fixint(cur_fd->cons.car);
+                int fd = fixint(CAR(cur_fd));
                 if (FD_ISSET(fd, &rfds))
                   rv = CONS(MAKE_INTEGER(fd), rv);
 
-                cur_fd = cur_fd->cons.cdr;
+                cur_fd = CDR(cur_fd);
               }
               @(return 0) = rv;
               @(return 1) = Cnil;
@@ -152,6 +152,7 @@
      . operation-not-permitted-error)
     (sb-bsd-sockets:protocol-not-supported-error
      . protocol-not-supported-error)
+    #-ecl
     (sb-bsd-sockets:unknown-protocol
      . protocol-not-supported-error)
     (sb-bsd-sockets:socket-type-not-supported-error
@@ -161,6 +162,7 @@
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
 
     ;; Nameservice errors: mapped to unknown-error
+    #-ecl #-ecl #-ecl
     (sb-bsd-sockets:no-recovery-error . ns-no-recovery-error)
     (sb-bsd-sockets:try-again-error . ns-try-again-condition)
     (sb-bsd-sockets:host-not-found-error . ns-host-not-found-error)))
