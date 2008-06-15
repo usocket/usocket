@@ -169,21 +169,36 @@
 ;;;
 
 #-win32
-(defun wait-for-input-internal (sockets &key timeout)
-  (with-mapped-conditions ()
-    ;; unfortunately, it's impossible to share code between
-    ;; non-win32 and win32 platforms...
-    ;; Can we have a sane -pref. complete [UDP!?]- API next time, please?
-    (dolist (x sockets)
-       (mp:notice-fd (os-socket-handle x)))
-    (mp:process-wait-with-timeout "Waiting for a socket to become active"
-                                  (truncate timeout)
-                                  #'(lambda (socks)
-                                      (some #'usocket-listen socks))
-                                  sockets)
-    (dolist (x sockets)
-       (mp:unnotice-fd (os-socket-handle x)))
-    (remove nil (mapcar #'usocket-listen sockets))))
+(progn
+
+  (defun %setup-wait-list (wait-list)
+    (declare (ignore wait-list)))
+
+  (defun %add-waiter (wait-list waiter)
+    (declare (ignore wait-list waiter)))
+
+  (defun %remove-waiter (wait-list waiter)
+    (declare (ignore wait-list waiter)))
+
+  (defun wait-for-input-internal (wait-list &key timeout)
+    (with-mapped-conditions ()
+      ;; unfortunately, it's impossible to share code between
+      ;; non-win32 and win32 platforms...
+      ;; Can we have a sane -pref. complete [UDP!?]- API next time, please?
+      (dolist (x (wait-list wait-list))
+        (mp:notice-fd (os-socket-handle x)))
+      (mp:process-wait-with-timeout "Waiting for a socket to become active"
+                                    (truncate timeout)
+                                    #'(lambda (socks)
+                                        (let (rv)
+                                          (dolist (x socks rv)
+                                            (when (usocket-listen x)
+                                              (setf (state x) :READ
+                                                    rv t)))))
+                                    (wait-list wait-list))
+      (dolist (x (wait-list wait-list))
+        (mp:unnotice-fd (os-socket-handle x)))
+      wait-list)))
 
 
 ;;;

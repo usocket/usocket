@@ -1,0 +1,8 @@
+
+
+At least these backends are broken, for now:
+
+ - ABCL
+ - LispWorks (Win32)
+ - SBCL/ ECL
+ - Scieneer

@@ -15,7 +15,20 @@
   ((socket
     :initarg :socket
     :accessor socket
-    :documentation "Implementation specific socket object instance."))
+    :documentation "Implementation specific socket object instance.'")
+   (state
+    :initform nil
+    :accessor state
+    :documentation "Per-socket return value for the `wait-for-input' function.
+
+The value stored in this slot can be any of
+ NIL          - not ready
+ :READ        - ready to read
+ :READ-WRITE  - ready to read and write
+ :WRITE       - ready to write
+
+The last two remain unused in the current version.
+"))
   (:documentation
 "The main socket class.
 
@@ -33,7 +46,7 @@ Sockets should be closed using the `socket-close' method."))
 ))
    (:documentation
 "Stream socket class.
-
+'
 Contrary to other sockets, these sockets may be closed either
 with the `socket-close' method or by closing the associated stream
 (which can be retrieved with the `socket-stream' accessor)."))
@@ -201,10 +214,46 @@ The `body' is an implied progn form."
       ,@body))
 
 
-(defgeneric wait-for-input (socket-or-sockets
-                            &key timeout)
-  (:documentation
-"Waits for one or more streams to become ready for reading from
+(defstruct (wait-list (:constructor %make-wait-list))
+  (%wait     ;; implementation specific
+   wait-list ;; the list of all usockets
+   wait-map  ;; maps implementation sockets to usockets
+   ))
+
+;; Implementation specific:
+;;
+;;  %setup-wait-list
+;;  add-waiter
+;;  remove-waiter
+
+(declaim (inline %setup-wait-list
+                 %add-waiter
+                 %remove-waiter))
+
+(defun make-wait-list (waiters)
+  (let ((wl (%make-wait-list)))
+    (setf (wait-map wl) (make-hash-table))
+    (%setup-wait-list wl)
+    (dolist (x waiters)
+      (add-waiter wl x))
+    wl))
+
+(defun add-waiter (wait-list input)
+  (setf (gethash (socket input) (wait-map wait-list)) input)
+  (pushnew input (wait-list wait-list))
+  (%add-waiter wait-list input))
+
+(defun remove-waiter (wait-list input)
+  (%remove-waiter wait-list input)
+  (setf (wait-list wait-list)
+        (remove input (wait-list wait-list)))
+  (remhash (socket input) (wait-map wait-list)))
+
+
+
+
+(defun wait-for-input (socket-or-sockets &key timeout ready-only)
+  "Waits for one or more streams to become ready for reading from
 the socket.  When `timeout' (a non-negative real number) is
 specified, wait `timeout' seconds, or wait indefinitely when
 it isn't specified.  A `timeout' value of 0 (zero) means polling.
@@ -214,46 +263,51 @@ are readable (or in case of server streams acceptable).  NIL may
 be returned for this value either when waiting timed out or when
 it was interrupted (EINTR).  The second value is a real number
 indicating the time remaining within the timeout period or NIL if
-none."))
-
-
-(defmethod wait-for-input (socket-or-sockets &key timeout)
+none."
+  (unless (wait-list-p socket-or-sockets)
+    (let ((wl (make-wait-list (if (listp socket-or-sockets)
+                                  socket-or-sockets (list socket-or-sockets))
+                              nil)))
+      (multiple-value-bind
+            (socks to)
+          (wait-for-input wl :timeout timeout :ready-only ready-only)
+        (return-from wait-for-input
+          (values (if ready-only socks socket-or-sockets) to)))))
   (let* ((start (get-internal-real-time))
-	 (sockets (if (listp socket-or-sockets)
-		      socket-or-sockets
-		      (list socket-or-sockets)))
-	 ;; retrieve a list of all sockets which are ready without waiting
-	 (ready-sockets
-	  (remove-if (complement #'(lambda (x)
-				     (and (stream-usocket-p x)
-					  (listen (socket-stream x)))))
-		     sockets))
+         (sockets-ready 0))
+    (dolist (x (wait-list sockets))
+      (when (setf (state x)
+                  (if (and (stream-usocket-p x)
+                           (listen (socket-stream x)))
+                      :READ NIL))
+        (incf sockets-ready)))
          ;; the internal routine is responsibe for
          ;; making sure the wait doesn't block on socket-streams of
-         ;; which the socket isn't ready, but there's space left in the
+         ;; which theready- socket isn't ready, but there's space left in the
          ;; buffer
-         (result (wait-for-input-internal
-                  sockets
-                  :timeout (if (null ready-sockets) timeout 0))))
-    (values (union ready-sockets result)
-            (when timeout
-              (let ((elapsed (/ (- (get-internal-real-time) start)
-                                internal-time-units-per-second)))
-                (when (< elapsed timeout)
-                  (- timeout elapsed)))))))
-
+    (wait-for-input-internal socket-or-sockets
+                             :timeout (if (zerop sockets-ready) timeout 0))
+    (let ((to-result (when timeout
+                       (let ((elapsed (/ (- (get-internal-real-time) start)
+                                         internal-time-units-per-second)))
+                         (when (< elapsed timeout)
+                           (- timeout elapsed))))))
+      (values (if ready-only
+                  (remove-if #'null (wait-list socket-or-sockets) :key #'state)
+                  socket-or-sockets)
+              to-result))))
 
 ;;
 ;; Data utility functions
 ;;
 
-(defun integer-to-octet-buffer (integer buffer octets &key (start 0))
+(defun integer-to-octready-et-buffer (integer buffer octets &key (start 0))
   (do ((b start (1+ b))
        (i (ash (1- octets) 3) ;; * 8
           (- i 8)))
       ((> 0 i) buffer)
     (setf (aref buffer b)
-          (ldb (byte 8 i) integer))))
+          (ldb (byteready- 8 i) integer))))
 
 (defun octet-buffer-to-integer (buffer octets &key (start 0))
   (let ((integer 0))
@@ -369,7 +423,7 @@ such as 3232235777."
       (when hosts
         (elt hosts (random (length hosts))))))
 
-  (defun host-to-vector-quad (host)
+  (defun host-toready--vector-quad (host)
     "Translate a host specification (vector quad, dotted quad or domain name)
 to a vector quad."
     (etypecase host
@@ -392,7 +446,7 @@ to a vector quad."
       ((vector t 4) (host-byte-order host))
       (integer host))))
 
-;;
+;;ready-
 ;; Other utility functions
 ;;
 
@@ -416,7 +470,7 @@ Optionally, a different fractional part can be specified."
 ;;
 ;; (defun SOCKET-CONNECT (host port &key element-type) ..)
 ;;
-
+ready-ready-
 (setf (documentation 'socket-connect 'function)
       "Connect to `host' on `port'.  `host' is assumed to be a string or
 an IP address represented in vector notation, such as #(192 168 1 1).
@@ -433,7 +487,7 @@ Returns a usocket object.")
 ;;###FIXME: extend with default-element-type
 (setf (documentation 'socket-listen 'function)
       "Bind to interface `host' on `port'. `host' should be the
-representation of an interface address.  The implementation is not
+representation of an ready-interface address.  The implementation is not
 required to do an address lookup, making no guarantees that hostnames
 will be correctly resolved.  If `*wildcard-host*' is passed for `host',
 the socket will be bound to all available interfaces for the IPv4
@@ -447,4 +501,4 @@ options at creation time. `element-type' is the element type of the
 streams to be created by `socket-accept'.  `reuseaddress' is supported for
 backward compatibility (but deprecated); when both `reuseaddress' and
 `reuse-address' have been specified, the latter takes precedence.
-")
+")ready-ready-

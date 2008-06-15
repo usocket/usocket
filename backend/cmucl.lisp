@@ -162,26 +162,35 @@
 (defun get-host-name ()
   (unix:unix-gethostname))
 
-(defun wait-for-input-internal (sockets &key timeout)
+(defun %setup-wait-list (wait-list)
+  (declare (ignore wait-list)))
+
+(defun %add-waiter (wait-list waiter)
+  (declare (ignore wait-list waiter)))
+
+(defun %remove-waiter (wait-list waiter)
+  (declare (ignore wait-list waiter)))
+
+(defun wait-for-input-internal (wait-list &key timeout)
   (with-mapped-conditions ()
     (alien:with-alien ((rfds (alien:struct unix:fd-set)))
        (unix:fd-zero rfds)
-       (dolist (socket sockets)
+       (dolist (socket (wait-list wait-list))
          (unix:fd-set (socket socket) rfds))
        (multiple-value-bind
            (secs musecs)
            (split-timeout (or timeout 1))
          (multiple-value-bind
              (count err)
-             (unix:unix-fast-select (1+ (reduce #'max sockets
+             (unix:unix-fast-select (1+ (reduce #'max (wait-list wait-list)
                                                 :key #'socket))
                                     (alien:addr rfds) nil nil
                                     (when timeout secs) musecs)
            (if (<= 0 count)
                ;; process the result...
-               (remove-if #'(lambda (x)
-                              (not (unix:fd-isset (socket x) rfds)))
-                          sockets)
+               (dolist (x (wait-list wait-list))
+                 (when (unix:fd-isset (socket x) rfds)
+                   (setf (state x) :READ)))
              (progn
                ;;###FIXME generate an error, except for EINTR
                )))))))

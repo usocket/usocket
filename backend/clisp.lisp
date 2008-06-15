@@ -127,23 +127,33 @@
   (nth-value 1 (get-peer-name usocket)))
 
 
-(defmethod wait-for-input-internal (sockets &key timeout)
+(defun %setup-wait-list (wait-list)
+  (declare (ignore wait-list)))
+
+(defun %add-waiter (wait-list waiter)
+  (push (cons (socket waiter) NIL) (%wait wait-list)))
+
+(defun %remove-waiter (wait-list waiter)
+  (setf (%wait wait-list)
+        (remove (socket waiter) (%wait wait-list) :key #'car)))
+
+(defmethod wait-for-input-internal (wait-list &key timeout)
   (with-mapped-conditions ()
     (multiple-value-bind
         (secs musecs)
         (split-timeout (or timeout 1))
-      (let* ((request-list (mapcar #'(lambda (x)
-                                       (if (stream-server-usocket-p x)
-                                           (socket x)
-                                         (list (socket x) :input)))
-                                   sockets))
-             (status-list (if timeout
+      (dolist (x (%wait wait-list))
+        (setf (cdr x) :INPUT))
+      (let* ((status-list (if timeout
                               (socket:socket-status request-list secs musecs)
-                            (socket:socket-status request-list))))
-        (remove nil
-                (mapcar #'(lambda (x y)
-                            (when y x))
-                        sockets status-list))))))
+                            (socket:socket-status request-list)))
+             (sockets (wait-list wait-list)))
+        (do* ((x (pop sockets) (pop sockets))
+              (y (pop status-list) (pop status-list)))
+             ((or (null sockets) (null status-list)))
+          (when y
+            (setf (state x) :READ)))
+        wait-list))))
 
 
 ;;
