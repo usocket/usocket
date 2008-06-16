@@ -131,25 +131,25 @@
   (declare (ignore wait-list)))
 
 (defun %add-waiter (wait-list waiter)
-  (push (socket waiter) (%wait wait-list)))
+  (push (socket waiter) (wait-list-%wait wait-list)))
 
 (defun %remove-waiter (wait-list waiter)
-  (setf (%wait wait-list)
-        (remove (socket waiter) (%wait wait-list))))
+  (setf (wait-list-%wait wait-list)
+        (remove (socket waiter) (wait-list-%wait wait-list))))
 
 (defun wait-for-input-internal (wait-list &key timeout)
   (with-mapped-conditions ()
     (let ((active-internal-sockets
            (if timeout
-               (mp:wait-for-input-available (%wait wait-list)
+               (mp:wait-for-input-available (wait-list-%wait wait-list)
                                             :timeout timeout)
-             (mp:wait-for-input-available (%wait wait-list)))))
+             (mp:wait-for-input-available (wait-list-%wait wait-list)))))
       ;; this is quadratic, but hey, the active-internal-sockets
       ;; list is very short and it's only quadratic in the length of that one.
       ;; When I have more time I could recode it to something of linear
       ;; complexity.
       ;; [Same code is also used in openmcl.lisp]
       (dolist (x active-internal-sockets)
-        (setf (state (gethash x (wait-map wait-list)))
+        (setf (state (gethash x (wait-list-map wait-list)))
               :READ))
       wait-list)))

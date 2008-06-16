@@ -175,7 +175,7 @@
   (with-mapped-conditions ()
     (alien:with-alien ((rfds (alien:struct unix:fd-set)))
        (unix:fd-zero rfds)
-       (dolist (socket (wait-list wait-list))
+       (dolist (socket (wait-list-waiters wait-list))
          (unix:fd-set (socket socket) rfds))
        (multiple-value-bind
            (secs musecs)
@@ -188,7 +188,7 @@
                                     (when timeout secs) musecs)
            (if (<= 0 count)
                ;; process the result...
-               (dolist (x (wait-list wait-list))
+               (dolist (x (wait-list-waiters wait-list))
                  (when (unix:fd-isset (socket x) rfds)
                    (setf (state x) :READ)))
              (progn

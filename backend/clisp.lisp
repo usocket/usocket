@@ -131,23 +131,23 @@
   (declare (ignore wait-list)))
 
 (defun %add-waiter (wait-list waiter)
-  (push (cons (socket waiter) NIL) (%wait wait-list)))
+  (push (cons (socket waiter) NIL) (wait-list-%wait wait-list)))
 
 (defun %remove-waiter (wait-list waiter)
-  (setf (%wait wait-list)
-        (remove (socket waiter) (%wait wait-list) :key #'car)))
+  (setf (wait-list-%wait wait-list)
+        (remove (socket waiter) (wait-list-%wait wait-list) :key #'car)))
 
 (defmethod wait-for-input-internal (wait-list &key timeout)
   (with-mapped-conditions ()
     (multiple-value-bind
         (secs musecs)
         (split-timeout (or timeout 1))
-      (dolist (x (%wait wait-list))
+      (dolist (x (wait-list-%wait wait-list))
         (setf (cdr x) :INPUT))
       (let* ((status-list (if timeout
                               (socket:socket-status request-list secs musecs)
                             (socket:socket-status request-list)))
-             (sockets (wait-list wait-list)))
+             (sockets (wait-list-waiters wait-list)))
         (do* ((x (pop sockets) (pop sockets))
               (y (pop status-list) (pop status-list)))
              ((or (null sockets) (null status-list)))

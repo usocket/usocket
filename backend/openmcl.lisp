@@ -153,7 +153,7 @@
     (let* ((ticks-timeout (truncate (* (or timeout 1)
                                        ccl::*ticks-per-second*)))
            (active-internal-sockets
-            (input-available-p wait-list
+            (input-available-p (wait-list-waiters wait-list)
                                (when timeout ticks-timeout))))
       wait-list)))
 
