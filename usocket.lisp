@@ -215,10 +215,10 @@ The `body' is an implied progn form."
 
 
 (defstruct (wait-list (:constructor %make-wait-list))
-  (%wait     ;; implementation specific
-   wait-list ;; the list of all usockets
-   wait-map  ;; maps implementation sockets to usockets
-   ))
+  %wait     ;; implementation specific
+  waiters ;; the list of all usockets
+  map  ;; maps implementation sockets to usockets
+  )
 
 ;; Implementation specific:
 ;;
@@ -232,22 +232,22 @@ The `body' is an implied progn form."
 
 (defun make-wait-list (waiters)
   (let ((wl (%make-wait-list)))
-    (setf (wait-map wl) (make-hash-table))
+    (setf (wait-list-map wl) (make-hash-table))
     (%setup-wait-list wl)
     (dolist (x waiters)
       (add-waiter wl x))
     wl))
 
 (defun add-waiter (wait-list input)
-  (setf (gethash (socket input) (wait-map wait-list)) input)
-  (pushnew input (wait-list wait-list))
+  (setf (gethash (socket input) (wait-list-map wait-list)) input)
+  (pushnew input (wait-list-waiters wait-list))
   (%add-waiter wait-list input))
 
 (defun remove-waiter (wait-list input)
   (%remove-waiter wait-list input)
-  (setf (wait-list wait-list)
-        (remove input (wait-list wait-list)))
-  (remhash (socket input) (wait-map wait-list)))
+  (setf (wait-list-waiters wait-list)
+        (remove input (wait-list-waiters wait-list)))
+  (remhash (socket input) (wait-list-map wait-list)))
 
 
 
@@ -275,7 +275,7 @@ none."
           (values (if ready-only socks socket-or-sockets) to)))))
   (let* ((start (get-internal-real-time))
          (sockets-ready 0))
-    (dolist (x (wait-list sockets))
+    (dolist (x (wait-list-waiters sockets))
       (when (setf (state x)
                   (if (and (stream-usocket-p x)
                            (listen (socket-stream x)))
@@ -293,7 +293,7 @@ none."
                          (when (< elapsed timeout)
                            (- timeout elapsed))))))
       (values (if ready-only
-                  (remove-if #'null (wait-list socket-or-sockets) :key #'state)
+                  (remove-if #'null (wait-list-waiters socket-or-sockets) :key #'state)
                   socket-or-sockets)
               to-result))))
 
@@ -301,13 +301,13 @@ none."
 ;; Data utility functions
 ;;
 
-(defun integer-to-octready-et-buffer (integer buffer octets &key (start 0))
+(defun integer-to-octet-buffer (integer buffer octets &key (start 0))
   (do ((b start (1+ b))
        (i (ash (1- octets) 3) ;; * 8
           (- i 8)))
       ((> 0 i) buffer)
     (setf (aref buffer b)
-          (ldb (byteready- 8 i) integer))))
+          (ldb (byte 8 i) integer))))
 
 (defun octet-buffer-to-integer (buffer octets &key (start 0))
   (let ((integer 0))
@@ -423,7 +423,7 @@ such as 3232235777."
       (when hosts
         (elt hosts (random (length hosts))))))
 
-  (defun host-toready--vector-quad (host)
+  (defun host-to-vector-quad (host)
     "Translate a host specification (vector quad, dotted quad or domain name)
 to a vector quad."
     (etypecase host
@@ -470,7 +470,6 @@ Optionally, a different fractional part can be specified."
 ;;
 ;; (defun SOCKET-CONNECT (host port &key element-type) ..)
 ;;
-ready-ready-
 (setf (documentation 'socket-connect 'function)
       "Connect to `host' on `port'.  `host' is assumed to be a string or
 an IP address represented in vector notation, such as #(192 168 1 1).
@@ -501,4 +500,4 @@ options at creation time. `element-type' is the element type of the
 streams to be created by `socket-accept'.  `reuseaddress' is supported for
 backward compatibility (but deprecated); when both `reuseaddress' and
 `reuse-address' have been specified, the latter takes precedence.
-")ready-ready-
+")
