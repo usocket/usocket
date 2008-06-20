@@ -157,7 +157,7 @@
 
 (defun usocket-listen (usocket)
   (if (stream-usocket-p usocket)
-      (when (listen (socket usocket))
+      (when (listen (socket-stream usocket))
         usocket)
     (when (comm::socket-listen (socket usocket))
       usocket)))
@@ -174,15 +174,15 @@
     ;; unfortunately, it's impossible to share code between
     ;; non-win32 and win32 platforms...
     ;; Can we have a sane -pref. complete [UDP!?]- API next time, please?
-    (mapcar #'mp:notice-fd sockets
-            :key #'os-socket-handle)
+    (dolist (x sockets)
+       (mp:notice-fd (os-socket-handle x)))
     (mp:process-wait-with-timeout "Waiting for a socket to become active"
                                   (truncate timeout)
                                   #'(lambda (socks)
                                       (some #'usocket-listen socks))
                                   sockets)
-    (mapcar #'mp:unnotice-fd sockets
-            :key #'os-socket-handle)
+    (dolist (x sockets)
+       (mp:unnotice-fd (os-socket-handle x)))
     (remove nil (mapcar #'usocket-listen sockets))))
 
 
