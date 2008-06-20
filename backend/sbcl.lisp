@@ -67,7 +67,7 @@
   (defun get-host-name ()
     (ffi:c-inline
      () () :object
-     "{ char *buf = GC_malloc(256);
+     "{ char *buf = cl_alloc_atomic(256);
 
         if (gethostname(buf,256) == 0)
           @(return) = make_simple_base_string(buf);
@@ -86,10 +86,10 @@
 
           FD_ZERO(&rfds);
           while (CONSP(cur_fd)) {
-            int fd = fixint(cur_fd->cons.car);
+            int fd = fixint(CAR(cur_fd));
             max_fd = (max_fd > fd) ? max_fd : fd;
             FD_SET(fd, &rfds);
-            cur_fd = cur_fd->cons.cdr;
+            cur_fd = CDR(cur_fd);
           }
 
           if (#1 != Cnil) {
@@ -102,14 +102,14 @@
           if (count == 0)
             @(return 0) = Cnil;
             @(return 1) = Cnil;
-          else if (count < 0)
+          } else if (count < 0) {
             /*###FIXME: We should be raising an error here...
 
               except, ofcourse in case of EINTR or EAGAIN */
 
             @(return 0) = Cnil;
             @(return 1) = MAKE_INTEGER(errno);
-          else
+          } else
             {
               cl_object rv = Cnil;
               cur_fd = #0;
@@ -152,6 +152,7 @@
      . operation-not-permitted-error)
     (sb-bsd-sockets:protocol-not-supported-error
      . protocol-not-supported-error)
+    #-ecl
     (sb-bsd-sockets:unknown-protocol
      . protocol-not-supported-error)
     (sb-bsd-sockets:socket-type-not-supported-error
@@ -161,6 +162,7 @@
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
 
     ;; Nameservice errors: mapped to unknown-error
+    #-ecl #-ecl #-ecl
     (sb-bsd-sockets:no-recovery-error . ns-no-recovery-error)
     (sb-bsd-sockets:try-again-error . ns-try-again-condition)
     (sb-bsd-sockets:host-not-found-error . ns-host-not-found-error)))
