@@ -52,7 +52,7 @@
      "{ char *buf = cl_alloc_atomic(257);
 
         if (gethostname(buf,256) == 0)
-           @(return) = make_simple_base_string(strndup(&buf,255));
+           @(return) = make_simple_base_string(buf);
         else
            @(return) = Cnil;
       }" :one-liner nil :side-effects nil)))
