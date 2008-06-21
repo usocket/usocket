@@ -55,14 +55,19 @@
                  (error usock-err :socket socket)
                (signal usock-err :socket socket)))))))
 
-(defun socket-connect (host port &key (element-type 'character))
+(defun socket-connect (host port &key (element-type 'character) timeout)
   (let ((socket)
         (hostname (host-to-hostname host)))
     (with-mapped-conditions (socket)
-       (setf socket
-             (socket:socket-connect port hostname
-                                    :element-type element-type
-                                    :buffered t)))
+      (setf socket
+            (if timeout
+                (socket:socket-connect port hostname
+                                       :element-type element-type
+                                       :buffered t
+                                       :timeout timeout)
+                (socket:socket-connect port hostname
+                                       :element-type element-type
+                                       :buffered t))))
     (make-stream-socket :socket socket
                         :stream socket))) ;; the socket is a stream too
 

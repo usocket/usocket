@@ -49,13 +49,18 @@
       :text
     :binary))
 
-(defun socket-connect (host port &key (element-type 'character))
+(defun socket-connect (host port &key (element-type 'character) timeout)
   (let ((socket))
     (setf socket
           (with-mapped-conditions (socket)
-             (socket:make-socket :remote-host (host-to-hostname host)
-                                 :remote-port port
-                                 :format (to-format element-type))))
+            (if timeout
+                (mp:with-timeout (timeout nil)
+                  (socket:make-socket :remote-host (host-to-hostname host)
+                                      :remote-port port
+                                      :format (to-format element-type)))
+                (socket:make-socket :remote-host (host-to-hostname host)
+                                    :remote-port port
+                                    :format (to-format element-type)))))
     (make-stream-socket :socket socket :stream socket)))
 
 

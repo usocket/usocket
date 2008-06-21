@@ -57,25 +57,30 @@
 (defun handle-condition (condition &optional socket)
   (typecase condition
     (openmcl-socket:socket-error
-     (raise-error-from-id (openmcl-socket:socket-error-identifier condition)
-                          socket condition))
+       (raise-error-from-id (openmcl-socket:socket-error-identifier condition)
+                            socket condition))
+    (ccl:communication-deadline-expired
+       (error 'timeout-error :socket socket :real-error condition))
     (ccl::socket-creation-error #| ugh! |#
-     (raise-error-from-id (ccl::socket-creation-error-identifier condition)
-                          socket condition))))
+       (raise-error-from-id (ccl::socket-creation-error-identifier condition)
+                            socket condition))))
 
 (defun to-format (element-type)
   (if (subtypep element-type 'character)
       :text
     :binary))
 
-(defun socket-connect (host port &key (element-type 'character))
+(defun socket-connect (host port &key (element-type 'character) timeout deadline)
   (with-mapped-conditions ()
-     (let ((mcl-sock
-	     (openmcl-socket:make-socket :remote-host (host-to-hostname host)
-                                         :remote-port port
-					 :format (to-format element-type))))
-        (openmcl-socket:socket-connect mcl-sock)
-        (make-stream-socket :stream mcl-sock :socket mcl-sock))))
+    (let ((mcl-sock
+           (openmcl-socket:make-socket :remote-host (host-to-hostname host)
+                                       :remote-port port
+                                       :format (to-format element-type)
+                                       :deadline deadline
+                                       :connect-timeout (and timeout
+                                                             (* timeout internal-time-units-per-second)))))
+      (openmcl-socket:socket-connect mcl-sock)
+      (make-stream-socket :stream mcl-sock :socket mcl-sock))))
 
 (defun socket-listen (host port
                            &key reuseaddress
