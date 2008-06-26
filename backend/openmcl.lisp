@@ -37,15 +37,15 @@
       (ccl::fd-zero infds)
       (ccl::fd-zero errfds)
       (dolist (sock sockets)
-        (ccl::fd-set (socket-os-fd sock infds))
-        (ccl::fd-set (socket-os-fd sock errfds)))
+        (ccl::fd-set (openmcl-socket:socket-os-fd sock infds))
+        (ccl::fd-set (openmcl-socket:socket-os-fd sock errfds)))
       (let* ((res (#_select
-                   (1+ (apply #'max fds))
+                   (1+ (apply #'max infds))
                    infds (ccl::%null-ptr) errfds
                    (if ticks-to-wait tv (ccl::%null-ptr)))))
         (when (> res 0)
           (remove-if #'(lambda (x)
-                         (not (ccl::fd-is-set (socket-os-fd x) infds)))
+                         (not (ccl::fd-is-set (openmcl-socket:socket-os-fd x) infds)))
                      sockets))))))
 
 (defun wait-for-input (sockets &optional ticks-to-wait)
@@ -67,7 +67,7 @@
      (raise-error-from-id (openmcl-socket:socket-error-identifier condition)
                           socket condition))
     (ccl::socket-creation-error #| ugh! |#
-     (raise-error-from-id (ccl::socket-creationg-error-identifier condition)
+     (raise-error-from-id (ccl::socket-creation-error-identifier condition)
                           socket condition))
     (error (error 'unknown-error :socket socket :real-error condition))
     (condition (signal 'unknown-condition :real-condition condition))))
