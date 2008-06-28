@@ -37,8 +37,8 @@
       (ccl::fd-zero infds)
       (ccl::fd-zero errfds)
       (dolist (sock sockets)
-        (ccl::fd-set (openmcl-socket:socket-os-fd sock infds))
-        (ccl::fd-set (openmcl-socket:socket-os-fd sock errfds)))
+        (ccl::fd-set (openmcl-socket:socket-os-fd sock) infds)
+        (ccl::fd-set (openmcl-socket:socket-os-fd sock) errfds))
       (let* ((res (#_select
                    (1+ (apply #'max infds))
                    infds (ccl::%null-ptr) errfds
