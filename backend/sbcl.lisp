@@ -268,13 +268,26 @@
 #+sbcl
 (progn
   #-win32
+(defun %setup-wait-list (wait-list)
+  (declare (ignore wait-list)))
+
+(defun %add-waiter (wait-list waiter)
+  (push (socket waiter) (wait-list-%wait wait-list)))
+
+(defun %remove-waiter (wait-list waiter)
+  ;;;### not removing from the waiters list?!
+  (setf (wait-list-%wait wait-list)
+        (remove (socket waiter) (wait-list-%wait wait-list))))
+
+
+
   (defun wait-for-input-internal (sockets &key timeout)
     (with-mapped-conditions ()
       (sb-alien:with-alien ((rfds (sb-alien:struct sb-unix:fd-set)))
          (sb-unix:fd-zero rfds)
-         (dolist (socket sockets)
+         (dolist (socket (wait-list-%wait sockets))
            (sb-unix:fd-set
-            (sb-bsd-sockets:socket-file-descriptor (socket socket))
+            (sb-bsd-sockets:socket-file-descriptor socket)
             rfds))
          (multiple-value-bind
              (secs musecs)
@@ -282,7 +295,7 @@
            (multiple-value-bind
                (count err)
                (sb-unix:unix-fast-select
-                (1+ (reduce #'max (mapcar #'socket sockets)
+                (1+ (reduce #'max (mapcar #'socket (wait-list-waiters sockets))
                             :key #'sb-bsd-sockets:socket-file-descriptor))
                 (sb-alien:addr rfds) nil nil
                 (when timeout secs) musecs)
@@ -291,12 +304,11 @@
 		   (error (map-errno-error err)))
 		 (when (< 0 count)
 		   ;; process the result...
-		   (remove-if
-		    #'(lambda (x)
-			(not (sb-unix:fd-isset
-			      (sb-bsd-sockets:socket-file-descriptor (socket x))
-			      rfds)))
-		    sockets))))))))
+                   (dolist (x (wait-list-waiters sockets))
+                     (when (not (sb-unix:fd-isset
+                                 (sb-bsd-sockets:socket-file-descriptor (socket x))
+                                 rfds))
+                       (setf (state x) :READ))))))))))
 
   #+win32
   (warn "wait-for-input not (yet!) supported...")
