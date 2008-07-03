@@ -275,7 +275,7 @@ none."
           (values (if ready-only socks socket-or-sockets) to)))))
   (let* ((start (get-internal-real-time))
          (sockets-ready 0))
-    (dolist (x (wait-list-waiters sockets))
+    (dolist (x (wait-list-waiters socket-or-sockets))
       (when (setf (state x)
                   (if (and (stream-usocket-p x)
                            (listen (socket-stream x)))
