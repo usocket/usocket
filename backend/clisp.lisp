@@ -144,14 +144,15 @@
         (split-timeout (or timeout 1))
       (dolist (x (wait-list-%wait wait-list))
         (setf (cdr x) :INPUT))
-      (let* ((status-list (if timeout
+      (let* ((request-list (wait-list-%wait wait-list))
+             (status-list (if timeout
                               (socket:socket-status request-list secs musecs)
                             (socket:socket-status request-list)))
              (sockets (wait-list-waiters wait-list)))
         (do* ((x (pop sockets) (pop sockets))
               (y (pop status-list) (pop status-list)))
-             ((or (null sockets) (null status-list)))
-          (when y
+             ((null x))
+          (when (eq y :INPUT)
             (setf (state x) :READ)))
         wait-list))))
 
