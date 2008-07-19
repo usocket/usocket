@@ -243,6 +243,23 @@
 
   (defconstant fionread 1074030207)
 
+
+  ;; Note:
+  ;;
+  ;;  If special finalization has to occur for a given
+  ;;  system resource (handle), an associated object should
+  ;;  be created.  A special cleanup action should be added
+  ;;  to the system and a special cleanup action should
+  ;;  be flagged on all objects created for resources like it
+  ;;
+  ;;  We have 2 functions to do so:
+  ;;   * hcl:add-special-free-action (function-symbol)
+  ;;   * hcl:flag-special-free-action (object)
+  ;;
+  ;;  Note that the special free action will be called on all
+  ;;  objects which have been flagged for special free, so be
+  ;;  sure to check for the right argument type!
+  
   (fli:define-foreign-type ws-socket () '(:unsigned :int))
   (fli:define-foreign-type win32-handle () '(:unsigned :int))
   (fli:define-c-struct wsa-network-events (network-events :long)
