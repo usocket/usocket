@@ -1,5 +1,5 @@
-;;;; $Id$
-;;;; $URL$
+;;;; $Id: package.lisp 326 2008-04-11 21:13:40Z ehuelsmann $
+;;;; $URL: svn://common-lisp.net/project/usocket/svn/usocket/branches/hans/package.lisp $
 
 ;;;; See the LICENSE file for licensing information.
 

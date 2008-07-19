@@ -1,5 +1,5 @@
-;;;; $Id$
-;;;; $URL$
+;;;; $Id: lispworks.lisp 335 2008-04-23 21:29:50Z hhubner $
+;;;; $URL: svn://common-lisp.net/project/usocket/svn/usocket/branches/hans/backend/lispworks.lisp $
 
 ;;;; See LICENSE for licensing information.
 
@@ -73,7 +73,8 @@
                     (declare (ignore host port err-msg))
                     (raise-usock-err errno socket condition)))))
 
-(defun socket-connect (host port &key (element-type 'base-char) timeout)
+(defun socket-connect (host port &key (element-type 'base-char) timeout nodelay)
+  (declare (ignore nodelay))
   (when timeout
     (warn "SOCKET-CONNECT timeout not supported in Lispworks"))
   (let ((hostname (host-to-hostname host))

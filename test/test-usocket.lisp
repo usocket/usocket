@@ -1,5 +1,5 @@
-;;;; $Id$
-;;;; $URL$
+;;;; $Id: test-usocket.lisp 228 2007-04-08 21:56:25Z ehuelsmann $
+;;;; $URL: svn://common-lisp.net/project/usocket/svn/usocket/branches/hans/test/test-usocket.lisp $
 
 ;;;; See LICENSE for licensing information.
 

@@ -1,6 +1,6 @@
 http://www.xach.com/sbcl/sb-bsd-sockets.html
 
-$Id$
+$Id: sb-bsd-sockets.txt 91 2006-02-13 08:01:51Z ehuelsmann $
 
 package: sb-bsd-sockets
 

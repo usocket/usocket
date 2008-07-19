@@ -1,5 +1,5 @@
-;;;; $Id$
-;;;; $URL$
+;;;; $Id: armedbear.lisp 335 2008-04-23 21:29:50Z hhubner $
+;;;; $URL: svn://common-lisp.net/project/usocket/svn/usocket/branches/hans/backend/armedbear.lisp $
 
 ;;;; See LICENSE for licensing information.
 
@@ -185,7 +185,8 @@
   (typecase condition
     (error (error 'unknown-error :socket socket :real-error condition))))
 
-(defun socket-connect (host port &key (element-type 'character) timeout)
+(defun socket-connect (host port &key (element-type 'character) timeout nodelay)
+  (declare (ignore nodelay))
   (when timeout
     (warn "SOCKET-CONNECT timeout not supported in ABCL"))
   (let ((usock))

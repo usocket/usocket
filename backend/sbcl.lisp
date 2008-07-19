@@ -1,5 +1,5 @@
-;;;; $Id$
-;;;; $URL$
+;;;; $Id: sbcl.lisp 335 2008-04-23 21:29:50Z hhubner $
+;;;; $URL: svn://common-lisp.net/project/usocket/svn/usocket/branches/hans/backend/sbcl.lisp $
 
 ;;;; See LICENSE for licensing information.
 
@@ -186,7 +186,8 @@
                      (signal usock-cond :socket socket))))))
 
 
-(defun socket-connect (host port &key (element-type 'character) timeout deadline)
+(defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay)
+  (declare (ignore nodelay))
   (declare (ignore deadline))
   (when timeout
     (warn "SOCKET-CONNECT timeout not supported in SBCL"))

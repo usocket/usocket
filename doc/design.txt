@@ -1,7 +1,7 @@
 
                                                         -*- text -*-
 
-$Id$
+$Id: design.txt 122 2006-10-22 08:42:00Z ehuelsmann $
 
 
                   usocket: Universal sockets library

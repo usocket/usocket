@@ -1,6 +1,6 @@
 http://cvs2.cons.org/ftp-area/cmucl/doc/cmu-user/internet.html
 
-$Id$
+$Id: cmucl-sockets.txt 91 2006-02-13 08:01:51Z ehuelsmann $
 
 extensions:lookup-host-entry host
 

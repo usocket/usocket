@@ -1,5 +1,5 @@
-;;;; $Id$
-;;;; $URL$
+;;;; $Id: cmucl.lisp 335 2008-04-23 21:29:50Z hhubner $
+;;;; $URL: svn://common-lisp.net/project/usocket/svn/usocket/branches/hans/backend/cmucl.lisp $
 
 ;;;; See LICENSE for licensing information.
 
@@ -50,7 +50,8 @@
                                                :socket socket
                                                :condition condition))))
 
-(defun socket-connect (host port &key (element-type 'character) timeout)
+(defun socket-connect (host port &key (element-type 'character) timeout nodelay)
+  (declare (ignore nodelay))
   (when timeout
     (warn "SOCKET-CONNECT timeout not supported in CMUCL"))
   (let* ((socket))

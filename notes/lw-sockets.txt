@@ -1,5 +1,5 @@
 
-$Id$
+$Id: lw-sockets.txt 91 2006-02-13 08:01:51Z ehuelsmann $
 
 http://www.lispworks.com/reference/lwu41/lwref/LWRM_37.HTM
 

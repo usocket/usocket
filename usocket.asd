@@ -1,6 +1,6 @@
 
-;;;; $Id$
-;;;; $URL$
+;;;; $Id: usocket.asd 320 2008-02-21 20:29:19Z ehuelsmann $
+;;;; $URL: svn://common-lisp.net/project/usocket/svn/usocket/branches/hans/usocket.asd $
 
 ;;;; See the LICENSE file for licensing information.
 

@@ -1,5 +1,5 @@
-;;;; $Id$
-;;;; $URL$
+;;;; $Id: condition.lisp 325 2008-04-11 21:12:29Z ehuelsmann $
+;;;; $URL: svn://common-lisp.net/project/usocket/svn/usocket/branches/hans/condition.lisp $
 
 ;;;; See LICENSE for licensing information.
 

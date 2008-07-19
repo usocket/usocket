@@ -1,5 +1,5 @@
-;;;; $Id$
-;;;; $URL$
+;;;; $Id: clisp.lisp 335 2008-04-23 21:29:50Z hhubner $
+;;;; $URL: svn://common-lisp.net/project/usocket/svn/usocket/branches/hans/backend/clisp.lisp $
 
 ;;;; See LICENSE for licensing information.
 
@@ -55,7 +55,8 @@
                  (error usock-err :socket socket)
                (signal usock-err :socket socket)))))))
 
-(defun socket-connect (host port &key (element-type 'character) timeout)
+(defun socket-connect (host port &key (element-type 'character) timeout nodelay)
+  (declare (ignore nodelay))
   (when timeout
     (warn "SOCKET-CONNECT timeout not supported in CLISP"))
   (let ((socket)
