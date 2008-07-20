@@ -28,7 +28,23 @@ The value stored in this slot can be any of
  :WRITE       - ready to write
 
 The last two remain unused in the current version.
-"))
+")
+   #+(and lispworks win32)
+   (%ready-p
+    :initform nil
+    :accessor %ready-p
+    :documentation "Indicates whether the socket has been signalled
+as ready for reading a new connection.
+
+The value will be set to T by `wait-for-input-internal' (given the
+right conditions) and reset to NIL by `socket-accept'.
+
+Don't modify this slot or depend on it as it is really intended
+to be internal only.
+
+Note: Accessed, but not used for 'stream-usocket'.
+"
+   ))
   (:documentation
 "The main socket class.
 
@@ -58,21 +74,7 @@ with the `socket-close' method or by closing the associated stream
               #+lispworks 'base-char
     :reader element-type
     :documentation "Default element type for streams created by
-`socket-accept'.")
-   #+(and lispworks win32)
-   (%ready-p
-    :initform nil
-    :accessor %ready-p
-    :documentation "Indicates whether the socket has been signalled
-as ready for reading a new connection.
-
-The value will be set to T by `wait-for-input-internal' (given the
-right conditions) and reset to NIL by `socket-accept'.
-
-Don't modify this slot or depend on it as it is really intended
-to be internal only.
-"
-   ))
+`socket-accept'."))
   (:documentation "Socket which listens for stream connections to
 be initiated from remote sockets."))
 
