@@ -275,7 +275,6 @@
   (push (socket waiter) (wait-list-%wait wait-list)))
 
 (defun %remove-waiter (wait-list waiter)
-  ;;;### not removing from the waiters list?!
   (setf (wait-list-%wait wait-list)
         (remove (socket waiter) (wait-list-%wait wait-list))))
 
