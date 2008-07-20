@@ -3,5 +3,5 @@
 At least these backends are broken, for now:
 
  - ABCL
- - SBCL/ ECL
+ - ECL
  - Scieneer
