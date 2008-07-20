@@ -266,8 +266,7 @@ indicating the time remaining within the timeout period or NIL if
 none."
   (unless (wait-list-p socket-or-sockets)
     (let ((wl (make-wait-list (if (listp socket-or-sockets)
-                                  socket-or-sockets (list socket-or-sockets))
-                              nil)))
+                                  socket-or-sockets (list socket-or-sockets)))))
       (multiple-value-bind
             (socks to)
           (wait-for-input wl :timeout timeout :ready-only ready-only)
