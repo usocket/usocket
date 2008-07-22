@@ -63,6 +63,11 @@ to be internal only.
   (:documentation "Socket which listens for stream connections to
 be initiated from remote sockets."))
 
+(defclass datagram-usocket (usocket)
+  ((connected-p :initarg :connected-p :accessor connected-p))
+;; ###FIXME: documentation to be added.
+  (:documentation ""))
+
 (defun usocket-p (socket)
   (typep socket 'usocket))
 
@@ -74,11 +79,6 @@ be initiated from remote sockets."))
 
 (defun datagram-usocket-p (socket)
   (typep socket 'datagram-usocket))
-
-(defclass datagram-usocket (usocket)
-  ((connected-p :initarg :connected-p :accessor connected-p))
-;; ###FIXME: documentation to be added.
-  (:documentation ""))
 
 (defun make-socket (&key socket)
   "Create a usocket socket type from implementation specific socket."
