@@ -349,8 +349,9 @@ return the function result list.
    ((datagram-usocket-p socket)
     "java.nio.channels.DatagramChannel")))
 
-(defun wait-for-input-internal (sockets &key timeout)
-  (let* ((ops (logior (op-read) (op-accept)))
+(defun wait-for-input-internal (wait-list &key timeout)
+  (let* ((sockets (wait-list-waiters wait-list))
+         (ops (logior (op-read) (op-accept)))
          (selector (jdi:do-jstatic "java.nio.channels.Selector" "open"))
          (channels (mapcar #'socket sockets)))
     (unwind-protect
@@ -415,3 +416,25 @@ return the function result list.
                                           "boolean")
                       (jdi:jop-deref chan) jtrue))))))
 
+
+;;
+;;
+;;
+;; The WAIT-LIST part
+;;
+
+;;
+;; Note that even though Java has the concept of the Selector class, which
+;; remotely looks like a wait-list, it requires the sockets to be non-blocking.
+;; usocket however doesn't make any such guarantees and is therefore unable to
+;; use the concept outside of the waiting routine itself (blergh!).
+;;
+
+(defun %setup-wait-list (wl)
+  (declare (ignore wl)))
+
+(defun %add-waiter (wl w)
+  (declare (ignore wl w)))
+
+(defun %remove-waiter (wl w)
+  (declare (ignore wl w)))
