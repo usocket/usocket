@@ -166,24 +166,27 @@
   (declare (ignore wait-list)))
 
 (defun %add-waiter (wait-list waiter)
-  (declare (ignore wait-list waiter)))
+  (declare (ignore wait-list waiter))
+  (push (socket waiter) (wait-list-%wait wait-list)))
 
 (defun %remove-waiter (wait-list waiter)
-  (declare (ignore wait-list waiter)))
+  (declare (ignore wait-list waiter))
+  (setf (wait-list-%wait wait-list)
+        (remove (socket waiter) (wait-list-%wait waiter))))
 
 (defun wait-for-input-internal (wait-list &key timeout)
   (with-mapped-conditions ()
     (alien:with-alien ((rfds (alien:struct unix:fd-set)))
        (unix:fd-zero rfds)
-       (dolist (socket (wait-list-waiters wait-list))
-         (unix:fd-set (socket socket) rfds))
+       (dolist (socket (wait-list-%wait wait-list))
+         (unix:fd-set socket rfds))
        (multiple-value-bind
            (secs musecs)
            (split-timeout (or timeout 1))
          (multiple-value-bind
              (count err)
-             (unix:unix-fast-select (1+ (reduce #'max (wait-list wait-list)
-                                                :key #'socket))
+             (unix:unix-fast-select (1+ (reduce #'max
+                                                (wait-list-%wait wait-list)))
                                     (alien:addr rfds) nil nil
                                     (when timeout secs) musecs)
            (if (<= 0 count)
