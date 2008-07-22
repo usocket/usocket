@@ -377,7 +377,7 @@ return the function result list.
                 ;; we actually have work to do
                 (let* ((selkeys (jdi:do-jmethod selector "selectedKeys"))
                        (selkey-iterator (jdi:do-jmethod selkeys "iterator"))
-                       ready-sockets)
+                       (%wait (wait-list-%wait wait-list)))
                   (loop while (java:jcall
                                (java:jmethod "java.util.Iterator" "hasNext")
                                (jdi:jop-deref selkey-iterator))
@@ -386,16 +386,8 @@ return the function result list.
                                         "java.nio.channels.SelectionKey"))
                                   (chan (jdi:jop-deref
                                          (jdi:do-jmethod key "channel"))))
-                             (push chan ready-sockets)))
-                  (remove-if #'(lambda (s)
-                                 (not (member (jdi:jop-deref (socket s))
-                                              ready-sockets
-                                              :test #'(lambda (x y)
-                                                        (java:jcall (java:jmethod "java.lang.Object"
-                                                                             "equals"
-                                                                             "java.lang.Object")
-                                                                    x y)))))
-                             sockets))))))
+                             (setf (state (gethash chan %wait))
+                                   :READ))))))))
       ;; cancel all Selector registrations
       (let* ((keys (jdi:do-jmethod selector "keys"))
              (iter (jdi:do-jmethod keys "iterator")))
@@ -431,10 +423,12 @@ return the function result list.
 ;;
 
 (defun %setup-wait-list (wl)
-  (declare (ignore wl)))
+  (setf (wait-list-%wait wl)
+        (make-hash-table :rehash-size 1.3d0)))
 
 (defun %add-waiter (wl w)
-  (declare (ignore wl w)))
+  (setf (gethash (socket w) (wait-list-%wait wl))
+        w))
 
 (defun %remove-waiter (wl w)
-  (declare (ignore wl w)))
+  (remhash (socket w) (wait-list-%wait wl)))
