@@ -88,6 +88,7 @@
    (t
     (java:jclass-name (jop-class instance)))))
 
+(declaim (inline jop-deref))
 (defun jop-deref (instance)
   (if (java-object-proxy-p instance)
       (jop-value instance)
@@ -355,14 +356,13 @@ return the function result list.
          (channels (mapcar #'socket sockets)))
     (unwind-protect
         (with-mapped-conditions ()
-          (let ((jfalse (java:make-immediate-object nil :boolean))
-                (sel (jdi:jop-deref selector)))
+          (let ((sel (jdi:jop-deref selector)))
             (dolist (channel channels)
               (let ((chan (jdi:jop-deref channel)))
                 (java:jcall (java:jmethod "java.nio.channels.SelectableChannel"
                                           "configureBlocking"
                                           "boolean")
-                            chan jfalse)
+                            chan (java:make-immediate-object nil :boolean))
                 (java:jcall (java:jmethod "java.nio.channels.SelectableChannel"
                                           "register"
                                           "java.nio.channels.Selector" "int")
@@ -387,25 +387,16 @@ return the function result list.
                                          (jdi:do-jmethod key "channel"))))
                              (setf (state (gethash chan %wait))
                                    :READ))))))))
-      ;; cancel all Selector registrations
-      (let* ((keys (jdi:do-jmethod selector "keys"))
-             (iter (jdi:do-jmethod keys "iterator")))
-        (loop while (java:jcall (java:jmethod "java.util.Iterator" "hasNext")
-                                (jdi:jop-deref iter))
-              do (java:jcall
-                  (java:jmethod "java.nio.channels.SelectionKey" "cancel")
-                  (java:jcall (java:jmethod "java.util.Iterator" "next")
-                              (jdi:jop-deref iter)))))
-      ;; close the selector
+      ;; close the selector: all keys will be deregistered
       (java:jcall (java:jmethod "java.nio.channels.Selector" "close")
                   (jdi:jop-deref selector))
       ;; make all sockets blocking again.
-      (let ((jtrue (java:make-immediate-object t :boolean)))
-        (dolist (chan channels)
-          (java:jcall (java:jmethod "java.nio.channels.SelectableChannel"
-                                          "configureBlocking"
-                                          "boolean")
-                      (jdi:jop-deref chan) jtrue))))))
+     (dolist (channel channels)
+       (java:jcall (java:jmethod "java.nio.channels.SelectableChannel"
+                                 "configureBlocking"
+                                 "boolean")
+                      (jdi:jop-deref channel)
+                      (java:make-immediate-object t :boolean))))))
 
 
 ;;
