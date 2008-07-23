@@ -196,7 +196,6 @@
              (jchan (jdi:do-jstatic-call "java.nio.channels.SocketChannel"
                                          "open" sock-addr))
              (sock (jdi:do-jmethod-call jchan "socket")))
-        (describe sock)
          (setf usock
                (make-stream-socket
                 :socket jchan
@@ -424,10 +423,10 @@ return the function result list.
 
 (defun %setup-wait-list (wl)
   (setf (wait-list-%wait wl)
-        (make-hash-table :rehash-size 1.3d0)))
+        (make-hash-table :test #'equal :rehash-size 1.3d0)))
 
 (defun %add-waiter (wl w)
-  (setf (gethash (socket w) (wait-list-%wait wl))
+  (setf (gethash (jdi:jop-deref (socket w)) (wait-list-%wait wl))
         w))
 
 (defun %remove-waiter (wl w)
