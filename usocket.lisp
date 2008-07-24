@@ -16,6 +16,10 @@
     :initarg :socket
     :accessor socket
     :documentation "Implementation specific socket object instance.'")
+   (wait-list
+    :initform nil
+    :accessor wait-list
+    :documentation "WAIT-LIST the object is associated with.")
    (state
     :initform nil
     :accessor state
@@ -225,8 +229,8 @@ The `body' is an implied progn form."
 ;; Implementation specific:
 ;;
 ;;  %setup-wait-list
-;;  add-waiter
-;;  remove-waiter
+;;  %add-waiter
+;;  %remove-waiter
 
 (declaim (inline %setup-wait-list
                  %add-waiter
@@ -241,17 +245,23 @@ The `body' is an implied progn form."
     wl))
 
 (defun add-waiter (wait-list input)
-  (setf (gethash (socket input) (wait-list-map wait-list)) input)
+  (setf (gethash (socket input) (wait-list-map wait-list)) input
+        (wait-list input) wait-list)
   (pushnew input (wait-list-waiters wait-list))
   (%add-waiter wait-list input))
 
 (defun remove-waiter (wait-list input)
   (%remove-waiter wait-list input)
   (setf (wait-list-waiters wait-list)
-        (remove input (wait-list-waiters wait-list)))
+        (remove input (wait-list-waiters wait-list))
+        (wait-list input) nil)
   (remhash (socket input) (wait-list-map wait-list)))
 
-
+(defun remove-all-waiters (wait-list)
+  (dolist (waiter (wait-list-waiters wait-list))
+    (%remove-waiter waiter))
+  (setf (wait-list-waiters wait-list) nil)
+  (clrhash (wait-list-map wait-list)))
 
 
 (defun wait-for-input (socket-or-sockets &key timeout ready-only)

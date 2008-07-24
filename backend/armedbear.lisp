@@ -245,6 +245,8 @@
 ;;    (print (jcall (jmethod "java.net.BindException" "getMessage") native-exception))))
 
 (defmethod socket-close ((usocket usocket))
+  (when (wait-list usocket)
+     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (jdi:do-jmethod (socket usocket) "close")))
 
@@ -252,6 +254,8 @@
 ;; socket streams. Closing the stream flushes
 ;; its buffers *and* closes the socket.
 (defmethod socket-close ((usocket stream-usocket))
+  (when (wait-list usocket)
+     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket-stream usocket))))
 
