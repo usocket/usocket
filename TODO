@@ -1,7 +1,6 @@
 
 - Implement wait-for-input-internal for
     * SBCL Win32
-    * LispWorks Win32
 
 - Implement errors for (the alien interface code of)
     * SBCL Unix
