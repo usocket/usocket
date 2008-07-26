@@ -88,6 +88,7 @@
    (t
     (java:jclass-name (jop-class instance)))))
 
+(declaim (inline jop-deref))
 (defun jop-deref (instance)
   (if (java-object-proxy-p instance)
       (jop-value instance)
@@ -198,7 +199,6 @@
              (jchan (jdi:do-jstatic-call "java.nio.channels.SocketChannel"
                                          "open" sock-addr))
              (sock (jdi:do-jmethod-call jchan "socket")))
-        (describe sock)
          (setf usock
                (make-stream-socket
                 :socket jchan
@@ -247,6 +247,8 @@
 ;;    (print (jcall (jmethod "java.net.BindException" "getMessage") native-exception))))
 
 (defmethod socket-close ((usocket usocket))
+  (when (wait-list usocket)
+     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (jdi:do-jmethod (socket usocket) "close")))
 
@@ -254,6 +256,8 @@
 ;; socket streams. Closing the stream flushes
 ;; its buffers *and* closes the socket.
 (defmethod socket-close ((usocket stream-usocket))
+  (when (wait-list usocket)
+     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket-stream usocket))))
 
@@ -351,20 +355,20 @@ return the function result list.
    ((datagram-usocket-p socket)
     "java.nio.channels.DatagramChannel")))
 
-(defun wait-for-input-internal (sockets &key timeout)
-  (let* ((ops (logior (op-read) (op-accept)))
+(defun wait-for-input-internal (wait-list &key timeout)
+  (let* ((sockets (wait-list-waiters wait-list))
+         (ops (logior (op-read) (op-accept)))
          (selector (jdi:do-jstatic "java.nio.channels.Selector" "open"))
          (channels (mapcar #'socket sockets)))
     (unwind-protect
         (with-mapped-conditions ()
-          (let ((jfalse (java:make-immediate-object nil :boolean))
-                (sel (jdi:jop-deref selector)))
+          (let ((sel (jdi:jop-deref selector)))
             (dolist (channel channels)
               (let ((chan (jdi:jop-deref channel)))
                 (java:jcall (java:jmethod "java.nio.channels.SelectableChannel"
                                           "configureBlocking"
                                           "boolean")
-                            chan jfalse)
+                            chan (java:make-immediate-object nil :boolean))
                 (java:jcall (java:jmethod "java.nio.channels.SelectableChannel"
                                           "register"
                                           "java.nio.channels.Selector" "int")
@@ -378,7 +382,7 @@ return the function result list.
                 ;; we actually have work to do
                 (let* ((selkeys (jdi:do-jmethod selector "selectedKeys"))
                        (selkey-iterator (jdi:do-jmethod selkeys "iterator"))
-                       ready-sockets)
+                       (%wait (wait-list-%wait wait-list)))
                   (loop while (java:jcall
                                (java:jmethod "java.util.Iterator" "hasNext")
                                (jdi:jop-deref selkey-iterator))
@@ -387,33 +391,40 @@ return the function result list.
                                         "java.nio.channels.SelectionKey"))
                                   (chan (jdi:jop-deref
                                          (jdi:do-jmethod key "channel"))))
-                             (push chan ready-sockets)))
-                  (remove-if #'(lambda (s)
-                                 (not (member (jdi:jop-deref (socket s))
-                                              ready-sockets
-                                              :test #'(lambda (x y)
-                                                        (java:jcall (java:jmethod "java.lang.Object"
-                                                                             "equals"
-                                                                             "java.lang.Object")
-                                                                    x y)))))
-                             sockets))))))
-      ;; cancel all Selector registrations
-      (let* ((keys (jdi:do-jmethod selector "keys"))
-             (iter (jdi:do-jmethod keys "iterator")))
-        (loop while (java:jcall (java:jmethod "java.util.Iterator" "hasNext")
-                                (jdi:jop-deref iter))
-              do (java:jcall
-                  (java:jmethod "java.nio.channels.SelectionKey" "cancel")
-                  (java:jcall (java:jmethod "java.util.Iterator" "next")
-                              (jdi:jop-deref iter)))))
-      ;; close the selector
+                             (setf (state (gethash chan %wait))
+                                   :READ))))))))
+      ;; close the selector: all keys will be deregistered
       (java:jcall (java:jmethod "java.nio.channels.Selector" "close")
                   (jdi:jop-deref selector))
       ;; make all sockets blocking again.
-      (let ((jtrue (java:make-immediate-object t :boolean)))
-        (dolist (chan channels)
-          (java:jcall (java:jmethod "java.nio.channels.SelectableChannel"
-                                          "configureBlocking"
-                                          "boolean")
-                      (jdi:jop-deref chan) jtrue))))))
+     (dolist (channel channels)
+       (java:jcall (java:jmethod "java.nio.channels.SelectableChannel"
+                                 "configureBlocking"
+                                 "boolean")
+                      (jdi:jop-deref channel)
+                      (java:make-immediate-object t :boolean))))))
 
+
+;;
+;;
+;;
+;; The WAIT-LIST part
+;;
+
+;;
+;; Note that even though Java has the concept of the Selector class, which
+;; remotely looks like a wait-list, it requires the sockets to be non-blocking.
+;; usocket however doesn't make any such guarantees and is therefore unable to
+;; use the concept outside of the waiting routine itself (blergh!).
+;;
+
+(defun %setup-wait-list (wl)
+  (setf (wait-list-%wait wl)
+        (make-hash-table :test #'equal :rehash-size 1.3d0)))
+
+(defun %add-waiter (wl w)
+  (setf (gethash (jdi:jop-deref (socket w)) (wait-list-%wait wl))
+        w))
+
+(defun %remove-waiter (wl w)
+  (remhash (socket w) (wait-list-%wait wl)))

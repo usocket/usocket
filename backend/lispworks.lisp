@@ -119,9 +119,13 @@
 ;; are correctly flushed and the socket closed.
 (defmethod socket-close ((usocket stream-usocket))
   "Close socket."
+  (when (wait-list usocket)
+     (remove-waiter (wait-list usocket) usocket))
   (close (socket-stream usocket)))
 
 (defmethod socket-close ((usocket usocket))
+  (when (wait-list usocket)
+     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
      (comm::close-socket (socket usocket))))
 
@@ -171,21 +175,36 @@
 ;;;
 
 #-win32
-(defun wait-for-input-internal (sockets &key timeout)
-  (with-mapped-conditions ()
-    ;; unfortunately, it's impossible to share code between
-    ;; non-win32 and win32 platforms...
-    ;; Can we have a sane -pref. complete [UDP!?]- API next time, please?
-    (dolist (x sockets)
-       (mp:notice-fd (os-socket-handle x)))
-    (mp:process-wait-with-timeout "Waiting for a socket to become active"
-                                  (truncate timeout)
-                                  #'(lambda (socks)
-                                      (some #'usocket-listen socks))
-                                  sockets)
-    (dolist (x sockets)
-       (mp:unnotice-fd (os-socket-handle x)))
-    (remove nil (mapcar #'usocket-listen sockets))))
+(progn
+
+  (defun %setup-wait-list (wait-list)
+    (declare (ignore wait-list)))
+
+  (defun %add-waiter (wait-list waiter)
+    (declare (ignore wait-list waiter)))
+
+  (defun %remove-waiter (wait-list waiter)
+    (declare (ignore wait-list waiter)))
+
+  (defun wait-for-input-internal (wait-list &key timeout)
+    (with-mapped-conditions ()
+      ;; unfortunately, it's impossible to share code between
+      ;; non-win32 and win32 platforms...
+      ;; Can we have a sane -pref. complete [UDP!?]- API next time, please?
+      (dolist (x (wait-list-waiters wait-list))
+        (mp:notice-fd (os-socket-handle x)))
+      (mp:process-wait-with-timeout "Waiting for a socket to become active"
+                                    (truncate timeout)
+                                    #'(lambda (socks)
+                                        (let (rv)
+                                          (dolist (x socks rv)
+                                            (when (usocket-listen x)
+                                              (setf (state x) :READ
+                                                    rv t)))))
+                                    (wait-list-waiters wait-list))
+      (dolist (x (wait-list-waiters wait-list))
+        (mp:unnotice-fd (os-socket-handle x)))
+      wait-list)))
 
 
 ;;;
@@ -230,6 +249,23 @@
 
   (defconstant fionread 1074030207)
 
+
+  ;; Note:
+  ;;
+  ;;  If special finalization has to occur for a given
+  ;;  system resource (handle), an associated object should
+  ;;  be created.  A special cleanup action should be added
+  ;;  to the system and a special cleanup action should
+  ;;  be flagged on all objects created for resources like it
+  ;;
+  ;;  We have 2 functions to do so:
+  ;;   * hcl:add-special-free-action (function-symbol)
+  ;;   * hcl:flag-special-free-action (object)
+  ;;
+  ;;  Note that the special free action will be called on all
+  ;;  objects which have been flagged for special free, so be
+  ;;  sure to check for the right argument type!
+  
   (fli:define-foreign-type ws-socket () '(:unsigned :int))
   (fli:define-foreign-type win32-handle () '(:unsigned :int))
   (fli:define-c-struct wsa-network-events (network-events :long)
@@ -274,7 +310,7 @@
 
   ;; Now that we have access to the system calls, this is the plan:
 
-  ;; 1. Receive a list of sockets to listen to
+  ;; 1. Receive a wait-list with associated sockets to wait for
   ;; 2. Add all those sockets to an event handle
   ;; 3. Listen for an event on that handle (we have a LispWorks system:: internal for that)
   ;; 4. After listening, detect if there are errors
@@ -294,14 +330,6 @@
             (fli:dereference int-ptr)
           0))))
 
-  (defun add-socket-to-event (socket event-object)
-    (let ((events (etypecase socket
-                    (stream-server-usocket (logior fd-connect fd-accept fd-close))
-                    (stream-usocket (logior fd-connect fd-read fd-oob fd-close)))))
-      (maybe-wsa-error
-       (wsa-event-select (os-socket-handle socket) event-object events)
-       socket)))
-
   (defun socket-ready-p (socket)
      (if (typep socket 'stream-usocket)
        (< 0 (bytes-available-for-read socket))
@@ -310,43 +338,65 @@
   (defun waiting-required (sockets)
     (notany #'socket-ready-p sockets))
 
-  (defun wait-for-input-internal (sockets &key timeout)
-    (let ((event-object (wsa-event-create)))
-      (unwind-protect
-          (progn
-            (when (waiting-required sockets)
-              (dolist (socket sockets)
-                (add-socket-to-event socket event-object))
-              (system:wait-for-single-object event-object
-                                             "Waiting for socket activity" timeout))
-            (update-ready-slots sockets)
-            (sockets-ready sockets))
-        (wsa-event-close event-object))))
+  (defun wait-for-input-internal (wait-list &key timeout)
+    (when (waiting-required (wait-list-waiters wait-list))
+      (system:wait-for-single-object (wait-list-%wait wait-list)
+                                     "Waiting for socket activity" timeout))
+    (update-ready-and-state-slots (wait-list-waiters wait-list)))
 
+  
   (defun map-network-events (func network-events)
     (let ((event-map (fli:foreign-slot-value network-events 'network-events))
           (error-array (fli:foreign-slot-pointer network-events 'error-code)))
       (unless (zerop event-map)
 	  (dotimes (i fd-max-events)
-	    (unless (zerop (ldb (byte 1 i) event-map))
+	    (unless (zerop (ldb (byte 1 i) event-map)) ;;### could be faster with ash and logand?
 	      (funcall func (fli:foreign-aref error-array i)))))))
 
-  (defun update-ready-slots (sockets)
+  (defun update-ready-and-state-slots (sockets)
      (dolist (socket sockets)
-        (unless (or (stream-usocket-p socket) ;; no need to check status for streams
-                    (%ready-p socket))        ;; and sockets already marked ready
-           (multiple-value-bind
-                 (rv network-events)
-                 (wsa-enum-network-events (os-socket-handle socket) 0 t)
-              (if (zerop rv)
+        (if (or (and (stream-usocket-p socket)
+                     (listen (socket-stream socket)))
+                (%ready-p socket))
+            (setf (state socket) :READ)
+          (multiple-value-bind
+                (rv network-events)
+                (wsa-enum-network-events (os-socket-handle socket) 0 t)
+             (if (zerop rv)
                  (map-network-events #'(lambda (err-code)
                                           (if (zerop err-code)
-                                             (setf (%ready-p socket) t)
+                                             (setf (%ready-p socket) t
+                                                   (state socket) :READ)
                                              (raise-usock-err err-code socket)))
                                      network-events)
                  (maybe-wsa-error rv socket))))))
 
-  (defun sockets-ready (sockets)
-    (remove-if-not #'socket-ready-p sockets))
+
+
+  ;; The wait-list part
+
+  (defun free-wait-list (wl)
+    (when (wait-list-p wl)
+      (unless (null (wait-list-%wait wl))
+        (wsa-event-close (wait-list-%wait wl)))))
+  
+  (hcl:add-special-free-action 'free-wait-list)
+  
+  (defun %setup-wait-list (wait-list)
+    (hcl:flag-special-free-action wait-list)
+    (setf (wait-list-%wait wait-list) (wsa-event-create)))
+
+  (defun %add-waiter (wait-list waiter)
+    (let ((events (etypecase waiter
+                    (stream-server-usocket (logior fd-connect fd-accept fd-close))
+                    (stream-usocket (logior fd-connect fd-read fd-oob fd-close)))))
+      (maybe-wsa-error
+       (wsa-event-select (os-socket-handle waiter) (wait-list-%wait wait-list) events)
+       waiter)))
+
+  (defun %remove-waiter (wait-list waiter)
+    (maybe-wsa-error
+     (wsa-event-select (os-socket-handle waiter) (wait-list-%wait wait-list) 0)
+     waiter))
   
   );; end of WIN32-block

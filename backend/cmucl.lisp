@@ -99,11 +99,15 @@
 ;; socket stream when closing a stream socket.
 (defmethod socket-close ((usocket stream-usocket))
   "Close socket."
+  (when (wait-list usocket)
+     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket-stream usocket))))
 
 (defmethod socket-close ((usocket usocket))
   "Close socket."
+  (when (wait-list usocket)
+     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (ext:close-socket (socket usocket))))
 
@@ -164,26 +168,38 @@
 (defun get-host-name ()
   (unix:unix-gethostname))
 
-(defun wait-for-input-internal (sockets &key timeout)
+(defun %setup-wait-list (wait-list)
+  (declare (ignore wait-list)))
+
+(defun %add-waiter (wait-list waiter)
+  (declare (ignore wait-list waiter))
+  (push (socket waiter) (wait-list-%wait wait-list)))
+
+(defun %remove-waiter (wait-list waiter)
+  (declare (ignore wait-list waiter))
+  (setf (wait-list-%wait wait-list)
+        (remove (socket waiter) (wait-list-%wait waiter))))
+
+(defun wait-for-input-internal (wait-list &key timeout)
   (with-mapped-conditions ()
     (alien:with-alien ((rfds (alien:struct unix:fd-set)))
        (unix:fd-zero rfds)
-       (dolist (socket sockets)
-         (unix:fd-set (socket socket) rfds))
+       (dolist (socket (wait-list-%wait wait-list))
+         (unix:fd-set socket rfds))
        (multiple-value-bind
            (secs musecs)
            (split-timeout (or timeout 1))
          (multiple-value-bind
              (count err)
-             (unix:unix-fast-select (1+ (reduce #'max sockets
-                                                :key #'socket))
+             (unix:unix-fast-select (1+ (reduce #'max
+                                                (wait-list-%wait wait-list)))
                                     (alien:addr rfds) nil nil
                                     (when timeout secs) musecs)
            (if (<= 0 count)
                ;; process the result...
-               (remove-if #'(lambda (x)
-                              (not (unix:fd-isset (socket x) rfds)))
-                          sockets)
+               (dolist (x (wait-list-waiters wait-list))
+                 (when (unix:fd-isset (socket x) rfds)
+                   (setf (state x) :READ)))
              (progn
                ;;###FIXME generate an error, except for EINTR
                )))))))

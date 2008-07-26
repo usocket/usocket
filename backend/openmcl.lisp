@@ -32,21 +32,23 @@
 (defun input-available-p (sockets &optional ticks-to-wait)
   (ccl::rletZ ((tv :timeval))
     (ccl::ticks-to-timeval ticks-to-wait tv)
+    ;;### The trickery below can be moved to the wait-list now...
     (ccl::%stack-block ((infds ccl::*fd-set-size*))
       (ccl::fd-zero infds)
       (let ((max-fd -1))
         (dolist (sock sockets)
-          (let ((fd (openmcl-socket:socket-os-fd sock)))
+          (let ((fd (openmcl-socket:socket-os-fd (socket sock))))
             (setf max-fd (max max-fd fd))
             (ccl::fd-set fd infds)))
         (let* ((res (#_select (1+ max-fd)
                               infds (ccl::%null-ptr) (ccl::%null-ptr)
                               (if ticks-to-wait tv (ccl::%null-ptr)))))
           (when (> res 0)
-            (remove-if #'(lambda (x)
-                           (not (ccl::fd-is-set (openmcl-socket:socket-os-fd x)
-                                                infds)))
-                       sockets)))))))
+            (dolist (x sockets)
+              (when (ccl::fd-is-set (openmcl-socket:socket-os-fd (socket x))
+                                    infds)
+                (setf (state x) :READ))))
+          sockets)))))
 
 (defun raise-error-from-id (condition-id socket real-condition)
   (let ((usock-err (cdr (assoc condition-id +openmcl-error-map+))))
@@ -109,6 +111,8 @@
 ;; and their associated objects are represented
 ;; by the same object.
 (defmethod socket-close ((usocket usocket))
+  (when (wait-list usocket)
+     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
@@ -141,19 +145,23 @@
      (list (hbo-to-vector-quad (openmcl-socket:lookup-hostname
                                 (host-to-hostname name))))))
 
-(defun wait-for-input-internal (sockets &key timeout)
+
+(defun %setup-wait-list (wait-list)
+  (declare (ignore wait-list)))
+
+(defun %add-waiter (wait-list waiter)
+  (declare (ignore wait-list waiter)))
+
+(defun %remove-waiter (wait-list waiter)
+  (declare (ignore wait-list waiter)))
+
+(defun wait-for-input-internal (wait-list &key timeout)
   (with-mapped-conditions ()
-    (let* ((ticks-timeout (truncate (* (or timeout 1) ccl::*ticks-per-second*)))
+    (let* ((ticks-timeout (truncate (* (or timeout 1)
+                                       ccl::*ticks-per-second*)))
            (active-internal-sockets
-            (input-available-p (mapcar #'socket sockets)
+            (input-available-p (wait-list-waiters wait-list)
                                (when timeout ticks-timeout))))
-      ;; this is quadratic, but hey, the active-internal-sockets
-      ;; list is very short and it's only quadratic in the length of that one.
-      ;; When I have more time I could recode it to something of linear
-      ;; complexity.
-      ;; [Same code is also used in lispworks.lisp, allegro.lisp]
-      (remove-if #'(lambda (x)
-                     (not (member (socket x) active-internal-sockets)))
-                 sockets))))
+      wait-list)))
 
 
