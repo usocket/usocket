@@ -15,13 +15,18 @@
              #:socket-listen
              #:socket-accept
              #:socket-close
-             #:wait-for-input
              #:get-local-address
              #:get-peer-address
              #:get-local-port
              #:get-peer-port
              #:get-local-name
              #:get-peer-name
+
+             #:wait-for-input ; waiting for input-ready state (select() like)
+             #:make-wait-list
+             #:add-waiter
+             #:remove-waiter
+             #:remove-all-waiters
 
              #:with-connected-socket ; convenience macros
              #:with-server-socket
