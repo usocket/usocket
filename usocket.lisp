@@ -403,17 +403,21 @@ such as 3232235777."
   "Translate a string or vector quad to a stringified hostname."
   (etypecase host
     (string host)
-    ((vector t 4) (vector-quad-to-dotted-quad host))
+    ((or (vector t 4)
+         (array (unsigned-byte 8) (4)))
+     (vector-quad-to-dotted-quad host))
     (integer (hbo-to-dotted-quad host))))
 
 (defun ip= (ip1 ip2)
   (etypecase ip1
     (string (string= ip1 (host-to-hostname ip2)))
-    ((vector t 4) (or (eq ip1 ip2)
-                      (and (= (aref ip1 0) (aref ip2 0))
-                           (= (aref ip1 1) (aref ip2 1))
-                           (= (aref ip1 2) (aref ip2 2))
-                           (= (aref ip1 3) (aref ip2 3)))))
+    ((or (vector t 4)
+         (array (unsigned-byte 8) (4)))
+     (or (eq ip1 ip2)
+         (and (= (aref ip1 0) (aref ip2 0))
+              (= (aref ip1 1) (aref ip2 1))
+              (= (aref ip1 2) (aref ip2 2))
+              (= (aref ip1 3) (aref ip2 3)))))
     (integer (= ip1 (host-byte-order ip2)))))
 
 (defun ip/= (ip1 ip2)
@@ -444,7 +448,9 @@ to a vector quad."
                     ;; valid IP dotted quad?
                     ip
                   (get-random-host-by-name host))))
-      ((vector t 4) host)
+      ((or (vector t 4)
+           (array (unsigned-byte 8) (4)))
+       host)
       (integer (hbo-to-vector-quad host))))
 
   (defun host-to-hbo (host)
@@ -454,10 +460,12 @@ to a vector quad."
                 (if (and ip (= 4 (length ip)))
                     (host-byte-order ip)
             (host-to-hbo (get-host-by-name host)))))
-      ((vector t 4) (host-byte-order host))
+      ((or (vector t 4)
+           (array (unsigned-byte 8) (4)))
+       (host-byte-order host))
       (integer host))))
 
-;;ready-
+;;
 ;; Other utility functions
 ;;
 
