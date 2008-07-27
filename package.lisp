@@ -56,6 +56,7 @@
              #:ip-from-octet-buffer
 
              #:with-mapped-conditions
+
              #:socket-condition ; conditions
              #:ns-condition
              #:socket-error ; errors
@@ -63,5 +64,10 @@
              #:unknown-condition
              #:ns-unknown-condition
              #:unknown-error
-             #:ns-unknown-error)))
+             #:ns-unknown-error
+
+             #:insufficient-implementation ; conditions regarding usocket support level
+             #:unsupported
+             #:unimplemented
+             )))
 
