@@ -259,7 +259,7 @@ The `body' is an implied progn form."
 
 (defun remove-all-waiters (wait-list)
   (dolist (waiter (wait-list-waiters wait-list))
-    (%remove-waiter waiter))
+    (%remove-waiter wait-list waiter))
   (setf (wait-list-waiters wait-list) nil)
   (clrhash (wait-list-map wait-list)))
 
