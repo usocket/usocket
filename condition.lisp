@@ -10,7 +10,9 @@
 
 (define-condition insufficient-implementation (error)
   ((feature :initarg :feature :reader feature)
-   (function :initarg :function :reader function))
+   (context :initarg :context :reader context
+    :documentation "String designator of the public API function which
+the feature belongs to."))
   (:documentation "The ancestor of all errors usocket may generate
 because of insufficient support from the underlying implementation
 with respect to the arguments given to `function'.
