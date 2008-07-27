@@ -176,7 +176,7 @@
 
 (defun %remove-waiter (wait-list waiter)
   (setf (wait-list-%wait wait-list)
-        (remove (socket waiter) (wait-list-%wait waiter))))
+        (remove (socket waiter) (wait-list-%wait wait-list))))
 
 (defun wait-for-input-internal (wait-list &key timeout)
   (with-mapped-conditions ()
