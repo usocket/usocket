@@ -184,5 +184,5 @@
                   ((endp sockets))
                 (let ((flags (sys:sap-ref-16 fds-sap (+ base 6))))
                   (unless (zerop (logand flags unix::pollin))
-                    (setf (state socket) :READ))))))))))
+                    (setf (state (first sockets)) :READ))))))))))
 
