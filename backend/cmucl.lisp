@@ -172,11 +172,9 @@
   (declare (ignore wait-list)))
 
 (defun %add-waiter (wait-list waiter)
-  (declare (ignore wait-list waiter))
   (push (socket waiter) (wait-list-%wait wait-list)))
 
 (defun %remove-waiter (wait-list waiter)
-  (declare (ignore wait-list waiter))
   (setf (wait-list-%wait wait-list)
         (remove (socket waiter) (wait-list-%wait waiter))))
 

@@ -232,10 +232,6 @@ The `body' is an implied progn form."
 ;;  %add-waiter
 ;;  %remove-waiter
 
-(declaim (inline %setup-wait-list
-                 %add-waiter
-                 %remove-waiter))
-
 (defun make-wait-list (waiters)
   (let ((wl (%make-wait-list)))
     (setf (wait-list-map wl) (make-hash-table))
