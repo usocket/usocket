@@ -130,7 +130,7 @@
           }
         @(return) = select(#3 + 1, (fd_set*)#2, NULL, NULL,
                            (#0 != Cnil) ? &tv : NULL);
-")))
+" :one-liner nil)))
         (cond
           ((= 0 count)
            (values nil nil))
@@ -199,7 +199,8 @@
                      (signal usock-cond :socket socket))))))
 
 
-(defun socket-connect (host port &key (element-type 'character) timeout deadline)
+(defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay)
+  (declare (ignore nodelay))
   (declare (ignore deadline))
   (when timeout
     (warn "SOCKET-CONNECT timeout not supported in SBCL"))

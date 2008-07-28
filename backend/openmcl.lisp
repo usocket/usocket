@@ -61,6 +61,8 @@
     (openmcl-socket:socket-error
        (raise-error-from-id (openmcl-socket:socket-error-identifier condition)
                             socket condition))
+    (ccl:input-timeout
+       (error 'timeout-error :socket socket :real-error condition))
     (ccl:communication-deadline-expired
        (error 'timeout-error :socket socket :real-error condition))
     (ccl::socket-creation-error #| ugh! |#
@@ -72,13 +74,14 @@
       :text
     :binary))
 
-(defun socket-connect (host port &key (element-type 'character) timeout deadline)
+(defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay)
   (with-mapped-conditions ()
     (let ((mcl-sock
            (openmcl-socket:make-socket :remote-host (host-to-hostname host)
                                        :remote-port port
                                        :format (to-format element-type)
                                        :deadline deadline
+                                       :nodelay nodelay
                                        :connect-timeout (and timeout
                                                              (* timeout internal-time-units-per-second)))))
       (openmcl-socket:socket-connect mcl-sock)

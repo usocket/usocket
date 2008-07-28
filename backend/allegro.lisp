@@ -49,7 +49,10 @@
       :text
     :binary))
 
-(defun socket-connect (host port &key (element-type 'character) timeout)
+(defun socket-connect (host port &key (element-type 'character) timeout nodelay)
+  (declare (ignore nodelay))
+  (when timeout
+    (warn "SOCKET-CONNECT timeout not supported in Allegro CL"))
   (let ((socket))
     (setf socket
           (with-mapped-conditions (socket)

@@ -55,7 +55,10 @@
                  (error usock-err :socket socket)
                (signal usock-err :socket socket)))))))
 
-(defun socket-connect (host port &key (element-type 'character) timeout)
+(defun socket-connect (host port &key (element-type 'character) timeout nodelay)
+  (declare (ignore nodelay))
+  (when timeout
+    (warn "SOCKET-CONNECT timeout not supported in CLISP"))
   (let ((socket)
         (hostname (host-to-hostname host)))
     (with-mapped-conditions (socket)
@@ -239,7 +242,7 @@ and the address of the sender as values."
     (when (wait-list usocket)
        (remove-waiter (wait-list usocket) usocket))
     (rawsock:sock-close (socket usocket)))
-
+  
   )
 
 #-rawsock

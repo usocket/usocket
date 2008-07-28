@@ -50,7 +50,8 @@
                                                :socket socket
                                                :condition condition))))
 
-(defun socket-connect (host port &key (element-type 'character) timeout)
+(defun socket-connect (host port &key (element-type 'character) timeout nodelay)
+  (declare (ignore nodelay))
   (when timeout
     (warn "SOCKET-CONNECT timeout not supported in CMUCL"))
   (let* ((socket))

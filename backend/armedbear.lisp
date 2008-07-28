@@ -186,7 +186,8 @@
   (typecase condition
     (error (error 'unknown-error :socket socket :real-error condition))))
 
-(defun socket-connect (host port &key (element-type 'character) timeout)
+(defun socket-connect (host port &key (element-type 'character) timeout nodelay)
+  (declare (ignore nodelay))
   (when timeout
     (warn "SOCKET-CONNECT timeout not supported in ABCL"))
   (let ((usock))
