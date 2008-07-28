@@ -199,14 +199,12 @@
                      (signal usock-cond :socket socket))))))
 
 
-(defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay)
-  (declare (ignore nodelay))
-  (declare (ignore deadline))
-  (when timeout
-    (warn "SOCKET-CONNECT timeout not supported in SBCL"))
+(defun socket-connect (host port &key (element-type 'character)
+                       timeout deadline (nodelay t nodelay-specified))
+  (declare (ignore deadline timeout))
   (unsupported 'deadline 'socket-connect)
   (unsupported 'timeout 'socket-connect)
-  (unimplemented 'nodelay 'socket-connect)
+
   (let* ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                 :type :stream :protocol :tcp))
          (stream (sb-bsd-sockets:socket-make-stream socket
@@ -217,6 +215,8 @@
          ;;###FIXME: The above line probably needs an :external-format
          (usocket (make-stream-socket :stream stream :socket socket))
          (ip (host-to-vector-quad host)))
+    (when nodelay-specified
+      (setf (sb-bsd-sockets:sockopt-tcp-nodelay socket) nodelay))
     (with-mapped-conditions (usocket)
       (sb-bsd-sockets:socket-connect socket ip port))
     usocket))
