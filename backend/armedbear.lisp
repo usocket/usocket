@@ -186,26 +186,32 @@
   (typecase condition
     (error (error 'unknown-error :socket socket :real-error condition))))
 
-(defun socket-connect (host port &key (element-type 'character) timeout nodelay)
+(defun socket-connect (host port &key (element-type 'character)
+                       timeout deadline (nodelay nil nodelay-specified))
   (declare (ignore nodelay timeout))
   (unsupported 'timeout 'socket-connect)
-  (unimplemented 'nodelay 'socket-connect)
+  (unimplemented 'deadline 'socket-connect)
 
   (let ((usock))
     (with-mapped-conditions (usock)
       (let* ((sock-addr (jdi:jcoerce
                          (jdi:do-jnew-call "java.net.InetSocketAddress"
-                                           (host-to-hostname host)
-                                           (jdi:jcoerce port :int))
+                           (host-to-hostname host)
+                           (jdi:jcoerce port :int))
                          "java.net.SocketAddress"))
              (jchan (jdi:do-jstatic-call "java.nio.channels.SocketChannel"
-                                         "open" sock-addr))
+                      "open" sock-addr))
              (sock (jdi:do-jmethod-call jchan "socket")))
-         (setf usock
-               (make-stream-socket
-                :socket jchan
-                :stream (ext:get-socket-stream (jdi:jop-deref sock)
-                                               :element-type element-type)))))))
+        (when nodelay-specified
+          (jdi:do-jmethod-call sock "setTcpNoDelay"
+                               (if nodelay
+                                   (java:make-immediate-object t :boolean)
+                                   (java:make-immediate-object nil :boolean))))
+        (setf usock
+              (make-stream-socket
+               :socket jchan
+               :stream (ext:get-socket-stream (jdi:jop-deref sock)
+                                              :element-type element-type)))))))
 
 (defun socket-listen (host port
                            &key reuseaddress
