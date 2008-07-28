@@ -204,6 +204,9 @@
   (declare (ignore deadline))
   (when timeout
     (warn "SOCKET-CONNECT timeout not supported in SBCL"))
+  (unsupported 'deadline 'socket-connect)
+  (unsupported 'timeout 'socket-connect)
+  (unimplemented 'nodelay 'socket-connect)
   (let* ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                 :type :stream :protocol :tcp))
          (stream (sb-bsd-sockets:socket-make-stream socket

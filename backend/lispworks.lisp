@@ -75,8 +75,8 @@
 
 (defun socket-connect (host port &key (element-type 'base-char) timeout nodelay)
   (declare (ignore nodelay))
-  (when timeout
-    (warn "SOCKET-CONNECT timeout not supported in Lispworks"))
+  (unsupported 'timeout 'socket-connect)
+  (unimplemented 'nodelay 'socket-connect)
   (let ((hostname (host-to-hostname host))
         (stream))
     (setf stream
@@ -93,6 +93,10 @@
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'base-char))
+  #+lispworks4.1
+  (unsupported 'host 'socket-listen)
+  #+lispworks4.1
+  (unsupported 'backlog 'socket-listen)
   (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
          (comm::*use_so_reuseaddr* reuseaddress)
          (hostname (host-to-hostname host))

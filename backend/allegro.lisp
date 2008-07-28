@@ -49,10 +49,11 @@
       :text
     :binary))
 
-(defun socket-connect (host port &key (element-type 'character) timeout nodelay)
-  (declare (ignore nodelay))
-  (when timeout
-    (warn "SOCKET-CONNECT timeout not supported in Allegro CL"))
+(defun socket-connect (host port &key (element-type 'character) timeout
+                       (nodelay t)) ;; nodelay == t is the ACL default
+  (declare (ignorable timeout))
+  (unsupported 'timeout 'socket-connect)
+
   (let ((socket))
     (setf socket
           (with-mapped-conditions (socket)
@@ -60,10 +61,12 @@
                 (mp:with-timeout (timeout nil)
                   (socket:make-socket :remote-host (host-to-hostname host)
                                       :remote-port port
-                                      :format (to-format element-type)))
+                                      :format (to-format element-type)
+                                      :nodelay nodelay))
                 (socket:make-socket :remote-host (host-to-hostname host)
                                     :remote-port port
-                                    :format (to-format element-type)))))
+                                    :format (to-format element-type)
+                                    :nodelay nodelay))))
     (make-stream-socket :socket socket :stream socket)))
 
 

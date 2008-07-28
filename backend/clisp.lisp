@@ -56,9 +56,10 @@
                (signal usock-err :socket socket)))))))
 
 (defun socket-connect (host port &key (element-type 'character) timeout nodelay)
-  (declare (ignore nodelay))
-  (when timeout
-    (warn "SOCKET-CONNECT timeout not supported in CLISP"))
+  (declare (ignore nodelay timeout))
+  (unsupported 'nodelay 'socket-connect)
+  (unsupported 'timeout 'socket-connect)
+
   (let ((socket)
         (hostname (host-to-hostname host)))
     (with-mapped-conditions (socket)

@@ -29,9 +29,10 @@
                :condition condition))))
 
 (defun socket-connect (host port &key (element-type 'character) timeout nodelay)
-  (declare (ignore nodelay))
-  (when timeout
-    (warn "SOCKET-CONNECT timeout not supported in SCL"))
+  (declare (ignore nodelay timeout))
+  (unsupported 'nodelay 'socket-connect)
+  (unsupported 'timeout 'socket-connect)
+
   (let* ((socket (with-mapped-conditions ()
                   (ext:connect-to-inet-socket (host-to-hbo host) port
                                               :kind :stream)))

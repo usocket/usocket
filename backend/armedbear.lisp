@@ -187,9 +187,10 @@
     (error (error 'unknown-error :socket socket :real-error condition))))
 
 (defun socket-connect (host port &key (element-type 'character) timeout nodelay)
-  (declare (ignore nodelay))
-  (when timeout
-    (warn "SOCKET-CONNECT timeout not supported in ABCL"))
+  (declare (ignore nodelay timeout))
+  (unsupported 'timeout 'socket-connect)
+  (unimplemented 'nodelay 'socket-connect)
+
   (let ((usock))
     (with-mapped-conditions (usock)
       (let* ((sock-addr (jdi:jcoerce

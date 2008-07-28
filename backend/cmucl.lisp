@@ -51,9 +51,10 @@
                                                :condition condition))))
 
 (defun socket-connect (host port &key (element-type 'character) timeout nodelay)
-  (declare (ignore nodelay))
-  (when timeout
-    (warn "SOCKET-CONNECT timeout not supported in CMUCL"))
+  (declare (ignore nodelay timeout))
+  (unsupported 'nodelay 'socket-connect)
+  (unsupported 'timeout 'socket-connect)
+
   (let* ((socket))
     (setf socket
           (with-mapped-conditions (socket)

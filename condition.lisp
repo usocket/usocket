@@ -190,3 +190,11 @@ error available."))
     (2 . ns-try-again-condition)
     (3 . ns-no-recovery-error)))
 
+
+
+(defmacro unsupported (feature context &key minimum)
+  `(signal 'unsupported :feature ,feature
+    :context ,context :minimum ,minimum))
+
+(defmacro unimplemented (feature context)
+  `(signal 'unimplemented :feature ,feature :context ,context))
