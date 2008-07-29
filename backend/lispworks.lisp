@@ -73,9 +73,11 @@
                     (declare (ignore host port err-msg))
                     (raise-usock-err errno socket condition)))))
 
-(defun socket-connect (host port &key (element-type 'base-char) timeout nodelay)
+(defun socket-connect (host port &key (element-type 'base-char)
+                       timeout deadline nodelay)
   (declare (ignore nodelay))
   (unsupported 'timeout 'socket-connect)
+  (unsupported 'deadline 'socket-connect)
   (unimplemented 'nodelay 'socket-connect)
   (let ((hostname (host-to-hostname host))
         (stream))

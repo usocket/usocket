@@ -49,10 +49,12 @@
       :text
     :binary))
 
-(defun socket-connect (host port &key (element-type 'character) timeout
+(defun socket-connect (host port &key (element-type 'character)
+                       timeout deadline
                        (nodelay t)) ;; nodelay == t is the ACL default
   (declare (ignorable timeout))
   (unsupported 'timeout 'socket-connect)
+  (unsupported 'deadline 'socket-connect)
 
   (let ((socket))
     (setf socket

@@ -28,9 +28,11 @@
                :socket socket
                :condition condition))))
 
-(defun socket-connect (host port &key (element-type 'character) timeout nodelay)
+(defun socket-connect (host port &key (element-type 'character)
+                       timeout deadline nodelay)
   (declare (ignore nodelay timeout))
   (unsupported 'nodelay 'socket-connect)
+  (unsupported 'deadline 'socket-connect)
   (unsupported 'timeout 'socket-connect)
 
   (let* ((socket (with-mapped-conditions ()
