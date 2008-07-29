@@ -188,7 +188,6 @@
 
 (defun socket-connect (host port &key (element-type 'character)
                        timeout deadline (nodelay nil nodelay-specified))
-  (declare (ignore nodelay timeout))
   (when deadline (unsupported 'deadline 'socket-connect))
 
   (let ((usock))
