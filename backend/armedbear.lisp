@@ -189,8 +189,7 @@
 (defun socket-connect (host port &key (element-type 'character)
                        timeout deadline (nodelay nil nodelay-specified))
   (declare (ignore nodelay timeout))
-  (unsupported 'timeout 'socket-connect)
-  (unimplemented 'deadline 'socket-connect)
+  (when deadline (unsupported 'deadline 'socket-connect))
 
   (let ((usock))
     (with-mapped-conditions (usock)
@@ -207,6 +206,9 @@
                                (if nodelay
                                    (java:make-immediate-object t :boolean)
                                    (java:make-immediate-object nil :boolean))))
+        (when timeout
+          (jdi:do-jmethod-call sock "setSoTimeout"
+                                    (truncate (* 1000 timeout))))
         (setf usock
               (make-stream-socket
                :socket jchan

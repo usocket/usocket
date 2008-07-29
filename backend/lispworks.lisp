@@ -74,17 +74,23 @@
                     (raise-usock-err errno socket condition)))))
 
 (defun socket-connect (host port &key (element-type 'base-char)
-                       timeout deadline nodelay)
-  (declare (ignore nodelay))
-  (unsupported 'timeout 'socket-connect)
-  (unsupported 'deadline 'socket-connect)
-  (unimplemented 'nodelay 'socket-connect)
+                       timeout deadline (nodelay t nodelay-specified))
+  (declare (ignorable nodelay))
+  (when timeout (unimplemented 'timeout 'socket-connect))
+  (when deadline (unsupported 'deadline 'socket-connect "LispWorks 5.1"))
+  
+  #+(and (not lispworks4) (not lispworks5.0))
+  (when nodelay-specified (unimplemented 'nodelay 'socket-connect))
+
   (let ((hostname (host-to-hostname host))
         (stream))
     (setf stream
           (with-mapped-conditions ()
              (comm:open-tcp-stream hostname port
-                                   :element-type element-type)))
+                                   :element-type element-type
+                                   #+(and (not lispworks4) (not lispworks5.0))
+                                   #+(and (not lispworks4) (not lispworks5.0))
+                                   :nodelay nodelay)))
     (if stream
         (make-stream-socket :socket (comm:socket-stream-socket stream)
                             :stream stream)
@@ -96,9 +102,10 @@
                            (backlog 5)
                            (element-type 'base-char))
   #+lispworks4.1
-  (unsupported 'host 'socket-listen)
+  (unsupported 'host 'socket-listen "LispWorks 4.0 or newer than 4.1")
   #+lispworks4.1
-  (unsupported 'backlog 'socket-listen)
+  (unsupported 'backlog 'socket-listen "LispWorks 4.0 or newer than 4.1")
+
   (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
          (comm::*use_so_reuseaddr* reuseaddress)
          (hostname (host-to-hostname host))

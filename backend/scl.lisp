@@ -29,11 +29,11 @@
                :condition condition))))
 
 (defun socket-connect (host port &key (element-type 'character)
-                       timeout deadline nodelay)
-  (declare (ignore nodelay timeout))
-  (unsupported 'nodelay 'socket-connect)
-  (unsupported 'deadline 'socket-connect)
-  (unsupported 'timeout 'socket-connect)
+                       timeout deadline (nodelay t nodelay-specified))
+  (declare (ignore nodelay))
+  (when nodelay-specified (unsupported 'nodelay 'socket-connect))
+  (when deadline (unsupported 'deadline 'socket-connect))
+  (when timeout (unsupported 'timeout 'socket-connect))
 
   (let* ((socket (with-mapped-conditions ()
                   (ext:connect-to-inet-socket (host-to-hbo host) port

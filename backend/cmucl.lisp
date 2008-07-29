@@ -51,11 +51,11 @@
                                                :condition condition))))
 
 (defun socket-connect (host port &key (element-type 'character)
-                       timeout deadline nodelay)
-  (declare (ignore nodelay timeout))
-  (unsupported 'timeout 'socket-connect)
-  (unsupported 'deadline 'socket-connect)
-  (unsupported 'nodelay 'socket-connect)
+                       timeout deadline (nodelay t nodelay-specified))
+  (declare (ignore nodelay))
+  (when timeout (unsupported 'timeout 'socket-connect))
+  (when deadline (unsupported 'deadline 'socket-connect))
+  (when nodelay-specified (unsupported 'nodelay 'socket-connect))
 
   (let* ((socket))
     (setf socket

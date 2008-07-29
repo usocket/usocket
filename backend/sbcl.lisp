@@ -201,9 +201,8 @@
 
 (defun socket-connect (host port &key (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified))
-  (declare (ignore deadline timeout))
-  (unsupported 'deadline 'socket-connect)
-  (unsupported 'timeout 'socket-connect)
+  (when deadline (unsupported 'deadline 'socket-connect))
+  (when timeout (unsupported 'timeout 'socket-connect))
 
   (let* ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                 :type :stream :protocol :tcp))
