@@ -51,7 +51,8 @@
 
 (defun socket-connect (host port &key (element-type 'character)
                        timeout deadline
-                       (nodelay t)) ;; nodelay == t is the ACL default
+                       (nodelay t) ;; nodelay == t is the ACL default
+                       local-host local-port)
   (when timeout (unsupported 'timeout 'socket-connect))
   (when deadline (unsupported 'deadline 'socket-connect))
 
@@ -62,10 +63,14 @@
                 (mp:with-timeout (timeout nil)
                   (socket:make-socket :remote-host (host-to-hostname host)
                                       :remote-port port
+                                      :local-host (when local-host (host-to-hostname local-host))
+                                      :local-port local-port
                                       :format (to-format element-type)
                                       :nodelay nodelay))
                 (socket:make-socket :remote-host (host-to-hostname host)
                                     :remote-port port
+                                    :local-host local-host
+                                    :local-port local-port
                                     :format (to-format element-type)
                                     :nodelay nodelay))))
     (make-stream-socket :socket socket :stream socket)))

@@ -74,11 +74,14 @@
       :text
     :binary))
 
-(defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay)
+(defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay
+                       local-host local-port)
   (with-mapped-conditions ()
     (let ((mcl-sock
            (openmcl-socket:make-socket :remote-host (host-to-hostname host)
                                        :remote-port port
+                                       :local-host (when local-host (host-to-hostname local-host))
+                                       :local-port local-port
                                        :format (to-format element-type)
                                        :deadline deadline
                                        :nodelay nodelay

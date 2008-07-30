@@ -200,7 +200,8 @@
 
 
 (defun socket-connect (host port &key (element-type 'character)
-                       timeout deadline (nodelay t nodelay-specified))
+                       timeout deadline (nodelay t nodelay-specified)
+                       local-host local-port)
   (when deadline (unsupported 'deadline 'socket-connect))
   (when timeout (unsupported 'timeout 'socket-connect))
 
@@ -216,6 +217,9 @@
          (ip (host-to-vector-quad host)))
     (when nodelay-specified
       (setf (sb-bsd-sockets:sockopt-tcp-nodelay socket) nodelay))
+    (when (or local-host local-port)
+      (sb-bsd-sockets:bind socket (host-to-vector-quad (or local-host *wildcard-host*))
+                           (or local-port *auto-port*)))
     (with-mapped-conditions (usocket)
       (sb-bsd-sockets:socket-connect socket ip port))
     usocket))

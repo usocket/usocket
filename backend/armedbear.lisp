@@ -187,8 +187,12 @@
     (error (error 'unknown-error :socket socket :real-error condition))))
 
 (defun socket-connect (host port &key (element-type 'character)
-                       timeout deadline (nodelay nil nodelay-specified))
+                       timeout deadline (nodelay nil nodelay-specified)
+                       local-host local-port)
   (when deadline (unsupported 'deadline 'socket-connect))
+  (when (or local-host local-port)
+    (unimplemented 'local-host 'socket-connect)
+    (unimplemented 'local-port 'socket-connect))
 
   (let ((usock))
     (with-mapped-conditions (usock)
