@@ -37,6 +37,7 @@
 
 #+ecl
 (progn
+
   #-:wsock
   (ffi:clines
    "#include <errno.h>"
@@ -59,6 +60,9 @@
   (ffi:clines
    "#define CONS(x, y) make_cons((x), (y))"
    "#define MAKE_INTEGER(x) make_integer((x))")
+
+  (defconstant sb-bsd-sockets::sockopt-tcp-nodelay (sockopt-tcp-nodelay))
+  (export sb-bsd-sockets::sockopt-tcp-nodelay)
 
   (defun fd-setsize ()
     (ffi:c-inline () () :fixnum
@@ -204,6 +208,9 @@
                        local-host local-port)
   (when deadline (unsupported 'deadline 'socket-connect))
   (when timeout (unsupported 'timeout 'socket-connect))
+  (when (and nodelay-specified
+             (not (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
+    (unsupported 'nodelay 'socket-connect))
 
   (let* ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                 :type :stream :protocol :tcp))
@@ -215,11 +222,14 @@
          ;;###FIXME: The above line probably needs an :external-format
          (usocket (make-stream-socket :stream stream :socket socket))
          (ip (host-to-vector-quad host)))
-    (when nodelay-specified
+    (when (and nodelay-specified
+               (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay))
       (setf (sb-bsd-sockets:sockopt-tcp-nodelay socket) nodelay))
     (when (or local-host local-port)
-      (sb-bsd-sockets:bind socket (host-to-vector-quad (or local-host *wildcard-host*))
-                           (or local-port *auto-port*)))
+      (sb-bsd-sockets:socket-bind socket
+                                  (host-to-vector-quad
+                                   (or local-host *wildcard-host*))
+                                  (or local-port *auto-port*)))
     (with-mapped-conditions (usocket)
       (sb-bsd-sockets:socket-connect socket ip port))
     usocket))
