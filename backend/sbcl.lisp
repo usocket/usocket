@@ -61,9 +61,6 @@
    "#define CONS(x, y) make_cons((x), (y))"
    "#define MAKE_INTEGER(x) make_integer((x))")
 
-  (defconstant sb-bsd-sockets::sockopt-tcp-nodelay (sockopt-tcp-nodelay))
-  (export sb-bsd-sockets::sockopt-tcp-nodelay)
-
   (defun fd-setsize ()
     (ffi:c-inline () () :fixnum
      "FD_SETSIZE" :one-liner t))
