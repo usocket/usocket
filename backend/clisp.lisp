@@ -1,4 +1,4 @@
-`;;;; $Id$
+;;;; $Id$
 ;;;; $URL$
 
 ;;;; See LICENSE for licensing information.
@@ -55,14 +55,29 @@
                  (error usock-err :socket socket)
                (signal usock-err :socket socket)))))))
 
-(defun socket-connect (host port &key (element-type 'character))
+(defun socket-connect (host port &key (element-type 'character)
+                       timeout deadline (nodelay t nodelay-specified)
+                       local-host local-port)
+  (declare (ignore nodelay))
+  (when timeout (unsupported 'timeout 'socket-connect))
+  (when deadline (unsupported 'deadline 'socket-connect))
+  (when nodelay-specified (unsupported 'nodelay 'socket-connect))
+  (when (or local-host local-port)
+     (unsupported 'local-host 'socket-connect)
+     (unsupported 'local-port 'socket-connect))
+
   (let ((socket)
         (hostname (host-to-hostname host)))
     (with-mapped-conditions (socket)
-       (setf socket
-             (socket:socket-connect port hostname
-                                    :element-type element-type
-                                    :buffered t)))
+      (setf socket
+            (if timeout
+                (socket:socket-connect port hostname
+                                       :element-type element-type
+                                       :buffered t
+                                       :timeout timeout)
+                (socket:socket-connect port hostname
+                                       :element-type element-type
+                                       :buffered t))))
     (make-stream-socket :socket socket
                         :stream socket))) ;; the socket is a stream too
 
@@ -160,3 +175,87 @@
             (setf (state x) :READ)))
         wait-list))))
 
+
+;;
+;; UDP/Datagram sockets!
+;;
+
+#+rawsock
+(progn
+
+  (defun make-sockaddr_in ()
+    (make-array 16 :element-type '(unsigned-byte 8) :initial-element 0))
+
+  (declaim (inline fill-sockaddr_in))
+  (defun fill-sockaddr_in (sockaddr_in ip port)
+    (port-to-octet-buffer sockaddr_in port)
+    (ip-to-octet-buffer sockaddr_in ip :start 2)
+    sockaddr_in)
+
+  (defun socket-create-datagram (local-port
+                                 &key (local-host *wildcard-host*)
+                                      remote-host
+                                      remote-port)
+    (let ((sock (rawsock:socket :inet :dgram 0))
+          (lsock_addr (fill-sockaddr_in (make-sockaddr_in)
+                                        local-host local-port))
+          (rsock_addr (when remote-host
+                        (fill-sockaddr_in (make-sockaddr_in)
+                                          remote-host (or remote-port
+                                                          local-port)))))
+      (bind sock lsock_addr)
+      (when rsock_addr
+        (connect sock rsock_addr))
+      (make-datagram-socket sock :connected-p (if rsock_addr t nil))))
+
+  (defun socket-receive (socket buffer &key (size (length buffer)))
+    "Returns the buffer, the number of octets copied into the buffer (received)
+and the address of the sender as values."
+    (let* ((sock (socket socket))
+           (sockaddr (when (not (connected-p socket))
+                       (rawsock:make-sockaddr)))
+           (rv (if sockaddr
+                   (rawsock:recvfrom sock buffer sockaddr
+                                     :start 0
+                                     :end size)
+                   (rawsock:recv sock buffer
+                                 :start 0
+                                 :end size))))
+      (values buffer
+              rv
+              (list (ip-from-octet-buffer (sockaddr-data sockaddr) 4)
+                    (port-from-octet-buffer (sockaddr-data sockaddr) 2)))))
+
+  (defun socket-send (socket buffer &key address (size (length buffer)))
+    "Returns the number of octets sent."
+    (let* ((sock (socket socket))
+           (sockaddr (when address
+                       (rawsock:make-sockaddr :INET
+                                              (fill-sockaddr_in
+                                               (make-sockaddr_in)
+                                               (host-byte-order
+                                                (second address))
+                                               (first address)))))
+           (rv (if address
+                   (rawsock:sendto sock buffer sockaddr
+                                   :start 0
+                                   :end size)
+                   (rawsock:send sock buffer
+                                 :start 0
+                                 :end size))))
+      rv))
+
+  (defmethod socket-close ((usocket datagram-usocket))
+    (when (wait-list usocket)
+       (remove-waiter (wait-list usocket) usocket))
+    (rawsock:sock-close (socket usocket)))
+  
+  )
+
+#-rawsock
+(progn
+  (warn "This image doesn't contain the RAWSOCK package.
+To enable UDP socket support, please be sure to use the -Kfull parameter
+at startup, or to enable RAWSOCK support during compilation.")
+
+  )

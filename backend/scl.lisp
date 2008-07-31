@@ -28,7 +28,17 @@
                :socket socket
                :condition condition))))
 
-(defun socket-connect (host port &key (element-type 'character))
+(defun socket-connect (host port &key (element-type 'character)
+                       timeout deadline (nodelay t nodelay-specified)
+                       local-host local-port)
+  (declare (ignore nodelay))
+  (when nodelay-specified (unsupported 'nodelay 'socket-connect))
+  (when deadline (unsupported 'deadline 'socket-connect))
+  (when timeout (unsupported 'timeout 'socket-connect))
+  (when (or local-host local-port)
+     (unsupported 'local-host 'socket-connect)
+     (unsupported 'local-port 'socket-connect))
+
   (let* ((socket (with-mapped-conditions ()
                   (ext:connect-to-inet-socket (host-to-hbo host) port
                                               :kind :stream)))
@@ -136,10 +146,27 @@
 (defun get-host-name ()
   (unix:unix-gethostname))
 
-(defun wait-for-input-internal (sockets &key timeout)
-  (let* ((pollfd-size (alien:alien-size (alien:struct unix::pollfd) :bytes))
-        (nfds (length sockets))
-        (bytes (* nfds pollfd-size)))
+
+;;
+;;
+;;  WAIT-LIST part
+;;
+
+
+(defun %add-waiter (wl waiter)
+  (declare (ignore wl waiter)))
+
+(defun %remove-waiter (wl waiter)
+  (declare (ignore wl waiter)))
+
+(defun %setup-wait-list (wl)
+  (declare (ignore wl)))
+
+(defun wait-for-input-internal (wait-list &key timeout)
+  (let* ((sockets (wait-list-waiters wait-list))
+         (pollfd-size (alien:alien-size (alien:struct unix::pollfd) :bytes))
+         (nfds (length sockets))
+         (bytes (* nfds pollfd-size)))
     (alien:with-bytes (fds-sap bytes)
       (do ((sockets sockets (rest sockets))
           (base 0 (+ base 8)))
@@ -161,11 +188,9 @@
                      (unix:get-unix-error-msg errno)))
              (t
               (do ((sockets sockets (rest sockets))
-                   (base 0 (+ base 8))
-                   (ready nil))
-                  ((endp sockets)
-                   (nreverse ready))
+                   (base 0 (+ base 8)))
+                  ((endp sockets))
                 (let ((flags (sys:sap-ref-16 fds-sap (+ base 6))))
                   (unless (zerop (logand flags unix::pollin))
-                    (push (first sockets) ready))))))))))
+                    (setf (state (first sockets)) :READ))))))))))
 

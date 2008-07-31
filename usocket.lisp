@@ -82,6 +82,11 @@ with the `socket-close' method or by closing the associated stream
   (:documentation "Socket which listens for stream connections to
 be initiated from remote sockets."))
 
+(defclass datagram-usocket (usocket)
+  ((connected-p :initarg :connected-p :accessor connected-p))
+;; ###FIXME: documentation to be added.
+  (:documentation ""))
+
 (defun usocket-p (socket)
   (typep socket 'usocket))
 
@@ -92,13 +97,7 @@ be initiated from remote sockets."))
   (typep socket 'stream-server-usocket))
 
 (defun datagram-usocket-p (socket)
-  (declare (ignore socket))
-  nil)
-
-;;Not in use yet:
-;;(defclass datagram-usocket (usocket)
-;;  ()
-;;  (:documentation ""))
+  (typep socket 'datagram-usocket))
 
 (defun make-socket (&key socket)
   "Create a usocket socket type from implementation specific socket."
@@ -134,6 +133,13 @@ The returned value is a subtype of `stream-server-usocket'.
   (make-instance 'stream-server-usocket
                  :socket socket
                  :element-type element-type))
+
+(defun make-datagram-socket (socket &key connected-p)
+  (unless socket
+    (error 'invalid-socket-error))
+  (make-instance 'datagram-usocket
+                 :socket socket
+                 :connected-p connected-p))
 
 (defgeneric socket-accept (socket &key element-type)
   (:documentation
@@ -299,6 +305,41 @@ none."
               to-result))))
 
 ;;
+;; Data utility functions
+;;
+
+(defun integer-to-octet-buffer (integer buffer octets &key (start 0))
+  (do ((b start (1+ b))
+       (i (ash (1- octets) 3) ;; * 8
+          (- i 8)))
+      ((> 0 i) buffer)
+    (setf (aref buffer b)
+          (ldb (byte 8 i) integer))))
+
+(defun octet-buffer-to-integer (buffer octets &key (start 0))
+  (let ((integer 0))
+    (do ((b start (1+ b))
+         (i (ash (1- octets) 3) ;; * 8
+            (- i 8)))
+        ((> 0 i)
+         integer)
+      (setf (ldb (byte 8 i) integer)
+            (aref buffer b)))))
+
+
+(defmacro port-to-octet-buffer (port buffer &key (start 0))
+  `(integer-to-octet-buffer ,port ,buffer 2 ,start))
+
+(defmacro ip-to-octet-buffer (ip buffer &key (start 0))
+  `(integer-to-octet-buffer (host-byte-order ,ip) ,buffer 4 ,start))
+
+(defmacro port-from-octet-buffer (buffer &key (start 0))
+  `(octet-buffer-to-integer ,buffer 2 ,start))
+
+(defmacro ip-from-octet-buffer (buffer &key (start 0))
+  `(octet-buffer-to-integer ,buffer 4 ,start))
+
+;;
 ;; IP(v4) utility functions
 ;;
 
@@ -358,17 +399,21 @@ such as 3232235777."
   "Translate a string or vector quad to a stringified hostname."
   (etypecase host
     (string host)
-    ((vector t 4) (vector-quad-to-dotted-quad host))
+    ((or (vector t 4)
+         (array (unsigned-byte 8) (4)))
+     (vector-quad-to-dotted-quad host))
     (integer (hbo-to-dotted-quad host))))
 
 (defun ip= (ip1 ip2)
   (etypecase ip1
     (string (string= ip1 (host-to-hostname ip2)))
-    ((vector t 4) (or (eq ip1 ip2)
-                      (and (= (aref ip1 0) (aref ip2 0))
-                           (= (aref ip1 1) (aref ip2 1))
-                           (= (aref ip1 2) (aref ip2 2))
-                           (= (aref ip1 3) (aref ip2 3)))))
+    ((or (vector t 4)
+         (array (unsigned-byte 8) (4)))
+     (or (eq ip1 ip2)
+         (and (= (aref ip1 0) (aref ip2 0))
+              (= (aref ip1 1) (aref ip2 1))
+              (= (aref ip1 2) (aref ip2 2))
+              (= (aref ip1 3) (aref ip2 3)))))
     (integer (= ip1 (host-byte-order ip2)))))
 
 (defun ip/= (ip1 ip2)
@@ -399,7 +444,9 @@ to a vector quad."
                     ;; valid IP dotted quad?
                     ip
                   (get-random-host-by-name host))))
-      ((vector t 4) host)
+      ((or (vector t 4)
+           (array (unsigned-byte 8) (4)))
+       host)
       (integer (hbo-to-vector-quad host))))
 
   (defun host-to-hbo (host)
@@ -409,10 +456,12 @@ to a vector quad."
                 (if (and ip (= 4 (length ip)))
                     (host-byte-order ip)
             (host-to-hbo (get-host-by-name host)))))
-      ((vector t 4) (host-byte-order host))
+      ((or (vector t 4)
+           (array (unsigned-byte 8) (4)))
+       (host-byte-order host))
       (integer host))))
 
-;;ready-
+;;
 ;; Other utility functions
 ;;
 

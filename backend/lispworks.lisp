@@ -73,13 +73,33 @@
                     (declare (ignore host port err-msg))
                     (raise-usock-err errno socket condition)))))
 
-(defun socket-connect (host port &key (element-type 'base-char))
+(defun socket-connect (host port &key (element-type 'base-char)
+                       timeout deadline (nodelay t nodelay-specified)
+                       local-host local-port)
+  (declare (ignorable nodelay))
+  (when timeout (unimplemented 'timeout 'socket-connect))
+  (when deadline (unsupported 'deadline 'socket-connect :minimum "LispWorks 5.1"))
+  
+  #+(and (not lispworks4) (not lispworks5.0))
+  (when nodelay-specified (unimplemented 'nodelay 'socket-connect))
+  #+lispworks4
+  (when (or local-host local-port)
+     (unsupported 'local-host 'socket-connect :minimum "LispWorks 5.0+ (verified)")
+     (unsupported 'local-port 'socket-connect :minimum "LispWorks 5.0+ (verified)"))
+
   (let ((hostname (host-to-hostname host))
         (stream))
     (setf stream
           (with-mapped-conditions ()
              (comm:open-tcp-stream hostname port
-                                   :element-type element-type)))
+                                   :element-type element-type
+                                   #-lispworks4 #-lispworks4
+                                   #-lispworks4 #-lispworks4
+                                   :local-address (when local-host (host-to-hostname local-host))
+                                   :local-port local-port
+                                   #+(and (not lispworks4) (not lispworks5.0))
+                                   #+(and (not lispworks4) (not lispworks5.0))
+                                   :nodelay nodelay)))
     (if stream
         (make-stream-socket :socket (comm:socket-stream-socket stream)
                             :stream stream)
@@ -90,6 +110,11 @@
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'base-char))
+  #+lispworks4.1
+  (unsupported 'host 'socket-listen :minimum "LispWorks 4.0 or newer than 4.1")
+  #+lispworks4.1
+  (unsupported 'backlog 'socket-listen :minimum "LispWorks 4.0 or newer than 4.1")
+
   (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
          (comm::*use_so_reuseaddr* reuseaddress)
          (hostname (host-to-hostname host))

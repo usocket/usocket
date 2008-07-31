@@ -37,6 +37,7 @@
 
 #+ecl
 (progn
+
   #-:wsock
   (ffi:clines
    "#include <errno.h>"
@@ -130,7 +131,7 @@
           }
         @(return) = select(#3 + 1, (fd_set*)#2, NULL, NULL,
                            (#0 != Cnil) ? &tv : NULL);
-")))
+" :one-liner nil)))
         (cond
           ((= 0 count)
            (values nil nil))
@@ -142,6 +143,8 @@
              (when (fdset-fd-isset rfds (sb-bsd-sockets:socket-file-descriptor
                                          (socket sock)))
                (setf (state sock) :READ))))))))
+
+
 )
 
 (defun map-socket-error (sock-err)
@@ -197,7 +200,15 @@
                      (signal usock-cond :socket socket))))))
 
 
-(defun socket-connect (host port &key (element-type 'character))
+(defun socket-connect (host port &key (element-type 'character)
+                       timeout deadline (nodelay t nodelay-specified)
+                       local-host local-port)
+  (when deadline (unsupported 'deadline 'socket-connect))
+  (when timeout (unsupported 'timeout 'socket-connect))
+  (when (and nodelay-specified
+             (not (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
+    (unsupported 'nodelay 'socket-connect))
+
   (let* ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                 :type :stream :protocol :tcp))
          (stream (sb-bsd-sockets:socket-make-stream socket
@@ -208,6 +219,14 @@
          ;;###FIXME: The above line probably needs an :external-format
          (usocket (make-stream-socket :stream stream :socket socket))
          (ip (host-to-vector-quad host)))
+    (when (and nodelay-specified
+               (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay))
+      (setf (sb-bsd-sockets:sockopt-tcp-nodelay socket) nodelay))
+    (when (or local-host local-port)
+      (sb-bsd-sockets:socket-bind socket
+                                  (host-to-vector-quad
+                                   (or local-host *wildcard-host*))
+                                  (or local-port *auto-port*)))
     (with-mapped-conditions (usocket)
       (sb-bsd-sockets:socket-connect socket ip port))
     usocket))

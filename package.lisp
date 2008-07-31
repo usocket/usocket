@@ -38,6 +38,7 @@
              #:stream-server-usocket
              #:socket
              #:socket-stream
+             #:datagram-usocket
 
              #:host-byte-order ; IP(v4) utility functions
              #:hbo-to-dotted-quad
@@ -47,7 +48,15 @@
              #:ip=
              #:ip/=
 
+             #:integer-to-octet-buffer ; Network utility functions
+             #:octet-buffer-to-integer
+             #:port-to-octet-buffer
+             #:port-from-octet-buffer
+             #:ip-to-octet-buffer
+             #:ip-from-octet-buffer
+
              #:with-mapped-conditions
+
              #:socket-condition ; conditions
              #:ns-condition
              #:socket-error ; errors
@@ -55,5 +64,10 @@
              #:unknown-condition
              #:ns-unknown-condition
              #:unknown-error
-             #:ns-unknown-error)))
+             #:ns-unknown-error
+
+             #:insufficient-implementation ; conditions regarding usocket support level
+             #:unsupported
+             #:unimplemented
+             )))
 

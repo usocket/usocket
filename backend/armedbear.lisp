@@ -186,22 +186,37 @@
   (typecase condition
     (error (error 'unknown-error :socket socket :real-error condition))))
 
-(defun socket-connect (host port &key (element-type 'character))
+(defun socket-connect (host port &key (element-type 'character)
+                       timeout deadline (nodelay nil nodelay-specified)
+                       local-host local-port)
+  (when deadline (unsupported 'deadline 'socket-connect))
+  (when (or local-host local-port)
+    (unimplemented 'local-host 'socket-connect)
+    (unimplemented 'local-port 'socket-connect))
+
   (let ((usock))
     (with-mapped-conditions (usock)
       (let* ((sock-addr (jdi:jcoerce
                          (jdi:do-jnew-call "java.net.InetSocketAddress"
-                                           (host-to-hostname host)
-                                           (jdi:jcoerce port :int))
+                           (host-to-hostname host)
+                           (jdi:jcoerce port :int))
                          "java.net.SocketAddress"))
              (jchan (jdi:do-jstatic-call "java.nio.channels.SocketChannel"
-                                         "open" sock-addr))
+                      "open" sock-addr))
              (sock (jdi:do-jmethod-call jchan "socket")))
-         (setf usock
-               (make-stream-socket
-                :socket jchan
-                :stream (ext:get-socket-stream (jdi:jop-deref sock)
-                                               :element-type element-type)))))))
+        (when nodelay-specified
+          (jdi:do-jmethod-call sock "setTcpNoDelay"
+                               (if nodelay
+                                   (java:make-immediate-object t :boolean)
+                                   (java:make-immediate-object nil :boolean))))
+        (when timeout
+          (jdi:do-jmethod-call sock "setSoTimeout"
+                                    (truncate (* 1000 timeout))))
+        (setf usock
+              (make-stream-socket
+               :socket jchan
+               :stream (ext:get-socket-stream (jdi:jop-deref sock)
+                                              :element-type element-type)))))))
 
 (defun socket-listen (host port
                            &key reuseaddress
@@ -260,16 +275,24 @@
     (close (socket-stream usocket))))
 
 (defmethod get-local-address ((usocket usocket))
-  (dotted-quad-to-vector-quad (ext:socket-local-address (socket usocket))))
+  (dotted-quad-to-vector-quad (ext:socket-local-address
+                               (jdi:jop-deref
+                                (jdi:do-jmethod-call (socket usocket)
+                                  "socket")))))
 
 (defmethod get-peer-address ((usocket stream-usocket))
-  (dotted-quad-to-vector-quad (ext:socket-peer-address (socket usocket))))
+  (dotted-quad-to-vector-quad (ext:socket-peer-address
+                               (jdi:jop-deref
+                                (jdi:do-jmethod-call (socket usocket)
+                                  "socket")))))
 
 (defmethod get-local-port ((usocket usocket))
-  (ext:socket-local-port (socket usocket)))
+  (ext:socket-local-port (jdi:jop-deref
+                          (jdi:do-jmethod-call (socket usocket) "socket"))))
 
 (defmethod get-peer-port ((usocket stream-usocket))
-  (ext:socket-peer-port (socket usocket)))
+  (ext:socket-peer-port (jdi:jop-deref
+                         (jdi:do-jmethod-call (socket usocket) "socket"))))
 
 (defmethod get-local-name ((usocket usocket))
   (values (get-local-address usocket)

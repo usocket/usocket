@@ -5,12 +5,36 @@
 
 (in-package :usocket)
 
-;; Condition raised by operations with unsupported arguments
+;; Condition signalled by operations with unsupported arguments
 ;; For trivial-sockets compatibility.
 
-(define-condition unsupported (error)
-  ((feature :initarg :feature :reader unsupported-feature)))
+(define-condition insufficient-implementation (error)
+  ((feature :initarg :feature :reader feature)
+   (context :initarg :context :reader context
+    :documentation "String designator of the public API function which
+the feature belongs to."))
+  (:documentation "The ancestor of all errors usocket may generate
+because of insufficient support from the underlying implementation
+with respect to the arguments given to `function'.
 
+One call may signal several errors, if the caller allows processing
+to continue.
+"))
+
+(define-condition unsupported (insufficient-implementation)
+  ((minimum :initarg :minimum :reader minimum
+            :documentation "Indicates the minimal version of the
+implementation required to support the requested feature."))
+  (:documentation "Signalled when the underlying implementation
+doesn't allow supporting the requested feature.
+
+When you see this error, go bug your vendor/implementation developer!"))
+
+(define-condition unimplemented (insufficient-implementation)
+  ()
+  (:documentation "Signalled if a certain feature might be implemented,
+based on the features of the underlying implementation, but hasn't
+been implemented yet."))
 
 ;; Conditions raised by sockets operations
 
@@ -166,3 +190,11 @@ error available."))
     (2 . ns-try-again-condition)
     (3 . ns-no-recovery-error)))
 
+
+
+(defmacro unsupported (feature context &key minimum)
+  `(signal 'unsupported :feature ,feature
+    :context ,context :minimum ,minimum))
+
+(defmacro unimplemented (feature context)
+  `(signal 'unimplemented :feature ,feature :context ,context))
