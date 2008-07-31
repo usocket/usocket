@@ -275,16 +275,24 @@
     (close (socket-stream usocket))))
 
 (defmethod get-local-address ((usocket usocket))
-  (dotted-quad-to-vector-quad (ext:socket-local-address (socket usocket))))
+  (dotted-quad-to-vector-quad (ext:socket-local-address
+                               (jdi:jop-deref
+                                (jdi:do-jmethod-call (socket usocket)
+                                  "socket")))))
 
 (defmethod get-peer-address ((usocket stream-usocket))
-  (dotted-quad-to-vector-quad (ext:socket-peer-address (socket usocket))))
+  (dotted-quad-to-vector-quad (ext:socket-peer-address
+                               (jdi:jop-deref
+                                (jdi:do-jmethod-call (socket usocket)
+                                  "socket")))))
 
 (defmethod get-local-port ((usocket usocket))
-  (ext:socket-local-port (socket usocket)))
+  (ext:socket-local-port (jdi:jop-deref
+                          (jdi:do-jmethod-call (socket usocket) "socket"))))
 
 (defmethod get-peer-port ((usocket stream-usocket))
-  (ext:socket-peer-port (socket usocket)))
+  (ext:socket-peer-port (jdi:jop-deref
+                         (jdi:do-jmethod-call (socket usocket) "socket"))))
 
 (defmethod get-local-name ((usocket usocket))
   (values (get-local-address usocket)
