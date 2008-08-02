@@ -206,6 +206,10 @@
   (when deadline (unsupported 'deadline 'socket-connect))
   (when timeout (unsupported 'timeout 'socket-connect))
   (when (and nodelay-specified
+             ;; 20080802: ECL added this function to its sockets
+             ;; package today. There's no guarantee the functions
+             ;; we need are available, but we can make sure not to
+             ;; call them if they aren't
              (not (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
     (unsupported 'nodelay 'socket-connect))
 
