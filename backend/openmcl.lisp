@@ -164,10 +164,9 @@
 (defun wait-for-input-internal (wait-list &key timeout)
   (with-mapped-conditions ()
     (let* ((ticks-timeout (truncate (* (or timeout 1)
-                                       ccl::*ticks-per-second*)))
-           (active-internal-sockets
-            (input-available-p (wait-list-waiters wait-list)
-                               (when timeout ticks-timeout))))
+                                       ccl::*ticks-per-second*))))
+      (input-available-p (wait-list-waiters wait-list)
+                               (when timeout ticks-timeout))
       wait-list)))
 
 
