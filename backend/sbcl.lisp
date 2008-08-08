@@ -346,7 +346,7 @@
                    (dolist (x (wait-list-%wait sockets))
                      (when (sb-unix:fd-isset
                             (sb-bsd-sockets:socket-file-descriptor x) rfds)
-                       (setf (state x) :READ))))))))))
+                       (setf (state x) :READ)))))))))
 
   #+win32
   (warn "wait-for-input not (yet!) supported...")
