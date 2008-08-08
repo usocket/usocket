@@ -334,8 +334,8 @@
            (multiple-value-bind
                (count err)
                (sb-unix:unix-fast-select
-                (1+ (reduce #'max (wait-list-%wait sockets))
-                            :key #'sb-bsd-sockets:socket-file-descriptor)
+                (1+ (reduce #'max (wait-list-%wait sockets)
+                            :key #'sb-bsd-sockets:socket-file-descriptor))
                 (sb-alien:addr rfds) nil nil
                 (when timeout secs) musecs)
 	     (if (null count)
