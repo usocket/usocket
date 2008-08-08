@@ -335,7 +335,7 @@
                (count err)
                (sb-unix:unix-fast-select
                 (1+ (reduce #'max (wait-list-%wait sockets))
-                            :key #'sb-bsd-sockets:socket-file-descriptor))
+                            :key #'sb-bsd-sockets:socket-file-descriptor)
                 (sb-alien:addr rfds) nil nil
                 (when timeout secs) musecs)
 	     (if (null count)
@@ -346,7 +346,7 @@
                    (dolist (x (wait-list-%wait sockets))
                      (when (sb-unix:fd-isset
                             (sb-bsd-sockets:socket-file-descriptor x) rfds)
-                       (setf (state x) :READ)))))))))
+                       (setf (state x) :READ))))))))))
 
   #+win32
   (warn "wait-for-input not (yet!) supported...")
