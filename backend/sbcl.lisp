@@ -343,9 +343,11 @@
 		   (error (map-errno-error err)))
 		 (when (< 0 count)
 		   ;; process the result...
-                   (dolist (x (wait-list-%wait sockets))
+                   (dolist (x (wait-list-waiters sockets))
                      (when (sb-unix:fd-isset
-                            (sb-bsd-sockets:socket-file-descriptor x) rfds)
+                            (sb-bsd-sockets:socket-file-descriptor
+                             (socket x))
+                            rfds)
                        (setf (state x) :READ))))))))))
 
   #+win32
