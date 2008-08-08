@@ -334,7 +334,7 @@
            (multiple-value-bind
                (count err)
                (sb-unix:unix-fast-select
-                (1+ (reduce #'max (mapcar #'socket (wait-list-waiters sockets))
+                (1+ (reduce #'max (wait-list-%wait sockets))
                             :key #'sb-bsd-sockets:socket-file-descriptor))
                 (sb-alien:addr rfds) nil nil
                 (when timeout secs) musecs)
@@ -343,10 +343,9 @@
 		   (error (map-errno-error err)))
 		 (when (< 0 count)
 		   ;; process the result...
-                   (dolist (x (wait-list-waiters sockets))
-                     (when (not (sb-unix:fd-isset
-                                 (sb-bsd-sockets:socket-file-descriptor (socket x))
-                                 rfds))
+                   (dolist (x (wait-list-%wait sockets))
+                     (when (sb-unix:fd-isset
+                            (sb-bsd-sockets:socket-file-descriptor x) rfds)
                        (setf (state x) :READ))))))))))
 
   #+win32
