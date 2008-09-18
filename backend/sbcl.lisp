@@ -213,27 +213,33 @@
              (not (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
     (unsupported 'nodelay 'socket-connect))
 
-  (let* ((socket (make-instance 'sb-bsd-sockets:inet-socket
-                                :type :stream :protocol :tcp))
-         (stream (sb-bsd-sockets:socket-make-stream socket
-                                                    :input t
-                                                    :output t
-                                                    :buffering :full
-                                                    :element-type element-type))
-         ;;###FIXME: The above line probably needs an :external-format
-         (usocket (make-stream-socket :stream stream :socket socket))
-         (ip (host-to-vector-quad host)))
-    (when (and nodelay-specified
-               (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay))
-      (setf (sb-bsd-sockets:sockopt-tcp-nodelay socket) nodelay))
-    (when (or local-host local-port)
-      (sb-bsd-sockets:socket-bind socket
-                                  (host-to-vector-quad
-                                   (or local-host *wildcard-host*))
-                                  (or local-port *auto-port*)))
-    (with-mapped-conditions (usocket)
-      (sb-bsd-sockets:socket-connect socket ip port))
-    usocket))
+  (let ((socket (make-instance 'sb-bsd-sockets:inet-socket
+                               :type :stream :protocol :tcp)))
+    (handler-case
+        (let* ((stream
+                (sb-bsd-sockets:socket-make-stream socket
+                                                   :input t
+                                                   :output t
+                                                   :buffering :full
+                                                   :element-type element-type))
+               ;;###FIXME: The above line probably needs an :external-format
+               (usocket (make-stream-socket :stream stream :socket socket))
+               (ip (host-to-vector-quad host)))
+          (when (and nodelay-specified
+                     (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay))
+            (setf (sb-bsd-sockets:sockopt-tcp-nodelay socket) nodelay))
+          (when (or local-host local-port)
+            (sb-bsd-sockets:socket-bind socket
+                                        (host-to-vector-quad
+                                         (or local-host *wildcard-host*))
+                                        (or local-port *auto-port*)))
+          (with-mapped-conditions (usocket)
+            (sb-bsd-sockets:socket-connect socket ip port))
+          usocket)
+      (t (c)
+        ;; Make sure we don't leak filedescriptors
+        (sb-bsd-sockets:socket-close socket)
+        (error c)))))
 
 (defun socket-listen (host port
                            &key reuseaddress
@@ -244,11 +250,16 @@
          (ip (host-to-vector-quad host))
          (sock (make-instance 'sb-bsd-sockets:inet-socket
                               :type :stream :protocol :tcp)))
-    (with-mapped-conditions ()
-       (setf (sb-bsd-sockets:sockopt-reuse-address sock) reuseaddress)
-       (sb-bsd-sockets:socket-bind sock ip port)
-       (sb-bsd-sockets:socket-listen sock backlog)
-       (make-stream-server-socket sock :element-type element-type))))
+    (handler-case
+        (with-mapped-conditions ()
+          (setf (sb-bsd-sockets:sockopt-reuse-address sock) reuseaddress)
+          (sb-bsd-sockets:socket-bind sock ip port)
+          (sb-bsd-sockets:socket-listen sock backlog)
+          (make-stream-server-socket sock :element-type element-type))
+      (t (c)
+        ;; Make sure we don't leak filedescriptors
+        (sb-bsd-sockets:socket-close sock)
+        (error c)))))
 
 (defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (with-mapped-conditions (socket)
