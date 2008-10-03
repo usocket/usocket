@@ -11,6 +11,9 @@
     (:export #:*wildcard-host*
              #:*auto-port*
 
+             #:*remote-host* ; special variables (udp)
+             #:*remote-port*
+
              #:socket-connect ; socket constructors and methods
              #:socket-listen
              #:socket-accept
@@ -21,6 +24,11 @@
              #:get-peer-port
              #:get-local-name
              #:get-peer-name
+
+             #:socket-send    ; udp function (send)
+             #:socket-receive ; udp function (receive)
+             #:socket-sync    ; udp client (high-level)
+             #:socket-server  ; udp server
 
              #:wait-for-input ; waiting for input-ready state (select() like)
              #:make-wait-list
@@ -65,6 +73,7 @@
              #:ns-unknown-condition
              #:unknown-error
              #:ns-unknown-error
+             #:socket-warning ; warnings (udp)
 
              #:insufficient-implementation ; conditions regarding usocket support level
              #:unsupported

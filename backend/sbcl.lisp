@@ -199,8 +199,7 @@
                  (if usock-cond
                      (signal usock-cond :socket socket))))))
 
-
-(defun socket-connect (host port &key (element-type 'character)
+(defun socket-connect (host port &key (protocol :tcp) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port)
   (when deadline (unsupported 'deadline 'socket-connect))
@@ -214,28 +213,38 @@
     (unsupported 'nodelay 'socket-connect))
 
   (let ((socket (make-instance 'sb-bsd-sockets:inet-socket
-                               :type :stream :protocol :tcp)))
+                               :type (cdr (assoc protocol +protocol-map+))
+                               :protocol protocol)))
     (handler-case
-        (let* ((stream
-                (sb-bsd-sockets:socket-make-stream socket
-                                                   :input t
-                                                   :output t
-                                                   :buffering :full
-                                                   :element-type element-type))
-               ;;###FIXME: The above line probably needs an :external-format
-               (usocket (make-stream-socket :stream stream :socket socket))
-               (ip (host-to-vector-quad host)))
-          (when (and nodelay-specified
-                     (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay))
-            (setf (sb-bsd-sockets:sockopt-tcp-nodelay socket) nodelay))
-          (when (or local-host local-port)
-            (sb-bsd-sockets:socket-bind socket
-                                        (host-to-vector-quad
-                                         (or local-host *wildcard-host*))
-                                        (or local-port *auto-port*)))
-          (with-mapped-conditions (usocket)
-            (sb-bsd-sockets:socket-connect socket ip port))
-          usocket)
+        (ecase protocol
+          (:tcp (let* ((stream
+                        (sb-bsd-sockets:socket-make-stream socket
+                                                           :input t
+                                                           :output t
+                                                           :buffering :full
+                                                           :element-type element-type))
+                       ;;###FIXME: The above line probably needs an :external-format
+                       (usocket (make-stream-socket :stream stream :socket socket))
+                       (ip (host-to-vector-quad host)))
+                  (when (and nodelay-specified
+                             (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay))
+                    (setf (sb-bsd-sockets:sockopt-tcp-nodelay socket) nodelay))
+                  (when (or local-host local-port)
+                    (sb-bsd-sockets:socket-bind socket
+                                                (host-to-vector-quad
+                                                 (or local-host *wildcard-host*))
+                                                (or local-port *auto-port*)))
+                  (with-mapped-conditions (usocket)
+                    (sb-bsd-sockets:socket-connect socket ip port))
+                  usocket))
+          (:udp (progn
+                  (when (and local-host local-port)
+                    (sb-bsd-sockets:socket-bind socket
+                                                (host-to-vector-quad local-host)
+                                                local-port))
+                  (when (and host port)
+                    (sb-bsd-sockets:socket-connect socket (host-to-hbo host) port))
+                  (make-datagram-socket socket))))
       (t (c)
         ;; Make sure we don't leak filedescriptors
         (sb-bsd-sockets:socket-close socket)
@@ -286,6 +295,18 @@
      (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket-stream usocket))))
+
+(defmethod socket-send ((socket datagram-usocket) buffer length &key address port)
+  (with-mapped-conditions (socket)
+    (let* ((s (socket socket))
+           (dest (if (and address port) (list (host-to-vector-quad address) port) nil)))
+      (sb-bsd-sockets:socket-send s buffer length :address dest))))
+
+(defmethod socket-receive ((socket datagram-usocket) buffer length
+			   &key (element-type '(unsigned-byte 8)))
+  (with-mapped-conditions (socket)
+    (let ((s (socket socket)))
+      (sb-bsd-sockets:socket-receive s buffer length :element-type element-type))))
 
 (defmethod get-local-name ((usocket usocket))
   (sb-bsd-sockets:socket-name (socket usocket)))

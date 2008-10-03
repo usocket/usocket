@@ -1,4 +1,4 @@
-
+;;;; -*- Mode: Lisp -*-
 ;;;; $Id$
 ;;;; $URL$
 
@@ -18,26 +18,26 @@
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (:split-sequence
-                 #+sbcl :sb-bsd-sockets)
+                 #+sbcl :sb-bsd-sockets
+                 #+lispworks :lispworks-udp)
     :components ((:file "package")
+                 (:file "rtt"
+                  :depends-on ("package"))
                  (:file "usocket"
-                        :depends-on ("package"))
+                  :depends-on ("package" "rtt"))
                  (:file "condition"
-                        :depends-on ("usocket"))
-                 #+clisp (:file "clisp" :pathname "backend/clisp"
-                                :depends-on ("condition"))
-                 #+cmu (:file "cmucl" :pathname "backend/cmucl"
-                              :depends-on ("condition"))
-                 #+scl (:file "scl" :pathname "backend/scl"
-                              :depends-on ("condition"))
-                 #+(or sbcl ecl) (:file "sbcl" :pathname "backend/sbcl"
-                                        :depends-on ("condition"))
-                 #+lispworks (:file "lispworks" :pathname "backend/lispworks"
-                                    :depends-on ("condition"))
-                 #+openmcl (:file "openmcl" :pathname "backend/openmcl"
-                                  :depends-on ("condition"))
-                 #+allegro (:file "allegro" :pathname "backend/allegro"
-                                  :depends-on ("condition"))
-                 #+armedbear (:file "armedbear" :pathname "backend/armedbear"
-                                                :depends-on ("condition"))
-                 ))
+                  :depends-on ("usocket" "rtt"))
+                 (:module "backend"
+                  :components (#+clisp         (:file "clisp")
+                               #+cmu           (:file "cmucl")
+                               #+scl           (:file "scl")
+                               #+(or sbcl ecl) (:file "sbcl")
+                               #+lispworks     (:file "lispworks")
+                               #+openmcl       (:file "openmcl")
+                               #+allegro       (:file "allegro")
+                               #+armedbear     (:file "armedbear"))
+                  :depends-on ("condition"))
+                 (:file "rtt-client"
+                  :depends-on ("rtt" "backend" "condition"))
+                 (:file "server"
+                  :depends-on ("backend"))))

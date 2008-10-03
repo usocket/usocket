@@ -74,21 +74,36 @@
       :text
     :binary))
 
-(defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay
+(defun socket-connect (host port &key (protocol :tcp) (element-type 'character)
+		       timeout deadline nodelay
                        local-host local-port)
   (with-mapped-conditions ()
-    (let ((mcl-sock
-           (openmcl-socket:make-socket :remote-host (host-to-hostname host)
-                                       :remote-port port
-                                       :local-host (when local-host (host-to-hostname local-host))
-                                       :local-port local-port
-                                       :format (to-format element-type)
-                                       :deadline deadline
-                                       :nodelay nodelay
-                                       :connect-timeout (and timeout
-                                                             (* timeout internal-time-units-per-second)))))
-      (openmcl-socket:socket-connect mcl-sock)
-      (make-stream-socket :stream mcl-sock :socket mcl-sock))))
+    (ecase protocol
+      (:tcp
+       (let ((mcl-sock
+	      (openmcl-socket:make-socket :remote-host (host-to-hostname host)
+					  :remote-port port
+					  :local-host (when local-host (host-to-hostname local-host))
+					  :local-port local-port
+					  :format (to-format element-type)
+					  :deadline deadline
+					  :nodelay nodelay
+					  :connect-timeout (and timeout
+								(* timeout internal-time-units-per-second)))))
+	 (openmcl-socket:socket-connect mcl-sock)
+	 (make-stream-socket :stream mcl-sock :socket mcl-sock)))
+      (:udp
+       (let ((mcl-sock
+	      (openmcl-socket:make-socket :address-family :internet
+					  :type :datagram
+					  :local-host (if local-host
+							  (host-to-hbo local-host))
+					  :local-port local-port)))
+	 (when (and host port)
+	   (ccl::inet-connect (ccl::socket-device mcl-sock)
+			      (ccl::host-as-inet-host host)
+			      (ccl::port-as-inet-port port "udp")))
+	 (make-datagram-socket mcl-sock))))))
 
 (defun socket-listen (host port
                            &key reuseaddress
@@ -121,6 +136,16 @@
      (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
+
+(defmethod socket-send ((usocket datagram-usocket) buffer length &key address port)
+  (with-mapped-conditions (usocket)
+    (openmcl-socket:send-to (socket usocket) buffer length
+			    :remote-host (if address (host-to-hbo address))
+			    :remote-port port)))
+
+(defmethod socket-receive ((usocket datagram-usocket) buffer length)
+  (with-mapped-conditions (usocket)
+    (openmcl-socket:receive-from (socket usocket) length :buffer buffer)))
 
 (defmethod get-local-address ((usocket usocket))
   (hbo-to-vector-quad (openmcl-socket:local-host (socket usocket))))

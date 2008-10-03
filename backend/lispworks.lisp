@@ -73,7 +73,7 @@
                     (declare (ignore host port err-msg))
                     (raise-usock-err errno socket condition)))))
 
-(defun socket-connect (host port &key (element-type 'base-char)
+(defun socket-connect (host port &key (protocol :tcp) (element-type 'base-char)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port)
   (declare (ignorable nodelay))
@@ -87,23 +87,36 @@
      (unsupported 'local-host 'socket-connect :minimum "LispWorks 5.0+ (verified)")
      (unsupported 'local-port 'socket-connect :minimum "LispWorks 5.0+ (verified)"))
 
-  (let ((hostname (host-to-hostname host))
-        (stream))
-    (setf stream
-          (with-mapped-conditions ()
-             (comm:open-tcp-stream hostname port
-                                   :element-type element-type
-                                   #-lispworks4 #-lispworks4
-                                   #-lispworks4 #-lispworks4
-                                   :local-address (when local-host (host-to-hostname local-host))
-                                   :local-port local-port
-                                   #+(and (not lispworks4) (not lispworks5.0))
-                                   #+(and (not lispworks4) (not lispworks5.0))
-                                   :nodelay nodelay)))
-    (if stream
-        (make-stream-socket :socket (comm:socket-stream-socket stream)
-                            :stream stream)
-      (error 'unknown-error))))
+  (ecase protocol
+    (:tcp (let ((hostname (host-to-hostname host))
+                (stream))
+            (setf stream
+                  (with-mapped-conditions ()
+                    (comm:open-tcp-stream hostname port
+                                          :element-type element-type
+                                          #-lispworks4 #-lispworks4
+                                          #-lispworks4 #-lispworks4
+                                          :local-address (when local-host (host-to-hostname local-host))
+                                          :local-port local-port
+                                          #+(and (not lispworks4) (not lispworks5.0))
+                                          #+(and (not lispworks4) (not lispworks5.0))
+                                          :nodelay nodelay)))
+            (if stream
+              (make-stream-socket :socket (comm:socket-stream-socket stream)
+                                  :stream stream)
+              (error 'unknown-error))))
+    (:udp (let ((usocket (make-datagram-socket
+                          (if (and host port)
+                            (comm:connect-to-udp-server host port
+                                                        :errorp t
+                                                        :local-address local-host
+                                                        :local-port local-port)
+                            (comm:open-udp-socket :errorp t
+                                                  :local-address local-host
+                                                  :local-port local-port))
+                          :connected-p t)))
+            (hcl:flag-special-free-action usocket)
+            usocket))))
 
 (defun socket-listen (host port
                            &key reuseaddress
@@ -151,6 +164,27 @@
      (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
      (comm::close-socket (socket usocket))))
+
+(defmethod socket-close :after ((socket datagram-usocket))
+  "Additional socket-close method for datagram-usocket"
+  (setf (%closed-p socket) t))
+
+;; Register a special free action for closing datagram usocket when being GCed
+(defun usocket-special-free-action (object)
+  (when (and (typep object 'datagram-usocket)
+             (not (closed-p object)))
+    (socket-close object)))
+
+(eval-when (:load-toplevel :execute)
+  (hcl:add-special-free-action 'usocket-special-free-action))
+
+(defmethod socket-send ((socket datagram-usocket) buffer length &key address port)
+  (let ((s (socket socket)))
+    (comm:send-message s buffer length address port)))
+
+(defmethod socket-receive ((socket datagram-usocket) buffer length)
+  (let ((s (socket socket)))
+    (comm:receive-message s buffer length)))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind

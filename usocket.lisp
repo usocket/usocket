@@ -11,6 +11,9 @@
 (defparameter *auto-port* 0
   "Port number to pass when an auto-assigned port number is wanted.")
 
+(defconstant +max-datagram-packet-size+ 65536)
+(defconstant +protocol-map+ '((:tcp . :stream) (:udp . :datagram)))
+
 (defclass usocket ()
   ((socket
     :initarg :socket
@@ -82,10 +85,17 @@ with the `socket-close' method or by closing the associated stream
   (:documentation "Socket which listens for stream connections to
 be initiated from remote sockets."))
 
-(defclass datagram-usocket (usocket)
-  ((connected-p :initarg :connected-p :accessor connected-p))
-;; ###FIXME: documentation to be added.
-  (:documentation ""))
+(defclass datagram-usocket (usocket rtt-info-mixin)
+  ((connected-p :type boolean
+                :accessor connected-p
+                :initarg :connected-p)
+   #+(or cmu lispworks)
+   (%closed-p   :type boolean
+                :accessor %closed-p
+                :initform nil
+		:documentation "Flag to indicate if this usocket is closed,
+for GC on LispWorks/CMUCL"))
+  (:documentation "UDP (inet-datagram) socket"))
 
 (defun usocket-p (socket)
   (typep socket 'usocket))

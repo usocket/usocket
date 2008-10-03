@@ -49,7 +49,7 @@
       :text
     :binary))
 
-(defun socket-connect (host port &key (element-type 'character)
+(defun socket-connect (host port &key (protocol :tcp) (element-type 'character)
                        timeout deadline
                        (nodelay t) ;; nodelay == t is the ACL default
                        local-host local-port)
@@ -59,22 +59,38 @@
   (let ((socket))
     (setf socket
           (with-mapped-conditions (socket)
-            (if timeout
-                (mp:with-timeout (timeout nil)
-                  (socket:make-socket :remote-host (host-to-hostname host)
-                                      :remote-port port
-                                      :local-host (when local-host (host-to-hostname local-host))
-                                      :local-port local-port
-                                      :format (to-format element-type)
-                                      :nodelay nodelay))
-                (socket:make-socket :remote-host (host-to-hostname host)
-                                    :remote-port port
-                                    :local-host local-host
-                                    :local-port local-port
-                                    :format (to-format element-type)
-                                    :nodelay nodelay))))
-    (make-stream-socket :socket socket :stream socket)))
-
+            (ecase protocol
+              (:tcp (if timeout
+                      (mp:with-timeout (timeout nil)
+                        (socket:make-socket :remote-host (host-to-hostname host)
+                                            :remote-port port
+                                            :local-host (when local-host (host-to-hostname local-host))
+                                            :local-port local-port
+                                            :format (to-format element-type)
+                                            :nodelay nodelay))
+                      (socket:make-socket :remote-host (host-to-hostname host)
+                                          :remote-port port
+                                          :local-host (when local-host (host-to-hostname local-host))
+                                          :local-port local-port
+                                          :format (to-format element-type)
+                                          :nodelay nodelay)))
+              (:udp (if (and host port)
+                      (socket:make-socket :type :datagram
+                                          :address-family :internet
+                                          :connect :active
+                                          :remote-host (host-to-hostname host)
+                                          :remote-port port
+                                          :local-host (when local-host (host-to-hostname local-host))
+                                          :local-port local-port
+                                          :format (to-format element-type))
+                      (socket:make-socket :type :datagram
+                                          :address-family :internet
+                                          :local-host local-host
+                                          :local-port (when local-host (host-to-hostname local-host))
+                                          :format (to-format element-type)))))))
+    (ecase protocol
+      (:tcp (make-stream-socket :socket socket :stream socket))
+      (:udp (make-datagram-socket socket)))))
 
 ;; One socket close method is sufficient,
 ;; because socket-streams are also sockets.
@@ -112,6 +128,16 @@
          (with-mapped-conditions (socket)
             (socket:accept-connection (socket socket)))))
     (make-stream-socket :socket stream-sock :stream stream-sock)))
+
+(defmethod socket-send ((socket datagram-usocket) buffer length &key address port)
+  (with-mapped-conditions (socket)
+    (let ((s (socket socket)))
+      (socket:send-to s buffer length :remote-host address :remote-port port))))
+
+(defmethod socket-receive ((socket datagram-usocket) buffer length)
+  (with-mapped-conditions (socket)
+    (let ((s (socket socket)))
+      (socket:receive-from s length :buffer buffer :extract t))))
 
 (defmethod get-local-address ((usocket usocket))
   (hbo-to-vector-quad (socket:local-host (socket usocket))))

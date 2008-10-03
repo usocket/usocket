@@ -50,7 +50,7 @@
                                                :socket socket
                                                :condition condition))))
 
-(defun socket-connect (host port &key (element-type 'character)
+(defun socket-connect (host port &key (protocol :tcp) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port)
   (declare (ignore nodelay))
@@ -61,20 +61,43 @@
      (unsupported 'local-host 'socket-connect)
      (unsupported 'local-port 'socket-connect))
 
-  (let* ((socket))
-    (setf socket
-          (with-mapped-conditions (socket)
-             (ext:connect-to-inet-socket (host-to-hbo host) port :stream)))
-    (if socket
-        (let* ((stream (sys:make-fd-stream socket :input t :output t
-                                           :element-type element-type
-                                           :buffering :full))
-               ;;###FIXME the above line probably needs an :external-format
-               (usocket (make-stream-socket :socket socket
-                                            :stream stream)))
-          usocket)
-      (let ((err (unix:unix-errno)))
-        (when err (cmucl-map-socket-error err))))))
+  (let ((socket))
+    (ecase protocol
+      (:tcp (progn
+              (setf socket
+                    (with-mapped-conditions (socket)
+                      (ext:connect-to-inet-socket (host-to-hbo host) port
+                                                  (cdr (assoc protocol +protocol-map+))
+                                                  :local-host (if local-host
+                                                                (host-to-hbo local-host))
+                                                  :local-port local-port)))
+              (if socket
+                (let* ((stream (sys:make-fd-stream socket :input t :output t
+                                                   :element-type element-type
+                                                   :buffering :full))
+                       ;;###FIXME the above line probably needs an :external-format
+                       (usocket (make-stream-socket :socket socket
+                                                    :stream stream)))
+                  usocket)
+                (let ((err (unix:unix-errno)))
+                  (when err (cmucl-map-socket-error err))))))
+      (:udp (progn
+              (if (and host port)
+                (setf socket (with-mapped-conditions (socket)
+                               (ext:connect-to-inet-socket (host-to-hbo host) port :datagram
+                                                           :local-host (if local-host
+                                                                         (host-to-hbo local-host))
+                                                           :local-port local-port)))
+                (progn
+                  (setf socket (with-mapped-conditions (socket)
+                                 (ext:create-inet-socket :datagram)))
+                  (when (and local-host local-port)
+                    (with-mapped-conditions (socket)
+                      (ext:bind-inet-socket socket local-host local-port)))))
+              (let ((usocket (make-datagram-socket socket)))
+                (ext:finalize usocket #'(lambda () (unless (%closed-p usocket)
+                                                     (ext:close-socket socket))))
+                usocket))))))
 
 (defun socket-listen (host port
                            &key reuseaddress
@@ -118,6 +141,24 @@
      (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (ext:close-socket (socket usocket))))
+
+(defmethod socket-close :after ((socket datagram-usocket))
+  (setf (%closed-p socket) t))
+
+(defmethod socket-send ((usocket datagram-usocket) buffer length &key address port)
+  (with-mapped-conditions (usocket)
+    (ext:inet-sendto (socket usocket) buffer length (if address (host-to-hbo address)) port)))
+
+(defmethod socket-receive ((usocket datagram-usocket) buffer length)
+  (let ((real-buffer (or buffer
+                         (make-array length :element-type '(unsigned-byte 8))))
+        (real-length (or length
+                         (length buffer))))
+    (multiple-value-bind (nbytes remote-host remote-port)
+        (with-mapped-conditions (usocket)
+          (ext:inet-recvfrom (socket usocket) real-buffer real-length))
+      (when (plusp nbytes)
+        (values real-buffer nbytes remote-host remote-port)))))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind
