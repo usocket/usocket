@@ -50,6 +50,7 @@
    "#include <winsock2.h>")
 
   (ffi:clines
+   "#include <sys/time.h>"
    "#include <ecl/ecl-inl.h>")
 
   #+:prefixed-api
