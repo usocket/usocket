@@ -216,15 +216,20 @@
       ;; Can we have a sane -pref. complete [UDP!?]- API next time, please?
       (dolist (x (wait-list-waiters wait-list))
         (mp:notice-fd (os-socket-handle x)))
-      (mp:process-wait-with-timeout "Waiting for a socket to become active"
-                                    (truncate timeout)
-                                    #'(lambda (socks)
-                                        (let (rv)
-                                          (dolist (x socks rv)
-                                            (when (usocket-listen x)
-                                              (setf (state x) :READ
-                                                    rv t)))))
-                                    (wait-list-waiters wait-list))
+      (labels ((wait-function (socks)
+		 (let (rv)
+		   (dolist (x socks rv)
+		     (when (usocket-listen x)
+		       (setf (state x) :READ
+			     rv t))))))
+	(if timeout
+	    (mp:process-wait-with-timeout "Waiting for a socket to become active"
+					(truncate timeout)
+					#'wait-function
+					(wait-list-waiters wait-list))
+	    (mp:process-wait "Waiting for a socket to become active"
+			     #'wait-function
+			     (wait-list-waiters wait-list))))
       (dolist (x (wait-list-waiters wait-list))
         (mp:unnotice-fd (os-socket-handle x)))
       wait-list)))
