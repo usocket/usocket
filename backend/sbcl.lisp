@@ -50,6 +50,7 @@
    "#include <winsock2.h>")
 
   (ffi:clines
+   "#include <sys/time.h>"
    "#include <ecl/ecl-inl.h>")
 
   #+:prefixed-api
@@ -199,7 +200,7 @@
                  (if usock-cond
                      (signal usock-cond :socket socket))))))
 
-(defun socket-connect (host port &key (protocol :tcp) (element-type 'character)
+(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port)
   (when deadline (unsupported 'deadline 'socket-connect))
@@ -213,38 +214,39 @@
     (unsupported 'nodelay 'socket-connect))
 
   (let ((socket (make-instance 'sb-bsd-sockets:inet-socket
-                               :type (cdr (assoc protocol +protocol-map+))
+                               :type protocol
                                :protocol protocol)))
     (handler-case
         (ecase protocol
-          (:tcp (let* ((stream
-                        (sb-bsd-sockets:socket-make-stream socket
-                                                           :input t
-                                                           :output t
-                                                           :buffering :full
-                                                           :element-type element-type))
-                       ;;###FIXME: The above line probably needs an :external-format
-                       (usocket (make-stream-socket :stream stream :socket socket))
-                       (ip (host-to-vector-quad host)))
-                  (when (and nodelay-specified
-                             (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay))
-                    (setf (sb-bsd-sockets:sockopt-tcp-nodelay socket) nodelay))
-                  (when (or local-host local-port)
-                    (sb-bsd-sockets:socket-bind socket
-                                                (host-to-vector-quad
-                                                 (or local-host *wildcard-host*))
-                                                (or local-port *auto-port*)))
-                  (with-mapped-conditions (usocket)
-                    (sb-bsd-sockets:socket-connect socket ip port))
-                  usocket))
-          (:udp (progn
-                  (when (and local-host local-port)
-                    (sb-bsd-sockets:socket-bind socket
-                                                (host-to-vector-quad local-host)
-                                                local-port))
-                  (when (and host port)
-                    (sb-bsd-sockets:socket-connect socket (host-to-hbo host) port))
-                  (make-datagram-socket socket))))
+          (:stream
+	   (let* ((stream
+		   (sb-bsd-sockets:socket-make-stream socket
+						      :input t
+						      :output t
+						      :buffering :full
+						      :element-type element-type))
+		  ;;###FIXME: The above line probably needs an :external-format
+		  (usocket (make-stream-socket :stream stream :socket socket))
+		  (ip (host-to-vector-quad host)))
+	     (when (and nodelay-specified
+			(fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay))
+	       (setf (sb-bsd-sockets:sockopt-tcp-nodelay socket) nodelay))
+	     (when (or local-host local-port)
+	       (sb-bsd-sockets:socket-bind socket
+					   (host-to-vector-quad
+					    (or local-host *wildcard-host*))
+					   (or local-port *auto-port*)))
+	     (with-mapped-conditions (usocket)
+	       (sb-bsd-sockets:socket-connect socket ip port))
+	     usocket))
+          (:datagram
+	   (when (and local-host local-port)
+	     (sb-bsd-sockets:socket-bind socket
+					 (host-to-vector-quad local-host)
+					 local-port))
+	   (when (and host port)
+	     (sb-bsd-sockets:socket-connect socket (host-to-hbo host) port))
+	   (make-datagram-socket socket)))
       (t (c)
         ;; Make sure we don't leak filedescriptors
         (sb-bsd-sockets:socket-close socket)

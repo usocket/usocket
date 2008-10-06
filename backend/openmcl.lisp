@@ -74,12 +74,12 @@
       :text
     :binary))
 
-(defun socket-connect (host port &key (protocol :tcp) (element-type 'character)
+(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
 		       timeout deadline nodelay
                        local-host local-port)
   (with-mapped-conditions ()
     (ecase protocol
-      (:tcp
+      (:stream
        (let ((mcl-sock
 	      (openmcl-socket:make-socket :remote-host (host-to-hostname host)
 					  :remote-port port
@@ -92,7 +92,7 @@
 								(* timeout internal-time-units-per-second)))))
 	 (openmcl-socket:socket-connect mcl-sock)
 	 (make-stream-socket :stream mcl-sock :socket mcl-sock)))
-      (:udp
+      (:datagram
        (let ((mcl-sock
 	      (openmcl-socket:make-socket :address-family :internet
 					  :type :datagram

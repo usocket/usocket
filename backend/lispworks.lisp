@@ -73,7 +73,164 @@
                     (declare (ignore host port err-msg))
                     (raise-usock-err errno socket condition)))))
 
-(defun socket-connect (host port &key (protocol :tcp) (element-type 'base-char)
+(defconstant *socket_sock_dgram* 2
+  "Connectionless, unreliable datagrams of fixed maximum length.")
+
+(defconstant *sockopt_so_rcvtimeo*
+  #+(not linux) #x1006
+  #+linux 20
+  "Socket receive timeout")
+
+(fli:define-c-struct timeval
+  (tv-sec :long)
+  (tv-usec :long))
+
+;;; ssize_t
+;;; recvfrom(int socket, void *restrict buffer, size_t length, int flags,
+;;;          struct sockaddr *restrict address, socklen_t *restrict address_len);
+(fli:define-foreign-function (%recvfrom "recvfrom" :source)
+    ((socket :int)
+     (buffer (:pointer (:unsigned :byte)))
+     (length :int)
+     (flags :int)
+     (address (:pointer (:struct sockaddr)))
+     (address-len (:pointer :int)))
+  :result-type :int
+  #+win32 :module
+  #+win32 "ws2_32")
+
+;;; ssize_t
+;;; sendto(int socket, const void *buffer, size_t length, int flags,
+;;;        const struct sockaddr *dest_addr, socklen_t dest_len);
+(fli:define-foreign-function (%sendto "sendto" :source)
+    ((socket :int)
+     (buffer (:pointer (:unsigned :byte)))
+     (length :int)
+     (flags :int)
+     (address (:pointer (:struct sockaddr)))
+     (address-len :int))
+  :result-type :int
+  #+win32 :module
+  #+win32 "ws2_32")
+
+#-win32
+(defun set-socket-receive-timeout (socket-fd seconds)
+  "Set socket option: RCVTIMEO, argument seconds can be a float number"
+  (declare (type integer socket-fd)
+           (type number seconds))
+  (multiple-value-bind (sec usec) (truncate seconds)
+    (fli:with-dynamic-foreign-objects ((timeout (:struct timeval)))
+      (fli:with-foreign-slots (tv-sec tv-usec) timeout
+        (setf tv-sec sec
+              tv-usec (truncate (* 1000000 usec)))
+        (if (zerop (setsockopt socket-fd
+                               *sockopt_sol_socket*
+                               *sockopt_so_rcvtimeo*
+                               (fli:copy-pointer timeout
+                                                 :type '(:pointer :void))
+                               (fli:size-of '(:struct timeval))))
+            seconds)))))
+
+#+win32
+(defun set-socket-receive-timeout (socket-fd seconds)
+  "Set socket option: RCVTIMEO, argument seconds can be a float number.
+   On win32, you must bind the socket before use this function."
+  (declare (type integer socket-fd)
+           (type number seconds))
+  (fli:with-dynamic-foreign-objects ((timeout :int))
+    (setf (fli:dereference timeout)
+          (truncate (* 1000 seconds)))
+    (if (zerop (setsockopt socket-fd
+                           *sockopt_sol_socket*
+                           *sockopt_so_rcvtimeo*
+                           (fli:copy-pointer timeout
+                                             :type '(:pointer :char))
+                           (fli:size-of :int)))
+        seconds)))
+
+#-win32
+(defmethod get-socket-receive-timeout (socket-fd)
+  "Get socket option: RCVTIMEO, return value is a float number"
+  (declare (type integer socket-fd))
+  (fli:with-dynamic-foreign-objects ((timeout (:struct timeval))
+                                     (len :int))
+    (getsockopt socket-fd
+                *sockopt_sol_socket*
+                *sockopt_so_rcvtimeo*
+                (fli:copy-pointer timeout
+                                  :type '(:pointer :void))
+                len)
+    (fli:with-foreign-slots (tv-sec tv-usec) timeout
+      (float (+ tv-sec (/ tv-usec 1000000))))))
+
+#+win32
+(defmethod get-socket-receive-timeout (socket-fd)
+  "Get socket option: RCVTIMEO, return value is a float number"
+  (declare (type integer socket-fd))
+  (fli:with-dynamic-foreign-objects ((timeout :int)
+                                     (len :int))
+    (getsockopt socket-fd
+                *sockopt_sol_socket*
+                *sockopt_so_rcvtimeo*
+                (fli:copy-pointer timeout
+                                  :type '(:pointer :void))
+                len)
+    (float (/ (fli:dereference timeout) 1000))))
+
+(defun open-udp-socket (&key local-address local-port read-timeout)
+  "Open a unconnected UDP socket.
+   For binding on address ANY(*), just not set LOCAL-ADDRESS (NIL),
+   for binding on random free unused port, set LOCAL-PORT to 0."
+  (let ((socket-fd (comm::socket *socket_af_inet* *socket_sock_dgram* *socket_pf_unspec*)))
+    (if socket-fd
+      (progn
+        (when read-timeout (set-socket-receive-timeout socket-fd read-timeout))
+        (if local-port
+            (fli:with-dynamic-foreign-objects ((client-addr (:struct sockaddr_in)))
+              (initialize-sockaddr_in client-addr *socket_af_inet*
+                                      local-address local-port "udp")
+              (if (bind socket-fd
+                        (fli:copy-pointer client-addr :type '(:struct sockaddr))
+                        (fli:pointer-element-size client-addr))
+		  ;; success, return socket fd
+		  socket-fd
+		  (progn
+		    (close-socket socket-fd)
+		    (error "cannot bind"))))
+	    socket-fd))
+      (error "cannot create socket"))))
+
+(defun connect-to-udp-server (hostname service
+			      &key local-address local-port read-timeout)
+  "Something like CONNECT-TO-TCP-SERVER"
+  (let ((socket-fd (open-udp-socket :local-address local-address
+				    :local-port local-port
+				    :read-timeout read-timeout)))
+    (if socket-fd
+        (fli:with-dynamic-foreign-objects ((server-addr (:struct sockaddr_in)))
+          ;; connect to remote address/port
+          (initialize-sockaddr_in server-addr *socket_af_inet* hostname service "udp")
+          (if (connect socket-fd
+                       (fli:copy-pointer server-addr :type '(:struct sockaddr))
+                       (fli:pointer-element-size server-addr))
+            ;; success, return socket fd
+            socket-fd
+            ;; fail, close socket and return nil
+            (progn
+              (close-socket socket-fd)
+	      (error "cannot connect"))))
+	(error "cannot create socket"))))
+
+;; Register a special free action for closing datagram usocket when being GCed
+(defun usocket-special-free-action (object)
+  (when (and (typep object 'datagram-usocket)
+             (%open-p object))
+    (socket-close object)))
+
+(eval-when (:load-toplevel :execute)
+  (hcl:add-special-free-action 'usocket-special-free-action))
+
+(defun socket-connect (host port &key (protocol :stream) (element-type 'base-char)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port)
   (declare (ignorable nodelay))
@@ -88,35 +245,35 @@
      (unsupported 'local-port 'socket-connect :minimum "LispWorks 5.0+ (verified)"))
 
   (ecase protocol
-    (:tcp (let ((hostname (host-to-hostname host))
-                (stream))
-            (setf stream
-                  (with-mapped-conditions ()
-                    (comm:open-tcp-stream hostname port
-                                          :element-type element-type
-                                          #-lispworks4 #-lispworks4
-                                          #-lispworks4 #-lispworks4
-                                          :local-address (when local-host (host-to-hostname local-host))
-                                          :local-port local-port
-                                          #+(and (not lispworks4) (not lispworks5.0))
-                                          #+(and (not lispworks4) (not lispworks5.0))
-                                          :nodelay nodelay)))
-            (if stream
-              (make-stream-socket :socket (comm:socket-stream-socket stream)
-                                  :stream stream)
-              (error 'unknown-error))))
-    (:udp (let ((usocket (make-datagram-socket
-                          (if (and host port)
-                            (comm:connect-to-udp-server host port
-                                                        :errorp t
-                                                        :local-address local-host
-                                                        :local-port local-port)
-                            (comm:open-udp-socket :errorp t
-                                                  :local-address local-host
-                                                  :local-port local-port))
-                          :connected-p t)))
-            (hcl:flag-special-free-action usocket)
-            usocket))))
+    ((:stream :tcp)
+     (let ((hostname (host-to-hostname host))
+	   (stream))
+       (setf stream
+	     (with-mapped-conditions ()
+	       (comm:open-tcp-stream hostname port
+				     :element-type element-type
+				     #-lispworks4 #-lispworks4
+				     #-lispworks4 #-lispworks4
+				     :local-address (when local-host (host-to-hostname local-host))
+				     :local-port local-port
+				     #+(and (not lispworks4) (not lispworks5.0))
+				     #+(and (not lispworks4) (not lispworks5.0))
+				     :nodelay nodelay)))
+       (if stream
+	   (make-stream-socket :socket (comm:socket-stream-socket stream)
+			       :stream stream)
+	   (error 'unknown-error))))
+    ((:datagram :udp)
+     (let ((usocket (make-datagram-socket
+		     (if (and host port)
+			 (connect-to-udp-server host port
+						:local-address local-host
+						:local-port local-port)
+			 (open-udp-socket :local-address local-host
+					  :local-port local-port))
+		     :connected-p t)))
+       (hcl:flag-special-free-action usocket)
+       usocket))))
 
 (defun socket-listen (host port
                            &key reuseaddress
@@ -167,24 +324,102 @@
 
 (defmethod socket-close :after ((socket datagram-usocket))
   "Additional socket-close method for datagram-usocket"
-  (setf (%closed-p socket) t))
+  (setf (%open-p socket) nil))
 
-;; Register a special free action for closing datagram usocket when being GCed
-(defun usocket-special-free-action (object)
-  (when (and (typep object 'datagram-usocket)
-             (not (closed-p object)))
-    (socket-close object)))
+(defvar *message-send-buffer*
+  (make-array +max-datagram-packet-size+
+              :element-type '(unsigned-byte 8)
+              :allocation :static))
 
-(eval-when (:load-toplevel :execute)
-  (hcl:add-special-free-action 'usocket-special-free-action))
+(defvar *message-send-lock* (mp:make-lock))
+
+(defun send-message (socket-fd buffer &optional (length (length buffer)) host service)
+  "Send message to a socket, using sendto()/send()"
+  (declare (type integer socket-fd)
+           (type sequence buffer))
+  (let ((message *message-send-buffer*))
+    (fli:with-dynamic-foreign-objects ((client-addr (:struct sockaddr_in))
+                                       (len :int
+					    #-(or lispworks3 lispworks4 lispworks5.0)
+                                            :initial-element
+                                            (fli:size-of '(:struct sockaddr_in))))
+      (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
+        (mp:with-lock (*message-send-lock*)
+          (replace message buffer :end2 length)
+          (if (and host service)
+              (progn
+                (initialize-sockaddr_in client-addr *socket_af_inet* host service "udp")
+                (%sendto socket-fd ptr (min length +max-datagram-packet-size+) 0
+                         (fli:copy-pointer client-addr :type '(:struct sockaddr))
+                         (fli:dereference len)))
+              (%send socket-fd ptr (min length +max-datagram-packet-size+) 0)))))))
 
 (defmethod socket-send ((socket datagram-usocket) buffer length &key address port)
   (let ((s (socket socket)))
-    (comm:send-message s buffer length address port)))
+    (send-message s buffer length address port)))
+
+(defvar *message-receive-buffer*
+  (make-array +max-datagram-packet-size+
+              :element-type '(unsigned-byte 8)
+              :allocation :static))
+
+(defvar *message-receive-lock* (mp:make-lock))
+
+(defun receive-message (socket-fd &optional buffer (length (length buffer))
+			&key read-timeout (max-buffer-size +max-datagram-packet-size+))
+  "Receive message from socket, read-timeout is a float number in seconds.
+
+   This function will return 4 values:
+   1. receive buffer
+   2. number of receive bytes
+   3. remote address
+   4. remote port"
+  (declare (type integer socket-fd)
+           (type sequence buffer))
+  (let ((message *message-receive-buffer*)
+        old-timeout)
+    (fli:with-dynamic-foreign-objects ((client-addr (:struct sockaddr_in))
+                                       (len :int
+					    #-(or lispworks3 lispworks4 lispworks5.0)
+                                            :initial-element
+                                            (fli:size-of '(:struct sockaddr_in))))
+      (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
+        ;; setup new read timeout
+        (when read-timeout
+          (setf old-timeout (get-socket-receive-timeout socket-fd))
+          (set-socket-receive-timeout socket-fd read-timeout))
+        (mp:with-lock (*message-receive-lock*)
+          (let ((n (%recvfrom socket-fd ptr max-buffer-size 0
+                              (fli:copy-pointer client-addr :type '(:struct sockaddr))
+                              len)))
+            ;; restore old read timeout
+            (when (and read-timeout (/= old-timeout read-timeout))
+              (set-socket-receive-timeout socket-fd old-timeout))
+            (if (plusp n)
+                (values (if buffer
+                            (replace buffer message
+                                     :end1 (min length max-buffer-size)
+                                     :end2 (min n max-buffer-size))
+                          (subseq message 0 (min n max-buffer-size)))
+                        (min n max-buffer-size)
+			(ntohl (fli:foreign-slot-value
+				(fli:foreign-slot-value client-addr
+							'sin_addr
+							:object-type '(:struct sockaddr_in)
+							:type '(:struct in_addr)
+							:copy-foreign-object nil)
+				's_addr
+				:object-type '(:struct in_addr)))
+                        (ntohs (fli:foreign-slot-value client-addr
+                                                       'sin_port
+                                                       :object-type '(:struct sockaddr_in)
+                                                       :type '(:unsigned :short)
+                                                       :copy-foreign-object nil)))
+              (values nil n 0 0))))))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length)
   (let ((s (socket socket)))
-    (comm:receive-message s buffer length)))
+    (receive-message s buffer length)))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind

@@ -12,7 +12,6 @@
   "Port number to pass when an auto-assigned port number is wanted.")
 
 (defconstant +max-datagram-packet-size+ 65536)
-(defconstant +protocol-map+ '((:tcp . :stream) (:udp . :datagram)))
 
 (defclass usocket ()
   ((socket
@@ -90,10 +89,10 @@ be initiated from remote sockets."))
                 :accessor connected-p
                 :initarg :connected-p)
    #+(or cmu lispworks)
-   (%closed-p   :type boolean
-                :accessor %closed-p
-                :initform nil
-		:documentation "Flag to indicate if this usocket is closed,
+   (%open-p     :type boolean
+                :accessor %open-p
+                :initform t
+		:documentation "Flag to indicate if usocket is open,
 for GC on LispWorks/CMUCL"))
   (:documentation "UDP (inet-datagram) socket"))
 
