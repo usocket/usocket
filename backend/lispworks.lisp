@@ -93,7 +93,7 @@
      (buffer (:pointer (:unsigned :byte)))
      (length :int)
      (flags :int)
-     (address (:pointer (:struct sockaddr)))
+     (address (:pointer (:struct comm::sockaddr)))
      (address-len (:pointer :int)))
   :result-type :int
   #+win32 :module
@@ -107,7 +107,7 @@
      (buffer (:pointer (:unsigned :byte)))
      (length :int)
      (flags :int)
-     (address (:pointer (:struct sockaddr)))
+     (address (:pointer (:struct comm::sockaddr)))
      (address-len :int))
   :result-type :int
   #+win32 :module
@@ -123,8 +123,8 @@
       (fli:with-foreign-slots (tv-sec tv-usec) timeout
         (setf tv-sec sec
               tv-usec (truncate (* 1000000 usec)))
-        (if (zerop (setsockopt socket-fd
-                               *sockopt_sol_socket*
+        (if (zerop (comm::setsockopt socket-fd
+                               comm::*sockopt_sol_socket*
                                *sockopt_so_rcvtimeo*
                                (fli:copy-pointer timeout
                                                  :type '(:pointer :void))
@@ -140,8 +140,8 @@
   (fli:with-dynamic-foreign-objects ((timeout :int))
     (setf (fli:dereference timeout)
           (truncate (* 1000 seconds)))
-    (if (zerop (setsockopt socket-fd
-                           *sockopt_sol_socket*
+    (if (zerop (comm::setsockopt socket-fd
+                           comm::*sockopt_sol_socket*
                            *sockopt_so_rcvtimeo*
                            (fli:copy-pointer timeout
                                              :type '(:pointer :char))
@@ -154,8 +154,8 @@
   (declare (type integer socket-fd))
   (fli:with-dynamic-foreign-objects ((timeout (:struct timeval))
                                      (len :int))
-    (getsockopt socket-fd
-                *sockopt_sol_socket*
+    (comm::getsockopt socket-fd
+                comm::*sockopt_sol_socket*
                 *sockopt_so_rcvtimeo*
                 (fli:copy-pointer timeout
                                   :type '(:pointer :void))
@@ -169,8 +169,8 @@
   (declare (type integer socket-fd))
   (fli:with-dynamic-foreign-objects ((timeout :int)
                                      (len :int))
-    (getsockopt socket-fd
-                *sockopt_sol_socket*
+    (comm::getsockopt socket-fd
+                comm::*sockopt_sol_socket*
                 *sockopt_so_rcvtimeo*
                 (fli:copy-pointer timeout
                                   :type '(:pointer :void))
@@ -181,21 +181,21 @@
   "Open a unconnected UDP socket.
    For binding on address ANY(*), just not set LOCAL-ADDRESS (NIL),
    for binding on random free unused port, set LOCAL-PORT to 0."
-  (let ((socket-fd (comm::socket *socket_af_inet* *socket_sock_dgram* *socket_pf_unspec*)))
+  (let ((socket-fd (comm::socket comm::*socket_af_inet* *socket_sock_dgram* comm::*socket_pf_unspec*)))
     (if socket-fd
       (progn
         (when read-timeout (set-socket-receive-timeout socket-fd read-timeout))
         (if local-port
-            (fli:with-dynamic-foreign-objects ((client-addr (:struct sockaddr_in)))
-              (initialize-sockaddr_in client-addr *socket_af_inet*
+            (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in)))
+              (comm::initialize-sockaddr_in client-addr comm::*socket_af_inet*
                                       local-address local-port "udp")
-              (if (bind socket-fd
-                        (fli:copy-pointer client-addr :type '(:struct sockaddr))
+              (if (comm::bind socket-fd
+                        (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
                         (fli:pointer-element-size client-addr))
 		  ;; success, return socket fd
 		  socket-fd
 		  (progn
-		    (close-socket socket-fd)
+		    (comm::close-socket socket-fd)
 		    (error "cannot bind"))))
 	    socket-fd))
       (error "cannot create socket"))))
@@ -207,17 +207,17 @@
 				    :local-port local-port
 				    :read-timeout read-timeout)))
     (if socket-fd
-        (fli:with-dynamic-foreign-objects ((server-addr (:struct sockaddr_in)))
+        (fli:with-dynamic-foreign-objects ((server-addr (:struct comm::sockaddr_in)))
           ;; connect to remote address/port
-          (initialize-sockaddr_in server-addr *socket_af_inet* hostname service "udp")
-          (if (connect socket-fd
-                       (fli:copy-pointer server-addr :type '(:struct sockaddr))
-                       (fli:pointer-element-size server-addr))
+          (comm::initialize-sockaddr_in server-addr comm::*socket_af_inet* hostname service "udp")
+          (if (comm::connect socket-fd
+			     (fli:copy-pointer server-addr :type '(:struct comm::sockaddr))
+			     (fli:pointer-element-size server-addr))
             ;; success, return socket fd
             socket-fd
             ;; fail, close socket and return nil
             (progn
-              (close-socket socket-fd)
+              (comm::close-socket socket-fd)
 	      (error "cannot connect"))))
 	(error "cannot create socket"))))
 
@@ -338,25 +338,25 @@
   (declare (type integer socket-fd)
            (type sequence buffer))
   (let ((message *message-send-buffer*))
-    (fli:with-dynamic-foreign-objects ((client-addr (:struct sockaddr_in))
+    (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in))
                                        (len :int
 					    #-(or lispworks3 lispworks4 lispworks5.0)
                                             :initial-element
-                                            (fli:size-of '(:struct sockaddr_in))))
+                                            (fli:size-of '(:struct comm::sockaddr_in))))
       (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
         (mp:with-lock (*message-send-lock*)
           (replace message buffer :end2 length)
           (if (and host service)
               (progn
-                (initialize-sockaddr_in client-addr *socket_af_inet* host service "udp")
+                (comm::initialize-sockaddr_in client-addr comm::*socket_af_inet* host service "udp")
                 (%sendto socket-fd ptr (min length +max-datagram-packet-size+) 0
-                         (fli:copy-pointer client-addr :type '(:struct sockaddr))
+                         (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
                          (fli:dereference len)))
-              (%send socket-fd ptr (min length +max-datagram-packet-size+) 0)))))))
+              (comm::%send socket-fd ptr (min length +max-datagram-packet-size+) 0)))))))
 
 (defmethod socket-send ((socket datagram-usocket) buffer length &key address port)
   (let ((s (socket socket)))
-    (send-message s buffer length address port)))
+    (send-message s buffer length (host-to-hbo address) port)))
 
 (defvar *message-receive-buffer*
   (make-array +max-datagram-packet-size+
@@ -378,11 +378,11 @@
            (type sequence buffer))
   (let ((message *message-receive-buffer*)
         old-timeout)
-    (fli:with-dynamic-foreign-objects ((client-addr (:struct sockaddr_in))
+    (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in))
                                        (len :int
 					    #-(or lispworks3 lispworks4 lispworks5.0)
                                             :initial-element
-                                            (fli:size-of '(:struct sockaddr_in))))
+                                            (fli:size-of '(:struct comm::sockaddr_in))))
       (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
         ;; setup new read timeout
         (when read-timeout
@@ -390,7 +390,7 @@
           (set-socket-receive-timeout socket-fd read-timeout))
         (mp:with-lock (*message-receive-lock*)
           (let ((n (%recvfrom socket-fd ptr max-buffer-size 0
-                              (fli:copy-pointer client-addr :type '(:struct sockaddr))
+                              (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
                               len)))
             ;; restore old read timeout
             (when (and read-timeout (/= old-timeout read-timeout))
@@ -402,24 +402,26 @@
                                      :end2 (min n max-buffer-size))
                           (subseq message 0 (min n max-buffer-size)))
                         (min n max-buffer-size)
-			(ntohl (fli:foreign-slot-value
-				(fli:foreign-slot-value client-addr
-							'sin_addr
-							:object-type '(:struct sockaddr_in)
-							:type '(:struct in_addr)
-							:copy-foreign-object nil)
-				's_addr
-				:object-type '(:struct in_addr)))
-                        (ntohs (fli:foreign-slot-value client-addr
-                                                       'sin_port
-                                                       :object-type '(:struct sockaddr_in)
-                                                       :type '(:unsigned :short)
-                                                       :copy-foreign-object nil)))
-              (values nil n 0 0))))))))
+			(comm::ntohl (fli:foreign-slot-value
+				      (fli:foreign-slot-value client-addr
+							      'comm::sin_addr
+							      :object-type '(:struct comm::sockaddr_in)
+							      :type '(:struct comm::in_addr)
+							      :copy-foreign-object nil)
+				      'comm::s_addr
+				      :object-type '(:struct comm::in_addr)))
+                        (comm::ntohs (fli:foreign-slot-value client-addr
+							     'comm::sin_port
+							     :object-type '(:struct comm::sockaddr_in)
+							     :type '(:unsigned :short)
+							     :copy-foreign-object nil)))
+		(values nil n 0 0))))))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length)
   (let ((s (socket socket)))
-    (receive-message s buffer length)))
+    (multiple-value-bind (buffer size host port)
+	(receive-message s buffer length)
+      (values buffer size host port))))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind
