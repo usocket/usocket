@@ -240,10 +240,11 @@
 	       (sb-bsd-sockets:socket-connect socket ip port))
 	     usocket))
           (:datagram
-	   (when (and local-host local-port)
+	   (when (or local-host local-port)
 	     (sb-bsd-sockets:socket-bind socket
-					 (host-to-vector-quad local-host)
-					 local-port))
+					 (host-to-vector-quad
+					  (or local-host *wildcard-host*))
+					 (or local-port *auto-port*)))
 	   (when (and host port)
 	     (sb-bsd-sockets:socket-connect socket (host-to-hbo host) port))
 	   (make-datagram-socket socket)))

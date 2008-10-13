@@ -10,7 +10,7 @@
                       &key (element-type '(unsigned-byte 8)) (timeout 1)
 		           (max-buffer-size +max-datagram-packet-size+))
   (let ((socket (socket-connect nil nil
-				:protocol :udp
+				:protocol :datagram
 				:local-host host
 				:local-port port
 				:element-type element-type))

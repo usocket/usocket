@@ -80,25 +80,4 @@
 
              #:insufficient-implementation ; conditions regarding usocket support level
              #:unsupported
-             #:unimplemented)
-
-    #+lispworks
-    (:import-from :comm
-             #:*socket_af_inet*
-             #:*socket_pf_unspec*
-             #:*sockopt_sol_socket*
-             #:%send
-             #:bind
-             #:close-socket
-             #:connect
-             #:getsockopt
-             #:in_addr
-             #:initialize-sockaddr_in
-             #:ntohl
-             #:ntohs
-             #:s_addr
-             #:setsockopt
-             #:sin_addr
-             #:sin_port
-             #:sockaddr
-             #:sockaddr_in))
+             #:unimplemented))

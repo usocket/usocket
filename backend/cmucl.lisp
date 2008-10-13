@@ -67,8 +67,7 @@
        (setf socket
 	     (with-mapped-conditions (socket)
 	       (ext:connect-to-inet-socket (host-to-hbo host) port :stream
-					   :local-host (if local-host
-							   (host-to-hbo local-host))
+					   :local-host (host-to-hbo local-host)
 					   :local-port local-port)))
        (if socket
 	   (let* ((stream (sys:make-fd-stream socket :input t :output t
@@ -84,8 +83,7 @@
        (if (and host port)
 	   (setf socket (with-mapped-conditions (socket)
 			  (ext:connect-to-inet-socket (host-to-hbo host) port :datagram
-						      :local-host (if local-host
-								      (host-to-hbo local-host))
+						      :local-host (host-to-hbo local-host)
 						      :local-port local-port)))
 	   (progn
 	     (setf socket (with-mapped-conditions (socket)

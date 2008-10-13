@@ -64,7 +64,7 @@
 	       (labels ((make-socket ()
 			  (socket:make-socket :remote-host (host-to-hostname host)
 					      :remote-port port
-					      :local-host (when local-host (host-to-hostname local-host))
+					      :local-host (host-to-hostname local-host)
 					      :local-port local-port
 					      :format (to-format element-type)
 					      :nodelay nodelay)))
@@ -79,13 +79,13 @@
 				       :connect :active
 				       :remote-host (host-to-hostname host)
 				       :remote-port port
-				       :local-host (when local-host (host-to-hostname local-host))
+				       :local-host (host-to-hostname local-host)
 				       :local-port local-port
 				       :format (to-format element-type))
 		   (socket:make-socket :type :datagram
 				       :address-family :internet
 				       :local-host local-host
-				       :local-port (when local-host (host-to-hostname local-host))
+				       :local-port (host-to-hostname local-host)
 				       :format (to-format element-type)))))))
     (ecase protocol
       (:stream
