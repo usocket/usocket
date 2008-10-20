@@ -44,7 +44,7 @@
                             :old-rto old-rto
                             :new-rto (slot-value socket 'rto))
 		      (unless continue-p
-                        (error 'rtt-timeout-error)
-			(rtt-init socket))))))
+			(rtt-init socket)
+                        (error 'rtt-timeout-error))))))
 	 until (or recv-message (not continue-p))
 	 finally (return recv-message)))))

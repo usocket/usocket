@@ -80,21 +80,24 @@
 	   (let ((err (unix:unix-errno)))
 	     (when err (cmucl-map-socket-error err)))))
       (:datagram
-       (if (and host port)
-	   (setf socket (with-mapped-conditions (socket)
-			  (ext:connect-to-inet-socket (host-to-hbo host) port :datagram
-						      :local-host (host-to-hbo local-host)
-						      :local-port local-port)))
-	   (progn
-	     (setf socket (with-mapped-conditions (socket)
-			    (ext:create-inet-socket :datagram)))
-	     (when (and local-host local-port)
-	       (with-mapped-conditions (socket)
-		 (ext:bind-inet-socket socket local-host local-port)))))
-       (let ((usocket (make-datagram-socket socket)))
-	 (ext:finalize usocket #'(lambda () (when (%open-p usocket)
-					      (ext:close-socket socket))))
-	 usocket)))))
+       (setf socket
+	     (if (and host port)
+		 (with-mapped-conditions (socket)
+		   (ext:connect-to-inet-socket (host-to-hbo host) port :datagram
+					       :local-host (host-to-hbo local-host)
+					       :local-port local-port))
+		 (if (or local-host local-port)
+		     (with-mapped-conditions (socket)
+		       (ext:create-inet-listener (or local-port 0) :datagram :host local-host))
+		     (with-mapped-conditoins (socket)
+		       (ext:create-inet-socket :datagram)))))
+       (if socket
+	   (let ((usocket (make-datagram-socket socket)))
+	     (ext:finalize usocket #'(lambda () (when (%open-p usocket)
+						  (ext:close-socket socket))))
+	     usocket)
+	   (let ((err (unix:unix-errno)))
+	     (when err (cmucl-map-socket-error err))))))))
 
 (defun socket-listen (host port
                            &key reuseaddress

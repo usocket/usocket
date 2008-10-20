@@ -88,12 +88,12 @@ be initiated from remote sockets."))
   ((connected-p :type boolean
                 :accessor connected-p
                 :initarg :connected-p)
-   #+(or cmu lispworks)
+   #+(or cmu scl lispworks)
    (%open-p     :type boolean
                 :accessor %open-p
                 :initform t
 		:documentation "Flag to indicate if usocket is open,
-for GC on LispWorks/CMUCL"))
+for GC on implementions operate on raw socket fd."))
   (:documentation "UDP (inet-datagram) socket"))
 
 (defun usocket-p (socket)
