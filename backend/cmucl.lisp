@@ -89,7 +89,7 @@
 		 (if (or local-host local-port)
 		     (with-mapped-conditions (socket)
 		       (ext:create-inet-listener (or local-port 0) :datagram :host local-host))
-		     (with-mapped-conditoins (socket)
+		     (with-mapped-conditions (socket)
 		       (ext:create-inet-socket :datagram)))))
        (if socket
 	   (let ((usocket (make-datagram-socket socket)))
@@ -248,5 +248,6 @@
                  (when (unix:fd-isset (socket x) rfds)
                    (setf (state x) :READ)))
              (progn
-               ;;###FIXME generate an error, except for EINTR
+	       ;;###FIXME generate an error, except for EINTR
+               (cmucl-map-socket-error err)
                )))))))
