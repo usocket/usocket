@@ -8,6 +8,22 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require "comm"))
 
+;;; ---------------------------------------------------------------------------
+;;;  Warn if multiprocessing is not running on Lispworks
+
+#-win32
+(defun check-for-multiprocessing-started (&optional errorp)
+  (unless mp:*current-process*
+    (funcall (if errorp 'error 'warn)
+             "You must start multiprocessing on Lispworks by calling~
+              ~%~3t(~s)~
+              ~%for ~s function properly."
+             'mp:initialize-multiprocessing
+             'wait-for-input)))
+
+#-win32
+(check-for-multiprocessing-started)
+
 #+win32
 (fli:register-module "ws2_32")
 
@@ -245,7 +261,7 @@
      (unsupported 'local-port 'socket-connect :minimum "LispWorks 5.0+ (verified)"))
 
   (ecase protocol
-    ((:stream :tcp)
+    (:stream
      (let ((hostname (host-to-hostname host))
 	   (stream))
        (setf stream
@@ -263,7 +279,7 @@
 	   (make-stream-socket :socket (comm:socket-stream-socket stream)
 			       :stream stream)
 	   (error 'unknown-error))))
-    ((:datagram :udp)
+    (:datagram
      (let ((usocket (make-datagram-socket
 		     (if (and host port)
 			 (connect-to-udp-server host port

@@ -64,7 +64,7 @@
     (ccl:input-timeout
        (error 'timeout-error :socket socket :real-error condition))
     (ccl:communication-deadline-expired
-       (error 'timeout-error :socket socket :real-error condition))
+       (error 'deadline-error :socket socket :real-error condition))
     (ccl::socket-creation-error #| ugh! |#
        (raise-error-from-id (ccl::socket-creation-error-identifier condition)
                             socket condition))))
