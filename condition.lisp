@@ -208,8 +208,10 @@ error available."))
 
 
 (defmacro unsupported (feature context &key minimum)
-  `(cerror 'unsupported :feature ,feature
-    :context ,context :minimum ,minimum))
+  `(cerror "Ignore it and continue" 'unsupported
+	   :feature ,feature
+	   :context ,context
+	   :minimum ,minimum))
 
 (defmacro unimplemented (feature context)
   `(signal 'unimplemented :feature ,feature :context ,context))
