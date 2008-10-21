@@ -61,9 +61,9 @@
   (when deadline (unsupported 'deadline 'socket-connect))
   (when nodelay-specified (unsupported 'nodelay 'socket-connect))
   (when (and local-host-p (not local-bind-p))
-     (unsupported 'local-host 'socket-connect :minimum "Snapshot 2008-10 (19E)"))
+     (unsupported 'local-host 'socket-connect :minimum "Snapshot 2008-08 (19E)"))
   (when (and local-port-p (not local-bind-p))
-     (unsupported 'local-port 'socket-connect :minimum "Snapshot 2008-10 (19E)"))
+     (unsupported 'local-port 'socket-connect :minimum "Snapshot 2008-08 (19E)"))
 
   (let* ((socket))
     (setf socket
