@@ -193,7 +193,7 @@ error available."))
 
 
 (defmacro unsupported (feature context &key minimum)
-  `(signal 'unsupported :feature ,feature
+  `(cerror 'unsupported :feature ,feature
     :context ,context :minimum ,minimum))
 
 (defmacro unimplemented (feature context)
