@@ -110,12 +110,15 @@ condition available."))
   ((real-error :initarg :real-error
                :accessor usocket-real-error))
   (:report (lambda (c stream)
-             (format stream
-                     (simple-condition-format-control (usocket-real-error c))
-                     (simple-condition-format-arguments (usocket-real-error c)))))
+             (typecase c
+               (simple-condition
+                (format stream
+                        (simple-condition-format-control (usocket-real-error c))
+                        (simple-condition-format-arguments (usocket-real-error c))))
+               (otherwise
+                (format stream "The condition ~A occurred." (usocket-real-error c))))))
   (:documentation "Error raised when there's no other - more applicable -
 error available."))
-
 
 (define-usocket-condition-classes
   (ns-try-again)
@@ -140,9 +143,13 @@ condition available."))
   ((real-error :initarg :real-error
                :accessor ns-real-error))
   (:report (lambda (c stream)
-             (format stream
-                     (simple-condition-format-control (ns-real-error c))
-                     (simple-condition-format-arguments (ns-real-error c)))))
+             (typecase c
+               (simple-condition
+                (format stream
+                        (simple-condition-format-control (usocket-real-error c))
+                        (simple-condition-format-arguments (usocket-real-error c))))
+               (otherwise
+                (format stream "The condition ~A occurred." (usocket-real-error c))))))
   (:documentation "Error raised when there's no other - more applicable -
 error available."))
 
