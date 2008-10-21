@@ -407,7 +407,6 @@ such as 3232235777."
 (defun host-to-hostname (host)
   "Translate a string or vector quad to a stringified hostname."
   (etypecase host
-    (null nil)
     (string host)
     ((or (vector t 4)
          (array (unsigned-byte 8) (4)))
@@ -461,7 +460,6 @@ to a vector quad."
 
   (defun host-to-hbo (host)
     (etypecase host
-      (null nil)
       (string (let ((ip (ignore-errors
                           (dotted-quad-to-vector-quad host))))
                 (if (and ip (= 4 (length ip)))
