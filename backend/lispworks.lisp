@@ -8,6 +8,22 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require "comm"))
 
+;;; ---------------------------------------------------------------------------
+;;;  Warn if multiprocessing is not running on Lispworks
+
+#-win32
+(defun check-for-multiprocessing-started (&optional errorp)
+  (unless mp:*current-process*
+    (funcall (if errorp 'error 'warn)
+             "You must start multiprocessing on Lispworks by calling~
+              ~%~3t(~s)~
+              ~%for ~s function properly."
+             'mp:initialize-multiprocessing
+             'wait-for-input)))
+
+#-win32
+(check-for-multiprocessing-started)
+
 #+win32
 (fli:register-module "ws2_32")
 
