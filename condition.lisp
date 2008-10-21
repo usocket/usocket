@@ -25,6 +25,12 @@ to continue.
   ((minimum :initarg :minimum :reader minimum
             :documentation "Indicates the minimal version of the
 implementation required to support the requested feature."))
+  (:report (lambda (c stream)
+	     (format stream "~A in ~A is unsupported."
+		     (feature c) (context c))
+	     (when (minimum c)
+	       (format stream " Minimum version (~A) is required."
+		       (minimum c)))))
   (:documentation "Signalled when the underlying implementation
 doesn't allow supporting the requested feature.
 
@@ -32,6 +38,9 @@ When you see this error, go bug your vendor/implementation developer!"))
 
 (define-condition unimplemented (insufficient-implementation)
   ()
+  (:report (lambda (c stream)
+	     (format stream "~A in ~A is unimplemented."
+		     (feature c) (context c))))
   (:documentation "Signalled if a certain feature might be implemented,
 based on the features of the underlying implementation, but hasn't
 been implemented yet."))

@@ -190,9 +190,8 @@
                        timeout deadline (nodelay nil nodelay-specified)
                        local-host local-port)
   (when deadline (unsupported 'deadline 'socket-connect))
-  (when (or local-host local-port)
-    (unimplemented 'local-host 'socket-connect)
-    (unimplemented 'local-port 'socket-connect))
+  (when local-host (unimplemented 'local-host 'socket-connect))
+  (when local-port (unimplemented 'local-port 'socket-connect))
 
   (let ((usock))
     (with-mapped-conditions (usock)

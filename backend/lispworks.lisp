@@ -98,10 +98,11 @@
   
   #+(and (not lispworks4) (not lispworks5.0))
   (when nodelay-specified (unimplemented 'nodelay 'socket-connect))
-  #+lispworks4
-  (when (or local-host local-port)
-     (unsupported 'local-host 'socket-connect :minimum "LispWorks 5.0+ (verified)")
-     (unsupported 'local-port 'socket-connect :minimum "LispWorks 5.0+ (verified)"))
+  #+lispworks4 #+lispworks4
+  (when local-host
+     (unsupported 'local-host 'socket-connect :minimum "LispWorks 5.0"))
+  (when local-port
+     (unsupported 'local-port 'socket-connect :minimum "LispWorks 5.0"))
 
   (let ((hostname (host-to-hostname host))
         (stream))

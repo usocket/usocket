@@ -30,18 +30,24 @@
 
 (defun socket-connect (host port &key (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
-                       local-host local-port)
+		       (local-host nil local-host-p)
+		       (local-port nil local-port-p)
+		       &aux
+		       (patch-udp-p (fboundp 'ext::inet-socket-send-to)))
   (declare (ignore nodelay))
   (when nodelay-specified (unsupported 'nodelay 'socket-connect))
   (when deadline (unsupported 'deadline 'socket-connect))
   (when timeout (unsupported 'timeout 'socket-connect))
-  (when (or local-host local-port)
-     (unsupported 'local-host 'socket-connect)
-     (unsupported 'local-port 'socket-connect))
+  (when (and local-host-p (not patch-udp-p))
+     (unsupported 'local-host 'socket-connect :minimum "1.3.8.2"))
+  (when (and local-port-p (not patch-udp-p))
+     (unsupported 'local-port 'socket-connect :minimum "1.3.8.2"))
 
-  (let* ((socket (with-mapped-conditions ()
-                  (ext:connect-to-inet-socket (host-to-hbo host) port
-                                              :kind :stream)))
+  (let* ((socket (let ((args (list (host-to-hbo host) port :kind :stream)))
+		   (when (and patch-udp-p (or local-host-p local-port-p))
+		     (nconc args (list :local-host local-host :local-port local-port)))
+		   (with-mapped-conditions ()
+		     (apply #'ext:connect-to-inet-socket args))))
          (stream (sys:make-fd-stream socket :input t :output t
                                      :element-type element-type
                                      :buffering :full)))
