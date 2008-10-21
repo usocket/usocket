@@ -109,6 +109,10 @@ condition available."))
 (define-condition unknown-error (socket-error)
   ((real-error :initarg :real-error
                :accessor usocket-real-error))
+  (:report (lambda (c stream)
+             (format stream
+                     (simple-condition-format-control (usocket-real-error c))
+                     (simple-condition-format-arguments (usocket-real-error c)))))
   (:documentation "Error raised when there's no other - more applicable -
 error available."))
 
@@ -135,6 +139,10 @@ condition available."))
 (define-condition ns-unknown-error (ns-error)
   ((real-error :initarg :real-error
                :accessor ns-real-error))
+  (:report (lambda (c stream)
+             (format stream
+                     (simple-condition-format-control (ns-real-error c))
+                     (simple-condition-format-arguments (ns-real-error c)))))
   (:documentation "Error raised when there's no other - more applicable -
 error available."))
 
