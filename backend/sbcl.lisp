@@ -50,6 +50,7 @@
    "#include <winsock2.h>")
 
   (ffi:clines
+   "#include <sys/time.h>"
    "#include <ecl/ecl-inl.h>")
 
   #+:prefixed-api
@@ -209,6 +210,10 @@
   (when deadline (unsupported 'deadline 'socket-connect))
   (when timeout (unsupported 'timeout 'socket-connect))
   (when (and nodelay-specified
+             ;; 20080802: ECL added this function to its sockets
+             ;; package today. There's no guarantee the functions
+             ;; we need are available, but we can make sure not to
+             ;; call them if they aren't
              (not sockopt-tcp-nodelay-p))
     (unsupported 'nodelay 'socket-connect))
 
