@@ -45,7 +45,8 @@
 
   (let* ((socket (let ((args (list (host-to-hbo host) port :kind :stream)))
 		   (when (and patch-udp-p (or local-host-p local-port-p))
-		     (nconc args (list :local-host local-host :local-port local-port)))
+		     (nconc args (list :local-host (host-to-hbo local-host)
+				       :local-port local-port)))
 		   (with-mapped-conditions ()
 		     (apply #'ext:connect-to-inet-socket args))))
          (stream (sys:make-fd-stream socket :input t :output t
