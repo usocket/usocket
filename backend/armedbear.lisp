@@ -372,7 +372,7 @@ return the function result list.
     "java.nio.channels.SocketChannel")
    ((stream-server-usocket-p socket)
     "java.nio.channels.ServerSocketChannel")
-   ((datagram-usocket-p socket)
+   (t
     "java.nio.channels.DatagramChannel")))
 
 (defun wait-for-input-internal (wait-list &key timeout)
