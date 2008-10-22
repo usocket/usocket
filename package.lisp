@@ -38,7 +38,6 @@
              #:stream-server-usocket
              #:socket
              #:socket-stream
-             #:datagram-usocket
 
              #:host-byte-order ; IP(v4) utility functions
              #:hbo-to-dotted-quad

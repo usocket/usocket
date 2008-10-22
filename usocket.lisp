@@ -82,11 +82,6 @@ with the `socket-close' method or by closing the associated stream
   (:documentation "Socket which listens for stream connections to
 be initiated from remote sockets."))
 
-(defclass datagram-usocket (usocket)
-  ((connected-p :initarg :connected-p :accessor connected-p))
-;; ###FIXME: documentation to be added.
-  (:documentation ""))
-
 (defun usocket-p (socket)
   (typep socket 'usocket))
 
@@ -95,9 +90,6 @@ be initiated from remote sockets."))
 
 (defun stream-server-usocket-p (socket)
   (typep socket 'stream-server-usocket))
-
-(defun datagram-usocket-p (socket)
-  (typep socket 'datagram-usocket))
 
 (defun make-socket (&key socket)
   "Create a usocket socket type from implementation specific socket."
@@ -133,13 +125,6 @@ The returned value is a subtype of `stream-server-usocket'.
   (make-instance 'stream-server-usocket
                  :socket socket
                  :element-type element-type))
-
-(defun make-datagram-socket (socket &key connected-p)
-  (unless socket
-    (error 'invalid-socket-error))
-  (make-instance 'datagram-usocket
-                 :socket socket
-                 :connected-p connected-p))
 
 (defgeneric socket-accept (socket &key element-type)
   (:documentation
