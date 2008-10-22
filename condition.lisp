@@ -25,6 +25,12 @@ to continue.
   ((minimum :initarg :minimum :reader minimum
             :documentation "Indicates the minimal version of the
 implementation required to support the requested feature."))
+  (:report (lambda (c stream)
+	     (format stream "~A in ~A is unsupported."
+		     (feature c) (context c))
+	     (when (minimum c)
+	       (format stream " Minimum version (~A) is required."
+		       (minimum c)))))
   (:documentation "Signalled when the underlying implementation
 doesn't allow supporting the requested feature.
 
@@ -32,6 +38,9 @@ When you see this error, go bug your vendor/implementation developer!"))
 
 (define-condition unimplemented (insufficient-implementation)
   ()
+  (:report (lambda (c stream)
+	     (format stream "~A in ~A is unimplemented."
+		     (feature c) (context c))))
   (:documentation "Signalled if a certain feature might be implemented,
 based on the features of the underlying implementation, but hasn't
 been implemented yet."))
@@ -110,12 +119,15 @@ condition available."))
   ((real-error :initarg :real-error
                :accessor usocket-real-error))
   (:report (lambda (c stream)
-             (format stream
-                     (simple-condition-format-control (usocket-real-error c))
-                     (simple-condition-format-arguments (usocket-real-error c)))))
+             (typecase c
+               (simple-condition
+                (format stream
+                        (simple-condition-format-control (usocket-real-error c))
+                        (simple-condition-format-arguments (usocket-real-error c))))
+               (otherwise
+                (format stream "The condition ~A occurred." (usocket-real-error c))))))
   (:documentation "Error raised when there's no other - more applicable -
 error available."))
-
 
 (define-usocket-condition-classes
   (ns-try-again)
@@ -140,9 +152,13 @@ condition available."))
   ((real-error :initarg :real-error
                :accessor ns-real-error))
   (:report (lambda (c stream)
-             (format stream
-                     (simple-condition-format-control (ns-real-error c))
-                     (simple-condition-format-arguments (ns-real-error c)))))
+             (typecase c
+               (simple-condition
+                (format stream
+                        (simple-condition-format-control (usocket-real-error c))
+                        (simple-condition-format-arguments (usocket-real-error c))))
+               (otherwise
+                (format stream "The condition ~A occurred." (usocket-real-error c))))))
   (:documentation "Error raised when there's no other - more applicable -
 error available."))
 
@@ -201,8 +217,10 @@ error available."))
 
 
 (defmacro unsupported (feature context &key minimum)
-  `(cerror 'unsupported :feature ,feature
-    :context ,context :minimum ,minimum))
+  `(cerror "Ignore it and continue" 'unsupported
+	   :feature ,feature
+	   :context ,context
+	   :minimum ,minimum))
 
 (defmacro unimplemented (feature context)
   `(signal 'unimplemented :feature ,feature :context ,context))

@@ -62,9 +62,8 @@
   (when timeout (unsupported 'timeout 'socket-connect))
   (when deadline (unsupported 'deadline 'socket-connect))
   (when nodelay-specified (unsupported 'nodelay 'socket-connect))
-  (when (or local-host local-port)
-     (unsupported 'local-host 'socket-connect)
-     (unsupported 'local-port 'socket-connect))
+  (when local-host (unsupported 'local-host 'socket-connect))
+  (when local-port (unsupported 'local-port 'socket-connect))
 
   (let ((socket)
         (hostname (host-to-hostname host)))
