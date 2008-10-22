@@ -58,23 +58,20 @@
 
   (let ((socket))
     (setf socket
-          (with-mapped-conditions (socket)
-            (if timeout
-                (mp:with-timeout (timeout nil)
-                  (socket:make-socket :remote-host (host-to-hostname host)
-                                      :remote-port port
-                                      :local-host (when local-host (host-to-hostname local-host))
-                                      :local-port local-port
-                                      :format (to-format element-type)
-                                      :nodelay nodelay))
-                (socket:make-socket :remote-host (host-to-hostname host)
-                                    :remote-port port
-                                    :local-host local-host
-                                    :local-port local-port
-                                    :format (to-format element-type)
-                                    :nodelay nodelay))))
+	  (labels ((make-socket ()
+		     (socket:make-socket :remote-host (host-to-hostname host)
+					 :remote-port port
+					 :local-host (when local-host
+						       (host-to-hostname local-host))
+					 :local-port local-port
+					 :format (to-format element-type)
+					 :nodelay nodelay)))
+	    (with-mapped-conditions (socket)
+	      (if timeout
+		  (mp:with-timeout (timeout nil)
+		    (make-socket))
+		  (make-socket)))))
     (make-stream-socket :socket socket :stream socket)))
-
 
 ;; One socket close method is sufficient,
 ;; because socket-streams are also sockets.
