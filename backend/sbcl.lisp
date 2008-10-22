@@ -319,9 +319,9 @@
      (sb-bsd-sockets::host-ent-addresses
          (sb-bsd-sockets:get-host-by-name name))))
 
-#+sbcl
+#+(and sbcl (not win32))
 (progn
-  #-win32
+
 (defun %setup-wait-list (wait-list)
   (declare (ignore wait-list)))
 
@@ -363,10 +363,10 @@
                              (socket x))
                             rfds)
                        (setf (state x) :READ))))))))))
+) ; progn
 
-  #+win32
+#+(and sbcl win32)
   (warn "wait-for-input not (yet!) supported...")
-  )
 
 #+ecl
 (progn

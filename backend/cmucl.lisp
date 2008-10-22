@@ -92,7 +92,7 @@
         (server-sock
          (with-mapped-conditions ()
            (apply #'ext:create-inet-listener
-                  (append (list port :stream
+                  (nconc  (list port :stream
                                 :backlog backlog
                                 :reuse-address reuseaddress)
                           (when (ip/= host *wildcard-host*)
