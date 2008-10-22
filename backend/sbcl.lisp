@@ -202,7 +202,10 @@
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
-                       local-host local-port)
+                       local-host local-port
+		       &aux
+		       (sockopt-tcp-nodelay-p
+			(fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
   (when deadline (unsupported 'deadline 'socket-connect))
   (when timeout (unsupported 'timeout 'socket-connect))
   (when (and nodelay-specified
@@ -210,7 +213,7 @@
              ;; package today. There's no guarantee the functions
              ;; we need are available, but we can make sure not to
              ;; call them if they aren't
-             (not (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
+             (not sockopt-tcp-nodelay-p))
     (unsupported 'nodelay 'socket-connect))
 
   (let ((socket (make-instance 'sb-bsd-sockets:inet-socket
@@ -228,8 +231,7 @@
 		  ;;###FIXME: The above line probably needs an :external-format
 		  (usocket (make-stream-socket :stream stream :socket socket))
 		  (ip (host-to-vector-quad host)))
-	     (when (and nodelay-specified
-			(fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay))
+	     (when (and nodelay-specified sockopt-tcp-nodelay-p)
 	       (setf (sb-bsd-sockets:sockopt-tcp-nodelay socket) nodelay))
 	     (when (or local-host local-port)
 	       (sb-bsd-sockets:socket-bind socket
@@ -340,9 +342,9 @@
      (sb-bsd-sockets::host-ent-addresses
          (sb-bsd-sockets:get-host-by-name name))))
 
-#+sbcl
+#+(and sbcl (not win32))
 (progn
-  #-win32
+
 (defun %setup-wait-list (wait-list)
   (declare (ignore wait-list)))
 
@@ -384,10 +386,10 @@
                              (socket x))
                             rfds)
                        (setf (state x) :READ))))))))))
+) ; progn
 
-  #+win32
+#+(and sbcl win32)
   (warn "wait-for-input not (yet!) supported...")
-  )
 
 #+ecl
 (progn

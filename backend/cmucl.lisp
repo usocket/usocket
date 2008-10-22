@@ -52,23 +52,29 @@
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
-                       local-host local-port)
+		       (local-host nil local-host-p)
+		       (local-port nil local-port-p)
+		       &aux
+		       (local-bind-p (fboundp 'ext::bind-inet-socket)))
   (declare (ignore nodelay))
   (when timeout (unsupported 'timeout 'socket-connect))
   (when deadline (unsupported 'deadline 'socket-connect))
   (when nodelay-specified (unsupported 'nodelay 'socket-connect))
-  (when (or local-host local-port)
-     (unsupported 'local-host 'socket-connect)
-     (unsupported 'local-port 'socket-connect))
+  (when (and local-host-p (not local-bind-p))
+     (unsupported 'local-host 'socket-connect :minimum "Snapshot 2008-08 (19E)"))
+  (when (and local-port-p (not local-bind-p))
+     (unsupported 'local-port 'socket-connect :minimum "Snapshot 2008-08 (19E)"))
 
   (let ((socket))
     (ecase protocol
       (:stream
        (setf socket
-	     (with-mapped-conditions (socket)
-	       (ext:connect-to-inet-socket (host-to-hbo host) port :stream
-					   :local-host (host-to-hbo local-host)
-					   :local-port local-port)))
+	     (let ((args (list (host-to-hbo host) port protocol)))
+	       (when (and local-bind-p (or local-host-p local-port-p))
+		 (nconc args (list :local-host (host-to-hbo local-host)
+				   :local-port local-port)))
+	       (with-mapped-conditions (socket)
+		 (apply #'ext:connect-to-inet-socket args))))
        (if socket
 	   (let* ((stream (sys:make-fd-stream socket :input t :output t
 					      :element-type element-type
@@ -82,15 +88,21 @@
       (:datagram
        (setf socket
 	     (if (and host port)
-		 (with-mapped-conditions (socket)
-		   (ext:connect-to-inet-socket (host-to-hbo host) port :datagram
-					       :local-host (host-to-hbo local-host)
-					       :local-port local-port))
-		 (if (or local-host local-port)
+		 (let ((args (list (host-to-hbo host) port protocol)))
+		   (when (and local-bind-p (or local-host-p local-port-p))
+		     (nconc args (list :local-host (host-to-hbo local-host)
+				       :local-port local-port)))
+		   (with-mapped-conditions (socket)
+		     (apply #'ext:connect-to-inet-socket args)))
+		 (if (or local-host-p local-port-p)
 		     (with-mapped-conditions (socket)
-		       (ext:create-inet-listener (or local-port 0) :datagram :host local-host))
+		       (apply #'ext:create-inet-listener
+			      (nconc (list (or local-port 0) protocol)
+				     (when (and local-host-p
+						(ip/= local-host *wildcard-host*))
+				       (list :host (host-to-hbo local-host))))))
 		     (with-mapped-conditions (socket)
-		       (ext:create-inet-socket :datagram)))))
+		       (ext:create-inet-socket protocol)))))
        (if socket
 	   (let ((usocket (make-datagram-socket socket)))
 	     (ext:finalize usocket #'(lambda () (when (%open-p usocket)
@@ -249,5 +261,4 @@
                    (setf (state x) :READ)))
              (progn
 	       ;;###FIXME generate an error, except for EINTR
-               (cmucl-map-socket-error err)
                )))))))
