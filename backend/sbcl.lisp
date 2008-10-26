@@ -185,7 +185,7 @@
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
   (typecase condition
-    (error (let* ((usock-error (cdr (assoc (type-of condition)
+    (serious-condition (let* ((usock-error (cdr (assoc (type-of condition)
                                            +sbcl-error-map+)))
                   (usock-error (if (functionp usock-error)
                                    (funcall usock-error condition)
