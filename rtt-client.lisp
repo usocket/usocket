@@ -5,7 +5,7 @@
 
 (defun default-rtt-function (message) (values message 0))
 
-(defmethod socket-sync ((socket datagram-usocket) message &key address port
+(defmethod socket-sync ((socket datagram-usocket) message &key host port
                         (max-receive-length +max-datagram-packet-size+)
                         (encode-function #'default-rtt-function)
                         (decode-function #'default-rtt-function))
@@ -18,7 +18,7 @@
 	 and recv-seq = -1
 	 and continue-p = t
 	 do (progn
-	      (socket-send socket data data-length :address address :port port)
+	      (socket-send socket data data-length :host host :port port)
 	      (multiple-value-bind (sockets real-time)
 		  (wait-for-input socket :timeout (rtt-start socket))
 		(declare (ignore sockets))

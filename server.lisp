@@ -12,8 +12,7 @@
   (let ((socket (socket-connect nil nil
 				:protocol :datagram
 				:local-host host
-				:local-port port
-				:element-type element-type))
+				:local-port port))
         (buffer (make-array max-buffer-size
                             :element-type '(unsigned-byte 8)
                             :initial-element 0)))
@@ -34,7 +33,7 @@
                               (when reply
                                 (replace buffer reply)
                                 (let ((n (socket-send socket buffer (length reply)
-                                                      :address *remote-host*
+                                                      :host *remote-host*
                                                       :port *remote-port*)))
                                   (when (minusp n)
                                     (error "send error: ~A~%" n))))))
