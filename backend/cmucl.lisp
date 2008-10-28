@@ -71,7 +71,8 @@
        (setf socket
 	     (let ((args (list (host-to-hbo host) port protocol)))
 	       (when (and local-bind-p (or local-host-p local-port-p))
-		 (nconc args (list :local-host (host-to-hbo local-host)
+		 (nconc args (list :local-host (when local-host
+						 (host-to-hbo local-host))
 				   :local-port local-port)))
 	       (with-mapped-conditions (socket)
 		 (apply #'ext:connect-to-inet-socket args))))
@@ -90,7 +91,8 @@
 	     (if (and host port)
 		 (let ((args (list (host-to-hbo host) port protocol)))
 		   (when (and local-bind-p (or local-host-p local-port-p))
-		     (nconc args (list :local-host (host-to-hbo local-host)
+		     (nconc args (list :local-host (when local-host
+						     (host-to-hbo local-host))
 				       :local-port local-port)))
 		   (with-mapped-conditions (socket)
 		     (apply #'ext:connect-to-inet-socket args)))
