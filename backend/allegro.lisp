@@ -129,10 +129,10 @@
             (socket:accept-connection (socket socket)))))
     (make-stream-socket :socket stream-sock :stream stream-sock)))
 
-(defmethod socket-send ((socket datagram-usocket) buffer length &key address port)
+(defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
   (with-mapped-conditions (socket)
     (let ((s (socket socket)))
-      (socket:send-to s buffer length :remote-host address :remote-port port))))
+      (socket:send-to s buffer length :remote-host host :remote-port port))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length)
   (with-mapped-conditions (socket)

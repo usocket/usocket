@@ -371,9 +371,9 @@
                          (fli:dereference len)))
               (comm::%send socket-fd ptr (min length +max-datagram-packet-size+) 0)))))))
 
-(defmethod socket-send ((socket datagram-usocket) buffer length &key address port)
+(defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
   (let ((s (socket socket)))
-    (send-message s buffer length (host-to-hbo address) port)))
+    (send-message s buffer length (host-to-hbo host) port)))
 
 (defvar *message-receive-buffer*
   (make-array +max-datagram-packet-size+

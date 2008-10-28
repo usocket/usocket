@@ -136,10 +136,10 @@
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
-(defmethod socket-send ((usocket datagram-usocket) buffer length &key address port)
+(defmethod socket-send ((usocket datagram-usocket) buffer length &key host port)
   (with-mapped-conditions (usocket)
     (openmcl-socket:send-to (socket usocket) buffer length
-			    :remote-host (host-to-hbo address)
+			    :remote-host (host-to-hbo host)
 			    :remote-port port)))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length)

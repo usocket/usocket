@@ -132,12 +132,12 @@
 (defmethod socket-close :after ((socket datagram-usocket))
   (setf (%open-p socket) nil))
 
-(defmethod socket-send ((socket datagram-usocket) buffer length &key address port)
+(defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
   (let ((s (socket socket))
-	(address (if address (host-to-hbo address))))
+	(host (if host (host-to-hbo host))))
     (multiple-value-bind (result errno)
 	(ext:inet-socket-send-to s buffer length
-				 :remote-host address :remote-port port)
+				 :remote-host host :remote-port port)
       (or result
 	  (scl-map-socket-error errno :socket socket)))))
 

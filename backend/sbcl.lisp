@@ -301,10 +301,10 @@
   (with-mapped-conditions (usocket)
     (close (socket-stream usocket))))
 
-(defmethod socket-send ((socket datagram-usocket) buffer length &key address port)
+(defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
   (with-mapped-conditions (socket)
     (let* ((s (socket socket))
-           (dest (if (and address port) (list (host-to-vector-quad address) port) nil)))
+           (dest (if (and host port) (list (host-to-vector-quad host) port) nil)))
       (sb-bsd-sockets:socket-send s buffer length :address dest))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length

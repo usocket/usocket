@@ -157,9 +157,9 @@
 (defmethod socket-close :after ((socket datagram-usocket))
   (setf (%open-p socket) nil))
 
-(defmethod socket-send ((usocket datagram-usocket) buffer length &key address port)
+(defmethod socket-send ((usocket datagram-usocket) buffer length &key host port)
   (with-mapped-conditions (usocket)
-    (ext:inet-sendto (socket usocket) buffer length (if address (host-to-hbo address)) port)))
+    (ext:inet-sendto (socket usocket) buffer length (if host (host-to-hbo host)) port)))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length)
   (let ((real-buffer (or buffer
