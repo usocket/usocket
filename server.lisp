@@ -7,7 +7,7 @@
 (defvar *remote-port*)
 
 (defun socket-server (host port function &optional arguments
-                      &key (element-type '(unsigned-byte 8)) (timeout 1)
+                      &key (timeout 1)
 		           (max-buffer-size +max-datagram-packet-size+))
   (let ((socket (socket-connect nil nil
 				:protocol :datagram
