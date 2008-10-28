@@ -81,9 +81,9 @@
     (ecase protocol
       (:stream
        (let ((mcl-sock
-	      (openmcl-socket:make-socket :remote-host (host-to-hbo host)
+	      (openmcl-socket:make-socket :remote-host (host-to-hostname host)
 					  :remote-port port
-					  :local-host (host-to-hbo local-host)
+					  :local-host (when local-host (host-to-hostname local-host))
 					  :local-port local-port
 					  :format (to-format element-type)
 					  :deadline deadline
@@ -96,8 +96,9 @@
        (let ((mcl-sock
 	      (openmcl-socket:make-socket :address-family :internet
 					  :type :datagram
-					  :local-host (host-to-hbo local-host)
-					  :local-port local-port)))
+					  :local-host (when local-host (host-to-hostname local-host))
+					  :local-port local-port
+					  :format :binary)))
 	 (when (and host port)
 	   (ccl::inet-connect (ccl::socket-device mcl-sock)
 			      (ccl::host-as-inet-host host)
