@@ -22,11 +22,11 @@
 
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
-  (etypecase condition
+  (typecase condition
     (ext::socket-error
      (scl-map-socket-error (ext::socket-errno condition)
-               :socket socket
-               :condition condition))))
+			   :socket socket
+			   :condition condition))))
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
@@ -48,7 +48,8 @@
       (:stream
        (setf socket (let ((args (list (host-to-hbo host) port :kind protocol)))
 		      (when (and patch-udp-p (or local-host-p local-port-p))
-			(nconc args (list :local-host (host-to-hbo local-host)
+			(nconc args (list :local-host (when local-host
+							(host-to-hbo local-host))
 					  :local-port local-port)))
 		      (with-mapped-conditions (socket)
 			(apply #'ext:connect-to-inet-socket args))))
@@ -76,7 +77,7 @@
 		       (ext:create-inet-listener (or local-port 0)
 						 protocol
 						 :host (when local-host
-							 (if (ip= host *wildcard-host*)
+							 (if (ip= local-host *wildcard-host*)
 							     0
 							     (host-to-hbo local-host)))))
 		     (with-mapped-conditions ()
