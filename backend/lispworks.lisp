@@ -255,7 +255,7 @@
   (when deadline
     (unimplemented 'deadline 'socket-connect))
 
-  #+(or lispworks4.2 lispworks4.3) ; < 4.4.5
+  #+(and lispworks4 (not lispworks4.4)) ; < 4.4.5
   (when timeout
     (unsupported 'timeout 'socket-connect :minimum "LispWorks 4.4.5"))
 
@@ -277,8 +277,8 @@
 	     (with-mapped-conditions ()
 	       (comm:open-tcp-stream hostname port
 				     :element-type element-type
-				     #-(or lispworks4.2 lispworks4.3) ; >= 4.4.5
-				     #-(or lispworks4.2 lispworks4.3)
+				     #-(and lispworks4 (not lispworks4.4)) ; >= 4.4.5
+				     #-(and lispworks4 (not lispworks4.4))
 				     :timeout timeout
 				     #-lispworks4 #-lispworks4
 				     #-lispworks4 #-lispworks4
