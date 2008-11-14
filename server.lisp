@@ -38,5 +38,8 @@
                                   (when (minusp n)
                                     (error "send error: ~A~%" n))))))
 			(error "receive error: ~A" n))))
+                  #+scl (when thread:*quitting-lisp*
+                          (return))
                   #+(and cmu mp) (mp:process-yield))))
-      (socket-close socket))))
+      (socket-close socket)
+      (values))))
