@@ -229,8 +229,10 @@
                ;;###FIXME: The above line probably needs an :external-format
                (usocket (make-stream-socket :stream stream :socket socket))
                (ip (host-to-vector-quad host)))
-          (when (and nodelay-specified sockopt-tcp-nodelay-p)
-            (setf (sb-bsd-sockets:sockopt-tcp-nodelay socket) nodelay))
+	  ;; binghe: use SOCKOPT-TCP-NODELAY as internal symbol
+	  ;;         to pass compilation on ECL without it.
+	  (when (and nodelay-specified sockopt-tcp-nodelay-p)
+	    (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) nodelay))
           (when (or local-host local-port)
             (sb-bsd-sockets:socket-bind socket
                                         (host-to-vector-quad
