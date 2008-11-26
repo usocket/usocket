@@ -39,9 +39,9 @@
   (when deadline (unsupported 'deadline 'socket-connect))
   (when timeout (unsupported 'timeout 'socket-connect))
   (when (and local-host-p (not patch-udp-p))
-     (unsupported 'local-host 'socket-connect :minimum "1.3.8.2"))
+     (unsupported 'local-host 'socket-connect :minimum "1.3.9"))
   (when (and local-port-p (not patch-udp-p))
-     (unsupported 'local-port 'socket-connect :minimum "1.3.8.2"))
+     (unsupported 'local-port 'socket-connect :minimum "1.3.9"))
 
   (let* ((socket (let ((args (list (host-to-hbo host) port :kind :stream)))
 		   (when (and patch-udp-p (or local-host-p local-port-p))
