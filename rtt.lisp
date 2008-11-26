@@ -25,15 +25,15 @@
            :documentation "#sec since 1/1/1970 at start, but we use Lisp time here"))
   (:documentation "RTT Info Class"))
 
-(defvar *rtt-rxtmin*  2.0 "min retransmit timeout value, seconds")
-(defvar *rtt-rxtmax* 60.0 "max retransmit timeout value, seconds")
+(defvar *rtt-rxtmin*  2.0s0 "min retransmit timeout value, seconds")
+(defvar *rtt-rxtmax* 60.0s0 "max retransmit timeout value, seconds")
 (defvar *rtt-maxnrexmt* 3 "max #times to retransmit")
 
 (defmethod rtt-rtocalc ((instance rtt-info-mixin))
   "Calculate the RTO value based on current estimators:
         smoothed RTT plus four times the deviation."
   (with-slots (srtt rttvar) instance
-    (+ srtt (* 4.0 rttvar))))
+    (+ srtt (* 4.0s0 rttvar))))
 
 (defun rtt-minmax (rto)
   "rtt-minmax makes certain that the RTO is between the upper and lower limits."
@@ -50,9 +50,9 @@
 (defmethod rtt-init ((instance rtt-info-mixin))
   (with-slots (base rtt srtt rttvar rto) instance
     (setf base   (get-internal-real-time)
-          rtt    0.0
-          srtt   0.0
-          rttvar 0.75
+          rtt    0.0s0
+          srtt   0.0s0
+          rttvar 0.75s0
           rto    (rtt-minmax (rtt-rtocalc instance)))))
 
 (defmethod rtt-ts ((instance rtt-info-mixin))
@@ -65,15 +65,15 @@
 
 (defmethod rtt-stop ((instance rtt-info-mixin) (ms number))
   (with-slots (rtt srtt rttvar rto) instance
-    (setf rtt (/ ms 1000.0))
+    (setf rtt (/ ms 1000.0s0))
     (let ((delta (- rtt srtt)))
-      (incf srtt (/ delta 8.0))
+      (incf srtt (/ delta 8.0s0))
       (incf rttvar (/ (- (abs delta) rttvar) 4.0)))
     (setf rto (rtt-minmax (rtt-rtocalc instance)))))
 
 (defmethod rtt-timeout ((instance rtt-info-mixin))
   (with-slots (rto nrexmt) instance
-    (setf rto (* rto 2.0))
+    (setf rto (* rto 2.0s0))
     (< (incf nrexmt) *rtt-maxnrexmt*)))
 
 (defmethod rtt-newpack ((instance rtt-info-mixin))
