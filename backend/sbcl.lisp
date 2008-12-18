@@ -218,7 +218,9 @@
 
   (let ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                :type protocol
-                               :protocol protocol)))
+                               :protocol (case protocol
+					   (:stream :tcp)
+					   (:datagram :udp)))))
     (handler-case
         (ecase protocol
           (:stream
