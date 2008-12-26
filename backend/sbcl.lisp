@@ -353,7 +353,7 @@
                 (1+ (reduce #'max (wait-list-%wait sockets)
                             :key #'sb-bsd-sockets:socket-file-descriptor))
                 (sb-alien:addr rfds) nil nil
-                (when timeout secs) musecs)
+                (when timeout secs) (when timeout musecs))
 	     (if (null count)
 		 (unless (= err sb-unix:EINTR)
 		   (error (map-errno-error err)))
