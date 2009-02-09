@@ -123,10 +123,14 @@
     (close (socket usocket))))
 
 (defmethod get-local-address ((usocket usocket))
-  (hbo-to-vector-quad (openmcl-socket:local-host (socket usocket))))
+  (let ((address (openmcl-socket:local-host (socket usocket))))
+    (when address
+      (hbo-to-vector-quad address))))
 
 (defmethod get-peer-address ((usocket stream-usocket))
-  (hbo-to-vector-quad (openmcl-socket:remote-host (socket usocket))))
+  (let ((address (openmcl-socket:remote-host (socket usocket))))
+    (when address
+      (hbo-to-vector-quad address))))
 
 (defmethod get-local-port ((usocket usocket))
   (openmcl-socket:local-port (socket usocket)))
