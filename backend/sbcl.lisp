@@ -252,7 +252,7 @@
 					  (or local-host *wildcard-host*))
 					 (or local-port *auto-port*)))
 	   (when (and host port)
-	     (sb-bsd-sockets:socket-connect socket (host-to-hbo host) port))
+	     (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port))
 	   (make-datagram-socket socket)))
       (t (c)
         ;; Make sure we don't leak filedescriptors
