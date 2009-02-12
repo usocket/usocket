@@ -351,6 +351,13 @@ parse-integer) on each of the string elements."
       (push (parse-integer element) new-list))
     new-list))
 
+(defun ip-address-string-p (string)
+  "Return a true value if the given string could be an IP address."
+  (every (lambda (char)
+           (or (digit-char-p char)
+               (eql char #\.)))
+         string))
+
 (defun hbo-to-dotted-quad (integer)
   "Host-byte-order integer to dotted-quad string conversion utility."
   (let ((first (ldb (byte 8 24) integer))
@@ -438,7 +445,7 @@ such as 3232235777."
     "Translate a host specification (vector quad, dotted quad or domain name)
 to a vector quad."
     (etypecase host
-      (string (let* ((ip (ignore-errors
+      (string (let* ((ip (when (ip-address-string-p host)
                            (dotted-quad-to-vector-quad host))))
                 (if (and ip (= 4 (length ip)))
                     ;; valid IP dotted quad?
@@ -451,7 +458,7 @@ to a vector quad."
 
   (defun host-to-hbo (host)
     (etypecase host
-      (string (let ((ip (ignore-errors
+      (string (let ((ip (when (ip-address-string-p host)
                           (dotted-quad-to-vector-quad host))))
                 (if (and ip (= 4 (length ip)))
                     (host-byte-order ip)
