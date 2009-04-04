@@ -68,7 +68,7 @@
 
   (defun fdset-alloc ()
     (ffi:c-inline () () :pointer-void
-     "cl_alloc_atomic(sizeof(fd_set))" :one-liner t))
+     "ecl_alloc_atomic(sizeof(fd_set))" :one-liner t))
 
   (defun fdset-zero (fdset)
     (ffi:c-inline (fdset) (:pointer-void) :void
@@ -96,7 +96,7 @@
   (defun get-host-name ()
     (ffi:c-inline
      () () :object
-     "{ char *buf = cl_alloc_atomic(257);
+     "{ char *buf = ecl_alloc_atomic(257);
 
         if (gethostname(buf,256) == 0)
           @(return) = make_simple_base_string(buf);

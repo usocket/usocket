@@ -248,7 +248,7 @@
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'base-char)
                        timeout deadline (nodelay t nodelay-specified)
-                       local-host local-port)
+                       local-host (local-port #+win32 *auto-port* #-win32 nil))
   (declare (ignorable nodelay))
 
   ;; What's the meaning of this keyword?
