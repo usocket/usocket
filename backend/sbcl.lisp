@@ -174,6 +174,7 @@
      . socket-type-not-supported-error)
     (sb-bsd-sockets:network-unreachable-error . network-unreachable-error)
     (sb-bsd-sockets:operation-timeout-error . timeout-error)
+    #-ecl
     (sb-sys:io-timeout . timeout-error)
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
 
