@@ -62,9 +62,9 @@
        (raise-error-from-id (openmcl-socket:socket-error-identifier condition)
                             socket condition))
     (ccl:input-timeout
-       (error 'timeout-error :socket socket :real-error condition))
+       (error 'timeout-error :socket socket))
     (ccl:communication-deadline-expired
-       (error 'timeout-error :socket socket :real-error condition))
+       (error 'deadline-timeout-error :socket socket))
     (ccl::socket-creation-error #| ugh! |#
        (raise-error-from-id (ccl::socket-creation-error-identifier condition)
                             socket condition))))

@@ -111,6 +111,7 @@ condition available."))
    host-unreachable-error
    shutdown-error
    timeout-error
+   #+openmcl deadline-timeout-error
    invalid-socket-error
    invalid-socket-stream-error)
   (socket-error))
