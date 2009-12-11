@@ -30,7 +30,6 @@
 
              #:socket-send    ; udp function (send)
              #:socket-receive ; udp function (receive)
-             #:socket-sync    ; udp client (high-level)
              #:socket-server  ; udp server
 
              #:wait-for-input ; waiting for input-ready state (select() like)

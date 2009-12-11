@@ -20,12 +20,8 @@
     :depends-on (:split-sequence
                  #+sbcl :sb-bsd-sockets)
     :components ((:file "package")
-                 (:file "rtt"
-                  :depends-on ("package"))
-                 (:file "usocket"
-                  :depends-on ("package" "rtt"))
-                 (:file "condition"
-                  :depends-on ("usocket" "rtt"))
+                 (:file "usocket" :depends-on ("package"))
+                 (:file "condition" :depends-on ("usocket"))
                  (:module "backend"
                   :components (#+clisp         (:file "clisp")
                                #+cmu           (:file "cmucl")
@@ -36,7 +32,5 @@
                                #+allegro       (:file "allegro")
                                #+armedbear     (:file "armedbear"))
                   :depends-on ("condition"))
-                 (:file "rtt-client"
-                  :depends-on ("rtt" "backend" "condition"))
                  (:file "server"
                   :depends-on ("backend"))))

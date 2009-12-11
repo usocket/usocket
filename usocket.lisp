@@ -84,7 +84,7 @@ with the `socket-close' method or by closing the associated stream
   (:documentation "Socket which listens for stream connections to
 be initiated from remote sockets."))
 
-(defclass datagram-usocket (usocket rtt-info-mixin)
+(defclass datagram-usocket (usocket)
   ((connected-p :type boolean
                 :accessor connected-p
                 :initarg :connected-p)

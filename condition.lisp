@@ -225,42 +225,6 @@ error available."))
 (defmacro unimplemented (feature context)
   `(signal 'unimplemented :feature ,feature :context ,context))
 
-;;; binghe: socket-warning for UDP retransmit support
-
 (define-condition socket-warning (socket-condition warning)
   () ;; no slots (yet)
   (:documentation "Parent warning for all socket related warnings"))
-
-(define-condition rtt-timeout-warning (socket-warning)
-  ((old-rto :type short-float
-            :reader old-rto-of
-            :initarg :old-rto)
-   (new-rto :type short-float
-            :reader new-rto-of
-            :initarg :new-rto))
-  (:report (lambda (condition stream)
-             (format stream "Receive timeout (~As), next: ~As.~%"
-                     (old-rto-of condition)
-                     (new-rto-of condition))))
-  (:documentation "RTT timeout warning"))
-
-(define-condition rtt-seq-mismatch-warning (socket-warning)
-  ((send-seq :type integer
-             :reader send-seq-of
-             :initarg :send-seq)
-   (recv-seq :type integer
-             :reader recv-seq-of
-             :initarg :recv-seq))
-  (:report (lambda (condition stream)
-             (format stream "Sequence number mismatch (~A -> ~A), try read again.~%"
-                     (send-seq-of condition)
-                     (recv-seq-of condition))))
-  (:documentation "RTT sequence mismatch warning"))
-
-(define-condition rtt-timeout-error (socket-error)
-  ()
-  (:report (lambda (condition stream)
-             (declare (ignore condition))
-             (format stream "Max retransmit times (~A) reached, give up.~%"
-                     *rtt-maxnrexmt*)))
-  (:documentation "RTT timeout error"))
