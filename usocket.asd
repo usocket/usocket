@@ -40,4 +40,6 @@
                                   :depends-on ("condition"))
                  #+armedbear (:file "armedbear" :pathname "backend/armedbear"
                                                 :depends-on ("condition"))
+                 #+mcl (:file "mcl" :pathname "backend/armedbear"
+                                    :depends-on ("condition"))
                  ))
