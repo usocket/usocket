@@ -3,6 +3,9 @@
 
 (in-package :usocket)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (require :opentransport))
+
 (defun handle-condition (condition &optional socket)
   ; incomplete, needs to handle additional conditions
   (flet ((raise-error (&optional socket-condition)
@@ -92,8 +95,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; BASIC MCL SOCKET IMPLEMENTATION
-
-(require :opentransport)
 
 (defclass socket ()
   ((local-port :reader local-port :initarg :local-port)

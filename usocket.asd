@@ -24,22 +24,14 @@
                         :depends-on ("package"))
                  (:file "condition"
                         :depends-on ("usocket"))
-                 #+clisp (:file "clisp" :pathname "backend/clisp"
-                                :depends-on ("condition"))
-                 #+cmu (:file "cmucl" :pathname "backend/cmucl"
-                              :depends-on ("condition"))
-                 #+scl (:file "scl" :pathname "backend/scl"
-                              :depends-on ("condition"))
-                 #+(or sbcl ecl) (:file "sbcl" :pathname "backend/sbcl"
-                                        :depends-on ("condition"))
-                 #+lispworks (:file "lispworks" :pathname "backend/lispworks"
-                                    :depends-on ("condition"))
-                 #+openmcl (:file "openmcl" :pathname "backend/openmcl"
-                                  :depends-on ("condition"))
-                 #+allegro (:file "allegro" :pathname "backend/allegro"
-                                  :depends-on ("condition"))
-                 #+armedbear (:file "armedbear" :pathname "backend/armedbear"
-                                                :depends-on ("condition"))
-                 #+mcl (:file "mcl" :pathname "backend/armedbear"
-                                    :depends-on ("condition"))
-                 ))
+		 (:module "backend"
+			  :depends-on ("condition")
+			  :components (#+clisp		(:file "clisp")
+				       #+cmu		(:file "cmucl")
+				       #+scl		(:file "scl")
+				       #+(or sbcl ecl)	(:file "sbcl")
+				       #+lispworks	(:file "lispworks")
+				       #+mcl		(:file "mcl")
+				       #+openmcl	(:file "openmcl")
+				       #+allegro	(:file "allegro")
+				       #+armedbear	(:file "armedbear")))))
