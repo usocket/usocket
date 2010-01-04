@@ -15,6 +15,7 @@ Functions:
  - get-hosts-by-name [ optional ]
  - get-host-by-address [ optional ]
 
+ - wait-for-input-internal (new in 0.4.x)
 
 Methods:
 

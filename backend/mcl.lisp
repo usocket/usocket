@@ -168,6 +168,59 @@
     (declare (special ccl::*passive-interface-address*))
     new))
 
+
+(defun wait-for-input-internal (wait-list &key timeout &aux result)
+  (macrolet ((when-io-buffer-lock-grabbed ((lock &optional multiple-value-p) &body body)
+	       "Evaluates the body if and only if the lock is successfully grabbed"
+	       ;; like with-io-buffer-lock-grabbed but returns immediately instead of polling the lock
+	       (let ((needs-unlocking-p (gensym))
+		     (lock-var (gensym)))
+		 `(let* ((,lock-var ,lock)
+			 (ccl::*grabbed-io-buffer-locks* (cons ,lock-var ccl::*grabbed-io-buffer-locks*))
+			 (,needs-unlocking-p (needs-unlocking-p ,lock-var)))
+		    (declare (dynamic-extent ccl::*grabbed-io-buffer-locks*))
+		    (when ,needs-unlocking-p
+		      (,(if multiple-value-p 'multiple-value-prog1 'prog1)
+                        (progn ,@body)
+                        (ccl::%release-io-buffer-lock ,lock-var)))))))
+    (labels ((needs-unlocking-p (lock)
+	       (declare (type ccl::lock lock))
+	       ;; crucial - clears bogus lock.value as in grab-io-buffer-lock-out-of-line:
+	       (ccl::%io-buffer-lock-really-grabbed-p lock)
+	       (ccl:store-conditional lock nil ccl:*current-process*))
+	     (input-available (stream)
+	       "similar to stream-listen on buffered-input-stream-mixin but without waiting for lock"
+	       (let ((io-buffer (ccl::stream-io-buffer stream)))
+		 (or (not (eql 0 (ccl::io-buffer-incount io-buffer)))
+		     (ccl::io-buffer-untyi-char io-buffer)
+		     (locally (declare (optimize (speed 3) (safety 0)))
+		       (when-io-buffer-lock-grabbed ((ccl::io-buffer-lock io-buffer))
+		         (funcall (ccl::io-buffer-listen-function io-buffer) stream io-buffer))))))
+	     (ready-sockets (sockets)
+	       (dolist (sock sockets result)
+		 (when (input-available (socket-stream sock))
+		   (push sock result)))))
+      (with-mapped-conditions ()
+	(ccl:process-wait-with-timeout
+	 "socket input"
+	 (when timeout (truncate (* timeout 60)))
+	 #'ready-sockets
+	 (wait-list-waiters wait-list)))
+      (nreverse result))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+#| Test for wait-for-input
+(let* ((sock1 (usocket:socket-connect "in-progress.com" 80))
+      (sock2 (usocket:socket-connect "common-lisp.net" 80))
+      (sockets (list sock1 sock2)))
+ (dolist (sock sockets)
+   (format (usocket:socket-stream sock)
+           "GET / HTTP/1.0~A~A~A~A"
+           #\Return #\Linefeed #\Return #\Linefeed)
+   (force-output (usocket:socket-stream sock)))
+ (wait-for-input sockets :timeout 5000))
+|#
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 #| TEST (from test-usocket.lisp)
 

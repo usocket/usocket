@@ -24,8 +24,10 @@
                         :depends-on ("package"))
                  (:file "condition"
                         :depends-on ("usocket"))
+		 (:module "vendor"
+			  :components (#+mcl		(:file "kqueue")))
 		 (:module "backend"
-			  :depends-on ("condition")
+			  :depends-on ("condition" "vendor")
 			  :components (#+clisp		(:file "clisp")
 				       #+cmu		(:file "cmucl")
 				       #+scl		(:file "scl")
