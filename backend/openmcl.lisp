@@ -85,8 +85,7 @@
                                        :format (to-format element-type)
                                        :deadline deadline
                                        :nodelay nodelay
-                                       :connect-timeout (and timeout
-                                                             (* timeout internal-time-units-per-second)))))
+                                       :connect-timeout timeout)))
       (openmcl-socket:socket-connect mcl-sock)
       (make-stream-socket :stream mcl-sock :socket mcl-sock))))
 
