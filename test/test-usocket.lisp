@@ -7,12 +7,15 @@
 
 ;; The parameters below may need adjustments to match the system
 ;; the tests are run on.
-(defparameter +non-existing-host+ "192.168.1.1")
+(defparameter +non-existing-host+ "192.168.1.199")
 (defparameter +unused-local-port+ 15213)
 (defparameter *soc1* (usocket::make-stream-socket :socket :my-socket
                                                   :stream :my-stream))
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defparameter +common-lisp-net+ #(80 68 86 115))) ;; common-lisp.net IP
+  (defparameter +local-ip+ #(192 168 1 25))
+  (defparameter +common-lisp-net+
+    #+ignore #(80 68 86 115) ;; common-lisp.net IP (not valid as of 2010-01-03
+    (first (usocket::get-hosts-by-name "common-lisp.net"))))
 
 (defmacro with-caught-conditions ((expect throw) &body body)
   `(catch 'caught-error
@@ -48,29 +51,29 @@
 
 (deftest socket-no-connect.1
   (with-caught-conditions ('usocket:socket-error nil)
-      (usocket:socket-connect "127.0.0.0" +unused-local-port+)
+      (usocket:socket-connect "127.0.0.0" +unused-local-port+ :timeout 0)
       t)
   nil)
 (deftest socket-no-connect.2
   (with-caught-conditions ('usocket:socket-error nil)
-    (usocket:socket-connect #(127 0 0 0) +unused-local-port+)
+    (usocket:socket-connect #(127 0 0 0) +unused-local-port+ :timeout 0)
     t)
   nil)
 (deftest socket-no-connect.3
   (with-caught-conditions ('usocket:socket-error nil)
-    (usocket:socket-connect 2130706432 +unused-local-port+) ;; == #(127 0 0 0)
+    (usocket:socket-connect 2130706432 +unused-local-port+ :timeout 0) ;; == #(127 0 0 0)
     t)
   nil)
 
 (deftest socket-failure.1
-  (with-caught-conditions (#-(or cmu lispworks armedbear openmcl)
+  (with-caught-conditions (#-(or cmu lispworks armedbear openmcl mcl)
                              'usocket:network-unreachable-error
                            #+(or cmu lispworks armedbear)
                              'usocket:unknown-error
-                           #+openmcl
+                           #+(or openmcl mcl)
                              'usocket:timeout-error
                            nil)
-    (usocket:socket-connect 2130706432 +unused-local-port+) ;; == #(127 0 0 0)
+    (usocket:socket-connect 2130706432 +unused-local-port+ :timeout 0) ;; == #(127 0 0 0)
     :unreach)
   nil)
 (deftest socket-failure.2
@@ -78,12 +81,12 @@
                              'usocket:unknown-error
                            #+cmu
                              'usocket:network-unreachable-error
-                           #+openmcl
+                           #+(or openmcl mcl)
                              'usocket:timeout-error
-                           #-(or lispworks armedbear cmu openmcl)
+                           #-(or lispworks armedbear cmu openmcl mcl)
                              'usocket:host-unreachable-error
                            nil)
-      (usocket:socket-connect +non-existing-host+ 80) ;; 80 = just a port
+      (usocket:socket-connect +non-existing-host+ 80 :timeout 0) ;; 80 = just a port
       :unreach)
   nil)
 
@@ -94,21 +97,21 @@
   (with-caught-conditions (nil nil)
     (let ((sock (usocket:socket-connect "common-lisp.net" 80)))
       (unwind-protect
-          (typep sock 'usocket:usocket)
+          (when (typep sock 'usocket:usocket) t)
         (usocket:socket-close sock))))
   t)
 (deftest socket-connect.2
   (with-caught-conditions (nil nil)
     (let ((sock (usocket:socket-connect +common-lisp-net+ 80)))
       (unwind-protect
-          (typep sock 'usocket:usocket)
+          (when (typep sock 'usocket:usocket) t)
         (usocket:socket-close sock))))
   t)
 (deftest socket-connect.3
   (with-caught-conditions (nil nil)
     (let ((sock (usocket:socket-connect (usocket::host-byte-order +common-lisp-net+) 80)))
       (unwind-protect
-          (typep sock 'usocket:usocket)
+          (when (typep sock 'usocket:usocket) t)
         (usocket:socket-close sock))))
   t)
 
@@ -119,13 +122,13 @@
       (unwind-protect
           (progn
             (format (usocket:socket-stream sock)
-                    "GET / HTTP/1.0~A~A~A~A"
-                    #\Return #\Newline #\Return #\Newline)
+                    "GET / HTTP/1.0~c~c~c~c"
+                    #\Return #\linefeed #\Return #\linefeed)
             (force-output (usocket:socket-stream sock))
             (read-line (usocket:socket-stream sock)))
         (usocket:socket-close sock))))
-  #+clisp "HTTP/1.1 200 OK"
-  #-clisp #.(format nil "HTTP/1.1 200 OK~A" #\Return) nil)
+  #+(or mcl clisp) "HTTP/1.1 200 OK"
+  #-(or clisp mcl) #.(format nil "HTTP/1.1 200 OK~A" #\Return) nil)
 
 (deftest socket-name.1
   (with-caught-conditions (nil nil)
@@ -154,8 +157,10 @@
       (unwind-protect
           (usocket::get-local-address sock)
         (usocket:socket-close sock))))
-  #(192 168 1 65))
+  #.+local-ip+)
 
 
 (defun run-usocket-tests ()
   (do-tests))
+
+;;; (usoct::run-usocket-tests )

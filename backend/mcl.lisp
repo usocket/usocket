@@ -9,7 +9,9 @@
 (defun handle-condition (condition &optional socket)
   ; incomplete, needs to handle additional conditions
   (flet ((raise-error (&optional socket-condition)
-           (error (or socket-condition 'unknown-error) :socket socket :real-error condition)))
+           (if socket-condition
+           (error socket-condition :socket socket)
+           (error  'unknown-error :socket socket :real-error condition))))
     (typecase condition
       (ccl:host-stopped-responding
        (raise-error 'host-down-error))
@@ -20,24 +22,25 @@
       (ccl:connection-timed-out
        (raise-error 'timeout-error))
       (ccl:opentransport-protocol-error
-       (raise-error ''protocol-not-supported-error))       
+       (raise-error 'protocol-not-supported-error))       
       (otherwise
        (raise-error)))))
 
 (defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay 
                             local-host local-port)
-  (let* ((socket
-          (make-instance 'active-socket
-                         :remote-host (when host (host-to-hostname host)) 
-                         :remote-port port
-                         :local-host (when local-host (host-to-hostname local-host)) 
-                         :local-port local-port
-                         :deadline deadline
-                         :nodelay nodelay
-                         :connect-timeout (and timeout (round (* timeout 60)))
-                         :element-type element-type))
-         (stream (socket-open-stream socket)))
-    (make-stream-socket :socket socket :stream stream)))
+  (with-mapped-conditions ()
+    (let* ((socket
+            (make-instance 'active-socket
+              :remote-host (when host (host-to-hostname host)) 
+              :remote-port port
+              :local-host (when local-host (host-to-hostname local-host)) 
+              :local-port local-port
+              :deadline deadline
+              :nodelay nodelay
+              :connect-timeout (and timeout (round (* timeout 60)))
+              :element-type element-type))
+           (stream (socket-open-stream socket)))
+      (make-stream-socket :socket socket :stream stream))))
 
 (defun socket-listen (host port
                            &key reuseaddress
@@ -45,16 +48,18 @@
                            (backlog 5)
                            (element-type 'character))
   (declare (ignore reuseaddress reuse-address-supplied-p))
-  (let ((socket (make-instance 'passive-socket 
-                  :local-port port
-                  :local-host host
-                  :reuse-address reuse-address
-                  :backlog backlog)))
+  (let ((socket (with-mapped-conditions ()
+                  (make-instance 'passive-socket 
+                    :local-port port
+                    :local-host host
+                    :reuse-address reuse-address
+                    :backlog backlog))))
     (make-stream-server-socket socket :element-type element-type)))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
   (let* ((socket (socket usocket))
-         (stream (socket-accept socket :element-type element-type)))
+         (stream (with-mapped-conditions (usocket)
+                   (socket-accept socket :element-type element-type))))
     (make-stream-socket :socket socket :stream stream)))
 
 (defmethod socket-close ((usocket usocket))
@@ -92,6 +97,17 @@
 
 (defmethod get-peer-port ((usocket stream-usocket))
   (remote-port (socket usocket)))
+
+
+(defun %setup-wait-list (wait-list)
+  (declare (ignore wait-list)))
+
+(defun %add-waiter (wait-list waiter)
+  (declare (ignore wait-list waiter)))
+
+(defun %remove-waiter (wait-list waiter)
+  (declare (ignore wait-list waiter)))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; BASIC MCL SOCKET IMPLEMENTATION
