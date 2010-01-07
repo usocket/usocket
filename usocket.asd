@@ -24,10 +24,8 @@
                  :cl-utilities
                  #+sbcl :sb-bsd-sockets)
     :components ((:file "package")
-                 (:file "usocket"
-                        :depends-on ("package"))
-                 (:file "condition"
-                        :depends-on ("usocket"))
+                 (:file "usocket" :depends-on ("package"))
+                 (:file "condition" :depends-on ("usocket"))
 		 (:module "vendor"
 		  :components (#+mcl		(:file "kqueue")))
 		 (:module "backend"
@@ -40,4 +38,5 @@
 			       #+mcl		(:file "mcl")
 			       #+openmcl	(:file "openmcl")
 			       #+allegro	(:file "allegro")
-			       #+armedbear	(:file "armedbear")))))
+			       #+armedbear	(:file "armedbear")))
+		 (:file "server" :depends-on ("backend"))))

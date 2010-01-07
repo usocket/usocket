@@ -3,13 +3,19 @@
 
 ;;;; See the LICENSE file for licensing information.
 
-#+lispworks (cl:require "comm")
+(in-package :usocket-system)
 
-(cl:eval-when (:execute :load-toplevel :compile-toplevel)
-  (cl:defpackage :usocket
-      (:use :cl)
-    (:export #:*wildcard-host*
+#+lispworks
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (require "comm"))
+
+(defpackage :usocket
+  (:use :common-lisp)
+  (:export   #:*wildcard-host*
              #:*auto-port*
+
+             #:*remote-host* ; special variables (udp)
+             #:*remote-port*
 
              #:socket-connect ; socket constructors and methods
              #:socket-listen
@@ -21,6 +27,10 @@
              #:get-peer-port
              #:get-local-name
              #:get-peer-name
+
+             #:socket-send    ; udp function (send)
+             #:socket-receive ; udp function (receive)
+             #:socket-server  ; udp server
 
              #:wait-for-input ; waiting for input-ready state (select() like)
              #:make-wait-list
@@ -65,9 +75,8 @@
              #:ns-unknown-condition
              #:unknown-error
              #:ns-unknown-error
+             #:socket-warning ; warnings (udp)
 
              #:insufficient-implementation ; conditions regarding usocket support level
              #:unsupported
-             #:unimplemented
-             )))
-
+             #:unimplemented))

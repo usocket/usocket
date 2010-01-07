@@ -11,6 +11,8 @@
 (defparameter *auto-port* 0
   "Port number to pass when an auto-assigned port number is wanted.")
 
+(defconstant +max-datagram-packet-size+ 65536)
+
 (defclass usocket ()
   ((socket
     :initarg :socket
@@ -83,9 +85,16 @@ with the `socket-close' method or by closing the associated stream
 be initiated from remote sockets."))
 
 (defclass datagram-usocket (usocket)
-  ((connected-p :initarg :connected-p :accessor connected-p))
-;; ###FIXME: documentation to be added.
-  (:documentation ""))
+  ((connected-p :type boolean
+                :accessor connected-p
+                :initarg :connected-p)
+   #+(or cmu scl lispworks)
+   (%open-p     :type boolean
+                :accessor %open-p
+                :initform t
+		:documentation "Flag to indicate if usocket is open,
+for GC on implementions operate on raw socket fd."))
+  (:documentation "UDP (inet-datagram) socket"))
 
 (defun usocket-p (socket)
   (typep socket 'usocket))
@@ -150,6 +159,14 @@ explicitly specified, or the element-type passed to `socket-listen' otherwise.")
 
 (defgeneric socket-close (usocket)
   (:documentation "Close a previously opened `usocket'."))
+
+(defgeneric socket-send (usocket buffer length &key host port)
+  (:documentation "Send packets through a previously opend `usocket'."))
+
+(defgeneric socket-receive (usocket buffer length &key)
+  (:documentation "Receive packets from a previously opend `usocket'.
+
+Returns 4 values: (values buffer size host port)"))
 
 (defgeneric get-local-address (socket)
   (:documentation "Returns the IP address of the socket."))

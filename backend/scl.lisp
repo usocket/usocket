@@ -28,7 +28,7 @@
 			   :socket socket
 			   :condition condition))))
 
-(defun socket-connect (host port &key (element-type 'character)
+(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
 		       (local-host nil local-host-p)
 		       (local-port nil local-port-p)
@@ -43,17 +43,50 @@
   (when (and local-port-p (not patch-udp-p))
      (unsupported 'local-port 'socket-connect :minimum "1.3.9"))
 
-  (let* ((socket (let ((args (list (host-to-hbo host) port :kind :stream)))
+  (let ((socket))
+    (ecase protocol
+      (:stream
+       (setf socket (let ((args (list (host-to-hbo host) port :kind protocol)))
+		      (when (and patch-udp-p (or local-host-p local-port-p))
+			(nconc args (list :local-host (when local-host
+							(host-to-hbo local-host))
+					  :local-port local-port)))
+		      (with-mapped-conditions (socket)
+			(apply #'ext:connect-to-inet-socket args))))
+       (let ((stream (sys:make-fd-stream socket :input t :output t
+					 :element-type element-type
+					 :buffering :full)))
+	 (make-stream-socket :socket socket :stream stream)))
+      (:datagram
+       (when (not patch-udp-p)
+	 (error 'unsupported
+		:feature '(protocol :datagram)
+		:context 'socket-connect
+		:minumum "1.3.9"))
+       (setf socket
+	     (if (and host port)
+		 (let ((args (list (host-to-hbo host) port :kind protocol)))
 		   (when (and patch-udp-p (or local-host-p local-port-p))
 		     (nconc args (list :local-host (when local-host
 						     (host-to-hbo local-host))
 				       :local-port local-port)))
-		   (with-mapped-conditions ()
-		     (apply #'ext:connect-to-inet-socket args))))
-         (stream (sys:make-fd-stream socket :input t :output t
-                                     :element-type element-type
-                                     :buffering :full)))
-    (make-stream-socket :socket socket :stream stream)))
+		   (with-mapped-conditions (socket)
+		     (apply #'ext:connect-to-inet-socket args)))
+		 (if (or local-host-p local-port-p)
+		     (with-mapped-conditions ()
+		       (ext:create-inet-listener (or local-port 0)
+						 protocol
+						 :host (when local-host
+							 (if (ip= local-host *wildcard-host*)
+							     0
+							     (host-to-hbo local-host)))))
+		     (with-mapped-conditions ()
+		       (ext:create-inet-socket protocol)))))
+       (let ((usocket (make-datagram-socket socket)))
+	 (ext:finalize usocket #'(lambda ()
+				   (when (%open-p usocket)
+				     (ext:close-socket socket))))
+	 usocket)))))
 
 (defun socket-listen (host port
                            &key reuseaddress
@@ -98,6 +131,30 @@
      (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket-stream usocket))))
+
+(defmethod socket-close :after ((socket datagram-usocket))
+  (setf (%open-p socket) nil))
+
+(defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
+  (let ((s (socket socket))
+	(host (if host (host-to-hbo host))))
+    (multiple-value-bind (result errno)
+	(ext:inet-socket-send-to s buffer length
+				 :remote-host host :remote-port port)
+      (or result
+	  (scl-map-socket-error errno :socket socket)))))
+
+(defmethod socket-receive ((socket datagram-usocket) buffer length &key)
+  (let ((s (socket socket)))
+    (let ((real-buffer (or buffer
+			   (make-array length :element-type '(unsigned-byte 8))))
+	  (real-length (or length
+			   (length buffer))))
+      (multiple-value-bind (result errno remote-host remote-port)
+	  (ext:inet-socket-receive-from s real-buffer real-length)
+	(if result
+	    (values real-buffer result remote-host remote-port)
+	    (scl-map-socket-error errno :socket socket))))))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind (address port)

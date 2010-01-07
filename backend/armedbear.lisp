@@ -6,7 +6,7 @@
 (in-package :usocket)
 
 
-;;;;; Proposed contribution to the JAVA package
+;;; Proposed contribution to the JAVA package
 
 (defpackage :jdi
   (:use :cl)
@@ -186,24 +186,36 @@
   (typecase condition
     (error (error 'unknown-error :socket socket :real-error condition))))
 
-(defun socket-connect (host port &key (element-type 'character)
+(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay nil nodelay-specified)
                        local-host local-port)
   (when deadline (unsupported 'deadline 'socket-connect))
-  (when local-host (unimplemented 'local-host 'socket-connect))
-  (when local-port (unimplemented 'local-port 'socket-connect))
 
   (let ((usock))
     (with-mapped-conditions (usock)
-      (let* ((sock-addr (jdi:jcoerce
-                         (jdi:do-jnew-call "java.net.InetSocketAddress"
-                           (host-to-hostname host)
-                           (jdi:jcoerce port :int))
-                         "java.net.SocketAddress"))
-             (jchan (jdi:do-jstatic-call "java.nio.channels.SocketChannel"
-                      "open" sock-addr))
+      (let* ((sock-addr (when (and host port)
+			  (jdi:jcoerce
+			   (jdi:do-jnew-call "java.net.InetSocketAddress"
+			     (host-to-hostname host)
+			     (jdi:jcoerce port :int))
+			   "java.net.SocketAddress")))
+	     (local-addr (when (or local-host local-port)
+			   (jdi:jcoerce
+			    (jdi:do-jnew-call "java.net.InetSocketAddress"
+			      (host-to-hostname (or host *wildcard-host*))
+			      (jdi:jcoerce (or port *auto-port*) :int))
+			    "java.net.SocketAddress")))
+             (jchan (jdi:do-jstatic-call (ecase protocol
+					   (:stream "java.nio.channels.SocketChannel")
+					   (:datagram "java.nio.channels.DatagramChannel"))
+		      "open"))
              (sock (jdi:do-jmethod-call jchan "socket")))
-        (when nodelay-specified
+	;; TODO: Fix it
+	(when (or local-host local-port)
+	  (jdi:do-jmethod-call sock "bind" local-addr))
+	(when (and host port)
+	  (jdi:do-jmethod-call jchan "connect" sock-addr))
+        (when (and (eq protocol 'stream) nodelay-specified)
           (jdi:do-jmethod-call sock "setTcpNoDelay"
                                (if nodelay
                                    (java:make-immediate-object t :boolean)
@@ -212,10 +224,14 @@
           (jdi:do-jmethod-call sock "setSoTimeout"
                                     (truncate (* 1000 timeout))))
         (setf usock
-              (make-stream-socket
-               :socket jchan
-               :stream (ext:get-socket-stream (jdi:jop-deref sock)
-                                              :element-type element-type)))))))
+	      (ecase protocol
+		(:stream
+		 (make-stream-socket
+		  :socket jchan
+		  :stream (ext:get-socket-stream (jdi:jop-deref sock)
+						 :element-type element-type)))
+		(:datagram
+		 (make-datagram-socket jchan))))))))
 
 (defun socket-listen (host port
                            &key reuseaddress
@@ -448,3 +464,28 @@ return the function result list.
 
 (defun %remove-waiter (wl w)
   (remhash (socket w) (wait-list-%wait wl)))
+
+;;
+;; UDP support
+;;
+
+(defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
+  (let ((jchan (socket socket)))
+    (let ((srcs (jdi:jcoerce buffer "java.nio.ByteBuffer"))
+	  (offset (jdi:jcoerce 0 :int))
+	  (length (jdi:jcoerce length :int)))
+      (if (and host port)
+	  (let ((target (jdi:jcoerce
+			 (jdi:do-jnew-call "java.net.InetSocketAddress"
+			   (host-to-hostname host)
+			   (jdi:jcoerce port :int))
+			 "java.net.SocketAddress")))
+	    ;; how to use "length" argument here? --binghe, 2009/12/12
+	    (jdi:do-jmethod-call jchan "send" buffer target))
+	  (jdi:do-jmethod-call jchan "write" srcs offset length)))))
+
+(defmethod socket-receive ((socket datagram-usocket) buffer length &key)
+  (let ((jchan (socket socket)))
+    (multiple-value-bind (buffer size host port)
+	0
+      (values buffer size host port))))

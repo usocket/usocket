@@ -55,7 +55,7 @@
                  (error usock-err :socket socket)
                (signal usock-err :socket socket)))))))
 
-(defun socket-connect (host port &key (element-type 'character)
+(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port)
   (declare (ignore nodelay))

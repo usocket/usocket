@@ -203,8 +203,7 @@
                  (if usock-cond
                      (signal usock-cond :socket socket))))))
 
-
-(defun socket-connect (host port &key (element-type 'character)
+(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port
 		       &aux
@@ -221,29 +220,43 @@
     (unsupported 'nodelay 'socket-connect))
 
   (let ((socket (make-instance 'sb-bsd-sockets:inet-socket
-                               :type :stream :protocol :tcp)))
+                               :type protocol
+                               :protocol (case protocol
+					   (:stream :tcp)
+					   (:datagram :udp)))))
     (handler-case
-        (let* ((stream
-                (sb-bsd-sockets:socket-make-stream socket
-                                                   :input t
-                                                   :output t
-                                                   :buffering :full
-                                                   :element-type element-type))
-               ;;###FIXME: The above line probably needs an :external-format
-               (usocket (make-stream-socket :stream stream :socket socket))
-               (ip (host-to-vector-quad host)))
-	  ;; binghe: use SOCKOPT-TCP-NODELAY as internal symbol
-	  ;;         to pass compilation on ECL without it.
-	  (when (and nodelay-specified sockopt-tcp-nodelay-p)
-	    (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) nodelay))
-          (when (or local-host local-port)
-            (sb-bsd-sockets:socket-bind socket
-                                        (host-to-vector-quad
-                                         (or local-host *wildcard-host*))
-                                        (or local-port *auto-port*)))
-          (with-mapped-conditions (usocket)
-            (sb-bsd-sockets:socket-connect socket ip port))
-          usocket)
+        (ecase protocol
+          (:stream
+	   (let* ((stream
+		   (sb-bsd-sockets:socket-make-stream socket
+						      :input t
+						      :output t
+						      :buffering :full
+						      :element-type element-type))
+		  ;;###FIXME: The above line probably needs an :external-format
+		  (usocket (make-stream-socket :stream stream :socket socket))
+		  (ip (host-to-vector-quad host)))
+	     ;; binghe: use SOCKOPT-TCP-NODELAY as internal symbol
+	     ;;         to pass compilation on ECL without it.
+	     (when (and nodelay-specified sockopt-tcp-nodelay-p)
+	       (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) nodelay))
+	     (when (or local-host local-port)
+	       (sb-bsd-sockets:socket-bind socket
+					   (host-to-vector-quad
+					    (or local-host *wildcard-host*))
+					   (or local-port *auto-port*)))
+	     (with-mapped-conditions (usocket)
+	       (sb-bsd-sockets:socket-connect socket ip port))
+	     usocket))
+          (:datagram
+	   (when (or local-host local-port)
+	     (sb-bsd-sockets:socket-bind socket
+					 (host-to-vector-quad
+					  (or local-host *wildcard-host*))
+					 (or local-port *auto-port*)))
+	   (when (and host port)
+	     (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port))
+	   (make-datagram-socket socket)))
       (t (c)
         ;; Make sure we don't leak filedescriptors
         (sb-bsd-sockets:socket-close socket)
@@ -294,6 +307,18 @@
      (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket-stream usocket))))
+
+(defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
+  (with-mapped-conditions (socket)
+    (let* ((s (socket socket))
+           (dest (if (and host port) (list (host-to-vector-quad host) port) nil)))
+      (sb-bsd-sockets:socket-send s buffer length :address dest))))
+
+(defmethod socket-receive ((socket datagram-usocket) buffer length
+			   &key (element-type '(unsigned-byte 8)))
+  (with-mapped-conditions (socket)
+    (let ((s (socket socket)))
+      (sb-bsd-sockets:socket-receive s buffer length :element-type element-type))))
 
 (defmethod get-local-name ((usocket usocket))
   (sb-bsd-sockets:socket-name (socket usocket)))
