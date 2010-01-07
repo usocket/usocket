@@ -62,9 +62,9 @@
        (raise-error-from-id (openmcl-socket:socket-error-identifier condition)
                             socket condition))
     (ccl:input-timeout
-       (error 'timeout-error :socket socket :real-error condition))
+       (error 'timeout-error :socket socket))
     (ccl:communication-deadline-expired
-       (error 'deadline-error :socket socket :real-error condition))
+       (error 'deadline-timeout-error :socket socket))
     (ccl::socket-creation-error #| ugh! |#
        (raise-error-from-id (ccl::socket-creation-error-identifier condition)
                             socket condition))))
@@ -123,10 +123,14 @@
     (close (socket usocket))))
 
 (defmethod get-local-address ((usocket usocket))
-  (hbo-to-vector-quad (openmcl-socket:local-host (socket usocket))))
+  (let ((address (openmcl-socket:local-host (socket usocket))))
+    (when address
+      (hbo-to-vector-quad address))))
 
 (defmethod get-peer-address ((usocket stream-usocket))
-  (hbo-to-vector-quad (openmcl-socket:remote-host (socket usocket))))
+  (let ((address (openmcl-socket:remote-host (socket usocket))))
+    (when address
+      (hbo-to-vector-quad address))))
 
 (defmethod get-local-port ((usocket usocket))
   (openmcl-socket:local-port (socket usocket)))

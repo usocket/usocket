@@ -50,7 +50,8 @@
    "#include <winsock2.h>")
 
   (ffi:clines
-   "#include <sys/time.h>"
+   #+:msvc "#include <time.h>"
+   #-:msvc "#include <sys/time.h>"
    "#include <ecl/ecl-inl.h>")
 
   #+:prefixed-api
@@ -174,6 +175,8 @@
      . socket-type-not-supported-error)
     (sb-bsd-sockets:network-unreachable-error . network-unreachable-error)
     (sb-bsd-sockets:operation-timeout-error . timeout-error)
+    #-ecl
+    (sb-sys:io-timeout . timeout-error)
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
 
     ;; Nameservice errors: mapped to unknown-error

@@ -111,6 +111,7 @@ condition available."))
    host-unreachable-error
    shutdown-error
    timeout-error
+   deadline-timeout-error
    invalid-socket-error
    invalid-socket-stream-error)
   (socket-error))
@@ -183,7 +184,7 @@ error available."))
     ((49 99) . address-not-available-error)
     ((9) . bad-file-descriptor-error)
     ((61 111) . connection-refused-error)
-    ((64 131) . connection-reset-error)
+    ((54 104) . connection-reset-error)
     ((53 103) . connection-aborted-error)
     ((22) . invalid-argument-error)
     ((55 105) . no-buffers-error)
