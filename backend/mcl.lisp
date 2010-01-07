@@ -177,8 +177,9 @@
 
 (defclass passive-socket (socket)
   ((streams :accessor socket-streams :type list :initform NIL
-            :documentation "Circular list of streams with first element the next to open")
-   (reuse-address :reader reuse-address :initarg :reuse-address)))
+	    :documentation "Circular list of streams with first element the next to open")
+   (reuse-address :reader reuse-address :initarg :reuse-address)
+   (lock :reader socket-lock :initform (ccl:make-lock "Socket"))))
 
 (defmethod initialize-instance :after ((socket passive-socket) &key backlog)
   (loop repeat backlog
@@ -191,20 +192,18 @@
                #'ccl::stream-local-port (car (socket-streams socket)))
               (error "timeout")))))
 
-(defmethod socket-accept ((socket passive-socket) &key element-type)
-  (flet ((connection-established-p (stream) 
-           (ccl::with-io-buffer-locked ((ccl::stream-io-buffer stream nil)) 
-             (let ((state (ccl::opentransport-stream-connection-state stream)))
-               (not (eq :unbnd state))))))
+(defmethod socket-accept ((socket passive-socket) &key element-type &aux (lock (socket-lock socket)))
+  (flet ((connection-established-p (stream)
+	   (ccl::with-io-buffer-locked ((ccl::stream-io-buffer stream nil))
+	     (let ((state (ccl::opentransport-stream-connection-state stream)))
+	       (not (eq :unbnd state))))))
     (with-mapped-conditions ()
-      (let* ((new (socket-open-listener socket element-type))
-             (connection (car (socket-streams socket))))
-        (assert connection)
-        (rplaca (socket-streams socket) new)
-        (setf (socket-streams socket) 
-              (cdr (socket-streams socket)))
-        (ccl::process-wait "Socket Accept" #'connection-established-p connection) ; expensive polling...
-        connection))))
+      (ccl:with-lock-grabbed (lock nil "Socket Lock")
+	(let ((connection (shiftf (car (socket-streams socket))
+				  (socket-open-listener socket element-type))))
+	  (pop (socket-streams socket))
+	  (ccl:process-wait "Accepting" #'connection-established-p connection)
+	  connection)))))
 
 (defmethod socket-close ((socket passive-socket))
   (loop
