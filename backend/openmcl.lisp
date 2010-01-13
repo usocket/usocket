@@ -25,6 +25,10 @@
     (:shutdown . shutdown-error)
     (:access-denied . operation-not-permitted-error)))
 
+(defparameter +openmcl-nameserver-error-map+
+  '((:no-recovery . ns-no-recovery-error)
+    (:try-again . ns-try-again-condition)
+    (:host-not-found . ns-host-not-found-error)))
 
 ;; we need something which the openmcl implementors 'forgot' to do:
 ;; wait for more than one socket-or-fd
@@ -66,8 +70,12 @@
     (ccl:communication-deadline-expired
        (error 'deadline-timeout-error :socket socket))
     (ccl::socket-creation-error #| ugh! |#
-       (raise-error-from-id (ccl::socket-creation-error-identifier condition)
-                            socket condition))))
+       (let* ((condition-id (ccl::socket-creation-error-identifier condition))
+	      (nameserver-error (cdr (assoc condition-id
+					    +openmcl-nameserver-error-map+))))
+	 (if nameserver-error
+	   (error nameserver-error :host-or-ip nil)
+	   (raise-error-from-id condition-id socket condition))))))
 
 (defun to-format (element-type)
   (if (subtypep element-type 'character)
