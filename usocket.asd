@@ -11,25 +11,20 @@
 
 (in-package #:usocket-system)
 
-(pushnew :split-sequence-deprecated *features*)
-
 (defsystem usocket
     :name "usocket"
     :author "Erik Enge & Erik Huelsmann"
     :version "0.5.0"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
-    :depends-on (;; :split-sequence
-                 ;; use the splie-sequence from cl-utilities
-                 :cl-utilities
-                 #+sbcl :sb-bsd-sockets)
+    :depends-on (#+sbcl :sb-bsd-sockets)
     :components ((:file "package")
-                 (:file "usocket" :depends-on ("package"))
-                 (:file "condition" :depends-on ("usocket"))
 		 (:module "vendor"
-		  :components (#+mcl		(:file "kqueue")))
-		 (:module "backend"
-		  :depends-on ("condition" "vendor")
+		  :components ((:file "split-sequence")
+			       #+mcl (:file "kqueue")))
+                 (:file "usocket" :depends-on ("package" "vendor"))
+                 (:file "condition" :depends-on ("usocket"))
+		 (:module "backend" :depends-on ("usocket" "condition")
 		  :components (#+clisp		(:file "clisp")
 			       #+cmu		(:file "cmucl")
 			       #+scl		(:file "scl")

@@ -399,14 +399,14 @@ parse-integer) on each of the string elements."
           (aref vector 3)))
 
 (defun dotted-quad-to-vector-quad (string)
-  (let ((list (list-of-strings-to-integers (split-sequence:split-sequence #\. string))))
+  (let ((list (list-of-strings-to-integers (split-sequence #\. string))))
     (vector (first list) (second list) (third list) (fourth list))))
 
 (defgeneric host-byte-order (address))
 (defmethod host-byte-order ((string string))
   "Convert a string, such as 192.168.1.1, to host-byte-order,
 such as 3232235777."
-  (let ((list (list-of-strings-to-integers (split-sequence:split-sequence #\. string))))
+  (let ((list (list-of-strings-to-integers (split-sequence #\. string))))
     (+ (* (first list) 256 256 256) (* (second list) 256 256)
        (* (third list) 256) (fourth list))))
 
