@@ -19,12 +19,12 @@
     :description "Universal socket library for Common Lisp"
     :depends-on (#+sbcl :sb-bsd-sockets)
     :components ((:file "package")
-		 (:module "vendor"
+		 (:module "vendor" :depends-on ("package")
 		  :components ((:file "split-sequence")
 			       #+mcl (:file "kqueue")))
-                 (:file "usocket" :depends-on ("package" "vendor"))
+                 (:file "usocket" :depends-on ("vendor"))
                  (:file "condition" :depends-on ("usocket"))
-		 (:module "backend" :depends-on ("usocket" "condition")
+		 (:module "backend" :depends-on ("condition")
 		  :components (#+clisp		(:file "clisp")
 			       #+cmu		(:file "cmucl")
 			       #+scl		(:file "scl")
