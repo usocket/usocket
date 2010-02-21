@@ -6,12 +6,14 @@
 (in-package :usocket)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (require "comm"))
+  (require "comm")
+
+  #+lispworks3
+  (error "LispWorks 3 is not supported by USOCKET."))
 
 ;;; ---------------------------------------------------------------------------
 ;;;  Warn if multiprocessing is not running on Lispworks
 
-#-win32
 (defun check-for-multiprocessing-started (&optional errorp)
   (unless mp:*current-process*
     (funcall (if errorp 'error 'warn)
@@ -21,11 +23,13 @@
              'mp:initialize-multiprocessing
              'wait-for-input)))
 
-#-win32
-(check-for-multiprocessing-started)
+(eval-when (:load-toplevel :execute)
+  (check-for-multiprocessing-started))
 
 #+win32
-(fli:register-module "ws2_32")
+(eval-when (:load-toplevel :execute)
+  (fli:register-module "ws2_32")
+  (comm::ensure-sockets))
 
 (fli:define-foreign-function (get-host-name-internal "gethostname" :source)
       ((return-string (:reference-return (:ef-mb-string :limit 257)))
@@ -359,7 +363,8 @@
               :element-type '(unsigned-byte 8)
               :allocation :static))
 
-(defvar *message-send-lock* (mp:make-lock))
+(defvar *message-send-lock*
+  (mp:make-lock :name "USOCKET message send lock"))
 
 (defun send-message (socket-fd buffer &optional (length (length buffer)) host service)
   "Send message to a socket, using sendto()/send()"
@@ -368,7 +373,7 @@
   (let ((message *message-send-buffer*))
     (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in))
                                        (len :int
-					    #-(or lispworks3 lispworks4 lispworks5.0)
+					    #-(or lispworks4 lispworks5.0) ; <= 5.0
                                             :initial-element
                                             (fli:size-of '(:struct comm::sockaddr_in))))
       (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
@@ -384,14 +389,15 @@
 
 (defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
   (let ((s (socket socket)))
-    (send-message s buffer length (host-to-hbo host) port)))
+    (send-message s buffer length (and host (host-to-hbo host)) port)))
 
 (defvar *message-receive-buffer*
   (make-array +max-datagram-packet-size+
               :element-type '(unsigned-byte 8)
               :allocation :static))
 
-(defvar *message-receive-lock* (mp:make-lock))
+(defvar *message-receive-lock*
+  (mp:make-lock :name "USOCKET message receive lock"))
 
 (defun receive-message (socket-fd &optional buffer (length (length buffer))
 			&key read-timeout (max-buffer-size +max-datagram-packet-size+))
@@ -408,7 +414,7 @@
         old-timeout)
     (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in))
                                        (len :int
-					    #-(or lispworks3 lispworks4 lispworks5.0)
+					    #-(or lispworks4 lispworks5.0) ; <= 5.0
                                             :initial-element
                                             (fli:size-of '(:struct comm::sockaddr_in))))
       (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
@@ -531,7 +537,9 @@
 			     (wait-list-waiters wait-list))))
       (dolist (x (wait-list-waiters wait-list))
         (mp:unnotice-fd (os-socket-handle x)))
-      wait-list)))
+      wait-list))
+
+) ; end of block
 
 
 ;;;
@@ -551,6 +559,7 @@
   ;; to resort to system calls to achieve the same thing.
   ;; Luckily, it provides us access to the raw socket handles (as we 
   ;; wrote the code above.
+
   (defconstant fd-read 1)
   (defconstant fd-read-bit 0)
   (defconstant fd-write 2)
@@ -603,10 +612,12 @@
       :lambda-list nil
     :result-type :int
     :module "ws2_32")
+
   (fli:define-foreign-function (wsa-event-close "WSACloseEvent" :source)
       ((event-object win32-handle))
     :result-type :int
     :module "ws2_32")
+
   (fli:define-foreign-function (wsa-enum-network-events "WSAEnumNetworkEvents" :source)
       ((socket ws-socket)
        (event-object win32-handle)
@@ -670,7 +681,6 @@
       (system:wait-for-single-object (wait-list-%wait wait-list)
                                      "Waiting for socket activity" timeout))
     (update-ready-and-state-slots (wait-list-waiters wait-list)))
-
   
   (defun map-network-events (func network-events)
     (let ((event-map (fli:foreign-slot-value network-events 'network-events))
@@ -691,7 +701,7 @@
                 (wsa-enum-network-events (os-socket-handle socket) 0 t)
              (if (zerop rv)
                  (map-network-events #'(lambda (err-code)
-                                          (if (zerop err-code)
+                                         (if (zerop err-code)
                                              (setf (%ready-p socket) t
                                                    (state socket) :READ)
                                              (raise-usock-err err-code socket)))
@@ -707,7 +717,8 @@
       (unless (null (wait-list-%wait wl))
         (wsa-event-close (wait-list-%wait wl)))))
   
-  (hcl:add-special-free-action 'free-wait-list)
+  (eval-when (:load-toplevel :execute)
+    (hcl:add-special-free-action 'free-wait-list))
   
   (defun %setup-wait-list (wait-list)
     (hcl:flag-special-free-action wait-list)
@@ -716,7 +727,8 @@
   (defun %add-waiter (wait-list waiter)
     (let ((events (etypecase waiter
                     (stream-server-usocket (logior fd-connect fd-accept fd-close))
-                    (stream-usocket (logior fd-connect fd-read fd-oob fd-close)))))
+                    (stream-usocket (logior fd-connect fd-read fd-oob fd-close))
+                    (datagram-usocket (logior fd-read)))))
       (maybe-wsa-error
        (wsa-event-select (os-socket-handle waiter) (wait-list-%wait wait-list) events)
        waiter)))
@@ -726,4 +738,4 @@
      (wsa-event-select (os-socket-handle waiter) (wait-list-%wait wait-list) 0)
      waiter))
   
-  );; end of WIN32-block
+) ; end of WIN32-block
