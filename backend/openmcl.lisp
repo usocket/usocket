@@ -147,7 +147,7 @@
 (defmethod socket-send ((usocket datagram-usocket) buffer length &key host port)
   (with-mapped-conditions (usocket)
     (openmcl-socket:send-to (socket usocket) buffer length
-			    :remote-host (host-to-hbo host)
+			    :remote-host (if host (host-to-hbo host))
 			    :remote-port port)))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
@@ -204,5 +204,3 @@
       (input-available-p (wait-list-waiters wait-list)
                                (when timeout ticks-timeout))
       wait-list)))
-
-
