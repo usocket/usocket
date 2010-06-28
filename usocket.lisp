@@ -288,7 +288,16 @@ are readable (or in case of server streams acceptable).  NIL may
 be returned for this value either when waiting timed out or when
 it was interrupted (EINTR).  The second value is a real number
 indicating the time remaining within the timeout period or NIL if
-none."
+none.
+
+Without the READY-ONLY arg, WAIT-FOR-INPUT will return all sockets in
+the original list you passed it. This prevents a new list from being
+consed up. Some users of USOCKET were reluctant to use it if it
+wouldn't behave that way, expecting it to cost significant performance
+to do the associated garbage collection.
+
+Without the READY-ONLY arg, you need to check the socket STATE slot for
+the values documented in usocket.lisp in the usocket class."
   (unless (wait-list-p socket-or-sockets)
     (let ((wl (make-wait-list (if (listp socket-or-sockets)
                                   socket-or-sockets (list socket-or-sockets)))))
