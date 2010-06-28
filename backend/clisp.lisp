@@ -13,10 +13,10 @@
                            :OUT :ALLOCA)
                      (len ffi:int))
          #+win32 (:library "WS2_32")
+	 #-win32 (:library :default)
          (:language #-win32 :stdc
                     #+win32 :stdc-stdcall)
          (:return-type ffi:int))
-
 
 (defun get-host-name ()
   (multiple-value-bind (retcode name)
