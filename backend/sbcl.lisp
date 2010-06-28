@@ -210,6 +210,7 @@
 		       (sockopt-tcp-nodelay-p
 			(fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
   (when deadline (unsupported 'deadline 'socket-connect))
+  #+ecl
   (when timeout (unsupported 'timeout 'socket-connect))
   (when (and nodelay-specified
              ;; 20080802: ECL added this function to its sockets
@@ -232,6 +233,8 @@
 						      :input t
 						      :output t
 						      :buffering :full
+						      #+sbcl #+sbcl
+						      :timeout timeout
 						      :element-type element-type))
 		  ;;###FIXME: The above line probably needs an :external-format
 		  (usocket (make-stream-socket :stream stream :socket socket))
