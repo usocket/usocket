@@ -68,10 +68,10 @@
     (if usock-err
         (if (subtypep usock-err 'error)
             (error usock-err :socket socket)
-          (signal usock-err :socket))
+          (signal usock-err :socket socket))
       (error 'unknown-error
              :socket socket
-             :real-condition nil))))
+             :real-error nil))))
 
 (defun raise-usock-err (errno socket &optional condition)
   (let* ((usock-err
