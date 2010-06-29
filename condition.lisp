@@ -118,7 +118,8 @@ condition available."))
 
 (define-condition unknown-error (socket-error)
   ((real-error :initarg :real-error
-               :accessor usocket-real-error))
+               :accessor usocket-real-error
+               :initform nil))
   (:report (lambda (c stream)
              (typecase c
                (simple-condition
@@ -135,8 +136,9 @@ error available."))
   (ns-condition))
 
 (define-condition ns-unknown-condition (ns-condition)
-  ((real-error :initarg :real-condition
-               :accessor ns-real-condition))
+  ((real-condition :initarg :real-condition
+                   :accessor ns-real-condition
+                   :initform nil))
   (:documentation "Condition raised when there's no other - more applicable -
 condition available."))
 
@@ -151,7 +153,8 @@ condition available."))
 
 (define-condition ns-unknown-error (ns-error)
   ((real-error :initarg :real-error
-               :accessor ns-real-error))
+               :accessor ns-real-error
+               :initform nil))
   (:report (lambda (c stream)
              (typecase c
                (simple-condition
