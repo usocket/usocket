@@ -14,8 +14,9 @@
   (usocket::make-stream-socket :socket :my-socket
                                :stream :my-stream))
 
-(defconstant +common-lisp-net+
-  #.(first (usocket::get-hosts-by-name "common-lisp.net")))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *common-lisp-net*
+    #.(first (usocket::get-hosts-by-name "common-lisp.net"))))
 
 (defvar *local-ip*)
 
@@ -107,7 +108,7 @@
 
 (deftest socket-connect.2
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect +common-lisp-net+ 80)))
+    (let ((sock (usocket:socket-connect *common-lisp-net* 80)))
       (unwind-protect
           (when (typep sock 'usocket:usocket) t)
         (usocket:socket-close sock))))
@@ -115,7 +116,7 @@
 
 (deftest socket-connect.3
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect (usocket::host-byte-order +common-lisp-net+) 80)))
+    (let ((sock (usocket:socket-connect (usocket::host-byte-order *common-lisp-net*) 80)))
       (unwind-protect
           (when (typep sock 'usocket:usocket) t)
         (usocket:socket-close sock))))
@@ -138,15 +139,15 @@
 
 (deftest socket-name.1
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect +common-lisp-net+ 80)))
+    (let ((sock (usocket:socket-connect *common-lisp-net* 80)))
       (unwind-protect
           (usocket::get-peer-address sock)
         (usocket:socket-close sock))))
-  #.+common-lisp-net+)
+  #.*common-lisp-net*)
 
 (deftest socket-name.2
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect +common-lisp-net+ 80)))
+    (let ((sock (usocket:socket-connect *common-lisp-net* 80)))
       (unwind-protect
           (usocket::get-peer-port sock)
         (usocket:socket-close sock))))
@@ -154,16 +155,16 @@
 
 (deftest socket-name.3
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect +common-lisp-net+ 80)))
+    (let ((sock (usocket:socket-connect *common-lisp-net* 80)))
       (unwind-protect
           (usocket::get-peer-name sock)
         (usocket:socket-close sock))))
-  #.+common-lisp-net+ 80)
+  #.*common-lisp-net* 80)
 
 #+ignore
 (deftest socket-name.4
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect +common-lisp-net+ 80)))
+    (let ((sock (usocket:socket-connect *common-lisp-net* 80)))
       (unwind-protect
           (equal (usocket::get-local-address sock) *local-ip*)
         (usocket:socket-close sock))))
@@ -174,7 +175,7 @@
 
 (deftest wait-for-input.1
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect +common-lisp-net+ 80))
+    (let ((sock (usocket:socket-connect *common-lisp-net* 80))
           (time (get-universal-time)))
       (unwind-protect
           (progn (usocket:wait-for-input sock :timeout *wait-for-input-timeout*)
@@ -184,7 +185,7 @@
 
 (deftest wait-for-input.2
   (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect +common-lisp-net+ 80))
+    (let ((sock (usocket:socket-connect *common-lisp-net* 80))
           (time (get-universal-time)))
       (unwind-protect
           (progn (usocket:wait-for-input sock :timeout *wait-for-input-timeout* :ready-only t)
