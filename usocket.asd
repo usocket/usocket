@@ -35,3 +35,6 @@
 			       #+allegro	(:file "allegro")
 			       #+armedbear	(:file "armedbear")))
 		 (:file "server" :depends-on ("backend"))))
+
+(defmethod perform ((op test-op) (c (eql (find-system :usocket))))
+  (oos 'test-op :usocket-test))

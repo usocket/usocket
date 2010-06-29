@@ -142,7 +142,7 @@
       (unwind-protect
           (usocket::get-peer-address sock)
         (usocket:socket-close sock))))
-  +common-lisp-net+)
+  #.+common-lisp-net+)
 
 (deftest socket-name.2
   (with-caught-conditions (nil nil)
@@ -158,18 +158,19 @@
       (unwind-protect
           (usocket::get-peer-name sock)
         (usocket:socket-close sock))))
-  +common-lisp-net+)
+  #.+common-lisp-net+ 80)
 
 #+ignore
 (deftest socket-name.4
   (with-caught-conditions (nil nil)
     (let ((sock (usocket:socket-connect +common-lisp-net+ 80)))
       (unwind-protect
-          (usocket::get-local-address sock)
+          (equal (usocket::get-local-address sock) *local-ip*)
         (usocket:socket-close sock))))
-  *local-ip*)
+  t)
 
-(defparameter *wait-for-input-timeout* 2)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defparameter *wait-for-input-timeout* 2))
 
 (deftest wait-for-input.1
   (with-caught-conditions (nil nil)
@@ -179,7 +180,7 @@
           (progn (usocket:wait-for-input sock :timeout *wait-for-input-timeout*)
             (- (get-universal-time) time))
         (usocket:socket-close sock))))
-  *wait-for-input-timeout*)
+  #.*wait-for-input-timeout*)
 
 (deftest wait-for-input.2
   (with-caught-conditions (nil nil)
@@ -189,7 +190,7 @@
           (progn (usocket:wait-for-input sock :timeout *wait-for-input-timeout* :ready-only t)
             (- (get-universal-time) time))
         (usocket:socket-close sock))))
-  *wait-for-input-timeout*)
+  #.*wait-for-input-timeout*)
 
 (defun run-usocket-tests ()
   (do-tests))
