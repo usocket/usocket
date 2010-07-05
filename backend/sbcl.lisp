@@ -459,16 +459,27 @@
     (object sb-alien::hinstance)
     (timeout sb-alien:long))
 
+  (sb-alien:define-alien-routine ("ioctlsocket" wsa-ioctlsocket)
+      sb-alien:int
+    (socket ws-socket)
+    (cmd sb-alien:long)
+    (argp (* sb-alien::unsigned-long)))
+
+  (defun raise-usock-err (errno socket)
+    (error 'unknown-error
+           :socket socket
+           :real-error errno))
+
   (defun maybe-wsa-error (rv &optional socket)
     (unless (zerop rv)
       (raise-usock-err (sockint::wsa-get-last-error) socket)))
 
   (defun os-socket-handle (usocket)
-    (socket usocket))
+    (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
 
   (defun bytes-available-for-read (socket)
-    (sb-alien:with-alien ((int-ptr sb-alien:long))
-      (let ((rv (sockint::win32-ioctl (os-socket-handle socket) fionread int-ptr)))
+    (sb-alien:with-alien ((int-ptr (* sb-alien:unsigned-long)))
+      (let ((rv (wsa-ioctlsocket (os-socket-handle socket) fionread int-ptr)))
         (prog1
             (if (= 0 rv) (sb-alien:deref int-ptr) 0)
           (sb-alien:free-alien int-ptr)))))
@@ -504,7 +515,7 @@
             (setf (state socket) :READ)
           (multiple-value-bind
               (rv network-events)
-              (wsa-enum-network-events (os-socket-handle socket) 0 t)
+              (wsa-enum-network-events (os-socket-handle socket) 0 t) ; ???
             (if (zerop rv)
                 (map-network-events #'(lambda (err-code)
                                         (if (zerop err-code)
