@@ -604,7 +604,8 @@
   
   (fli:define-foreign-type ws-socket () '(:unsigned :int))
   (fli:define-foreign-type win32-handle () '(:unsigned :int))
-  (fli:define-c-struct wsa-network-events (network-events :long)
+  (fli:define-c-struct wsa-network-events
+    (network-events :long)
     (error-code (:c-array :int 10)))
 
   (fli:define-foreign-function (wsa-event-create "WSACreateEvent" :source)
@@ -669,9 +670,9 @@
           0))))
 
   (defun socket-ready-p (socket)
-     (if (typep socket 'stream-usocket)
-       (< 0 (bytes-available-for-read socket))
-       (%ready-p socket)))
+    (if (typep socket 'stream-usocket)
+        (< 0 (bytes-available-for-read socket))
+      (%ready-p socket)))
 
   (defun waiting-required (sockets)
     (notany #'socket-ready-p sockets))
@@ -686,29 +687,27 @@
     (let ((event-map (fli:foreign-slot-value network-events 'network-events))
           (error-array (fli:foreign-slot-pointer network-events 'error-code)))
       (unless (zerop event-map)
-	  (dotimes (i fd-max-events)
-	    (unless (zerop (ldb (byte 1 i) event-map)) ;;### could be faster with ash and logand?
-	      (funcall func (fli:foreign-aref error-array i)))))))
+        (dotimes (i fd-max-events)
+          (unless (zerop (ldb (byte 1 i) event-map)) ;;### could be faster with ash and logand?
+            (funcall func (fli:foreign-aref error-array i)))))))
 
   (defun update-ready-and-state-slots (sockets)
-     (dolist (socket sockets)
-        (if (or (and (stream-usocket-p socket)
-                     (listen (socket-stream socket)))
-                (%ready-p socket))
-            (setf (state socket) :READ)
-          (multiple-value-bind
-                (rv network-events)
-                (wsa-enum-network-events (os-socket-handle socket) 0 t)
-             (if (zerop rv)
-                 (map-network-events #'(lambda (err-code)
-                                         (if (zerop err-code)
-                                             (setf (%ready-p socket) t
-                                                   (state socket) :READ)
-                                             (raise-usock-err err-code socket)))
-                                     network-events)
-                 (maybe-wsa-error rv socket))))))
-
-
+    (dolist (socket sockets)
+      (if (or (and (stream-usocket-p socket)
+                   (listen (socket-stream socket)))
+              (%ready-p socket))
+          (setf (state socket) :READ)
+        (multiple-value-bind
+            (rv network-events)
+            (wsa-enum-network-events (os-socket-handle socket) 0 t)
+          (if (zerop rv)
+              (map-network-events #'(lambda (err-code)
+                                      (if (zerop err-code)
+                                          (setf (%ready-p socket) t
+                                                (state socket) :READ)
+                                        (raise-usock-err err-code socket)))
+                                  network-events)
+            (maybe-wsa-error rv socket))))))
 
   ;; The wait-list part
 

@@ -35,7 +35,7 @@ The value stored in this slot can be any of
 
 The last two remain unused in the current version.
 ")
-   #+(and lispworks win32)
+   #+(and win32 (or sbcl lispworks))
    (%ready-p
     :initform nil
     :accessor %ready-p

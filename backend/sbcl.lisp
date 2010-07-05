@@ -13,6 +13,10 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require :sockets))
 
+#+(and sbcl win32) ; for "WaitForSingleObject"
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (sb-alien:load-shared-object "kernel32.dll"))
+
 #+sbcl
 (progn
   #-win32
@@ -354,18 +358,15 @@
 
 #+(and sbcl (not win32))
 (progn
+  (defun %setup-wait-list (wait-list)
+    (declare (ignore wait-list)))
 
-(defun %setup-wait-list (wait-list)
-  (declare (ignore wait-list)))
+  (defun %add-waiter (wait-list waiter)
+    (push (socket waiter) (wait-list-%wait wait-list)))
 
-(defun %add-waiter (wait-list waiter)
-  (push (socket waiter) (wait-list-%wait wait-list)))
-
-(defun %remove-waiter (wait-list waiter)
-  (setf (wait-list-%wait wait-list)
-        (remove (socket waiter) (wait-list-%wait wait-list))))
-
-
+  (defun %remove-waiter (wait-list waiter)
+    (setf (wait-list-%wait wait-list)
+          (remove (socket waiter) (wait-list-%wait wait-list))))
 
   (defun wait-for-input-internal (sockets &key timeout)
     (with-mapped-conditions ()
@@ -398,8 +399,141 @@
                        (setf (state x) :READ))))))))))
 ) ; progn
 
+
+;;; WAIT-FOR-INPUT support for SBCL on Windows platform (Chun Tian (binghe))
+;;; Based on LispWorks version written by Erik Huelsmann.
+
 #+(and sbcl win32)
-  (warn "wait-for-input not (yet!) supported...")
+(progn
+  (defconstant fd-read 1)
+  (defconstant fd-read-bit 0)
+  (defconstant fd-write 2)
+  (defconstant fd-write-bit 1)
+  (defconstant fd-oob 4)
+  (defconstant fd-oob-bit 2)
+  (defconstant fd-accept 8)
+  (defconstant fd-accept-bit 3)
+  (defconstant fd-connect 16)
+  (defconstant fd-connect-bit 4)
+  (defconstant fd-close 32)
+  (defconstant fd-close-bit 5)
+  (defconstant fd-qos 64)
+  (defconstant fd-qos-bit 6)
+  (defconstant fd-group-qos 128)
+  (defconstant fd-group-qos-bit 7)
+  (defconstant fd-routing-interface 256)
+  (defconstant fd-routing-interface-bit 8)
+  (defconstant fd-address-list-change 512)
+  (defconstant fd-address-list-change-bit 9)
+  (defconstant fd-max-events 10)
+  (defconstant fionread 1074030207)
+
+  (sb-alien:define-alien-type ws-socket sb-alien:unsigned-int)
+
+  (sb-alien:define-alien-type nil
+    (sb-alien:struct wsa-network-events
+      (network-events sb-alien:long)
+      (error-code (array sb-alien:int 10)))) ; 10 = fd-max-events
+
+  (sb-alien:define-alien-routine ("WSACreateEvent" wsa-event-create)
+      sb-alien::hinstance) ; return type only
+
+  (sb-alien:define-alien-routine ("WSACloseEvent" wsa-event-close)
+      (sb-alien:boolean #.sb-vm::n-machine-word-bits)
+    (event-object sb-alien::hinstance))
+
+  (sb-alien:define-alien-routine ("WSAEnumNetworkEvents" wsa-enum-network-events)
+      sb-alien:int
+    (socket ws-socket)
+    (event-object sb-alien::hinstance)
+    (network-events (* (sb-alien:struct wsa-network-events))))
+
+  (sb-alien:define-alien-routine ("WSAEventSelect" wsa-event-select)
+      sb-alien:int
+    (socket ws-socket)
+    (event-object sb-alien::hinstance)
+    (network-events sb-alien:long))
+
+  (sb-alien:define-alien-routine ("WaitForSingleObject" wait-for-single-object)
+      sb-alien:long
+    (object sb-alien::hinstance)
+    (timeout sb-alien:long))
+
+  (defun maybe-wsa-error (rv &optional socket)
+    (unless (zerop rv)
+      (raise-usock-err (sockint::wsa-get-last-error) socket)))
+
+  (defun os-socket-handle (usocket)
+    (socket usocket))
+
+  (defun bytes-available-for-read (socket)
+    (sb-alien:with-alien ((int-ptr sb-alien:long))
+      (let ((rv (sockint::win32-ioctl (os-socket-handle socket) fionread int-ptr)))
+        (prog1
+            (if (= 0 rv) (sb-alien:deref int-ptr) 0)
+          (sb-alien:free-alien int-ptr)))))
+
+  (defun socket-ready-p (socket)
+    (if (typep socket 'stream-usocket)
+        (< 0 (bytes-available-for-read socket))
+      (%ready-p socket)))
+
+  (defun waiting-required (sockets)
+    (notany #'socket-ready-p sockets))
+
+  (defun wait-for-input-internal (wait-list &key timeout)
+    (when (waiting-required (wait-list-waiters wait-list))
+      (maybe-wsa-error
+       (wait-for-single-object (wait-list-%wait wait-list) (truncate (* 1000 timeout)))
+       wait-list))
+    (update-ready-and-state-slots (wait-list-waiters wait-list)))
+
+  (defun map-network-events (func network-events)
+    (let ((event-map (sb-alien:slot network-events 'network-events))
+          (error-array (sb-alien:slot network-events 'error-code)))
+      (unless (zerop event-map)
+        (dotimes (i fd-max-events)
+          (unless (zerop (ldb (byte 1 i) event-map)) ;;### could be faster with ash and logand?
+            (funcall func (sb-alien:deref error-array i)))))))
+
+  (defun update-ready-and-state-slots (sockets)
+    (dolist (socket sockets)
+        (if (or (and (stream-usocket-p socket)
+                     (listen (socket-stream socket)))
+                (%ready-p socket))
+            (setf (state socket) :READ)
+          (multiple-value-bind
+              (rv network-events)
+              (wsa-enum-network-events (os-socket-handle socket) 0 t)
+            (if (zerop rv)
+                (map-network-events #'(lambda (err-code)
+                                        (if (zerop err-code)
+                                            (setf (%ready-p socket) t
+                                                  (state socket) :READ)
+                                          (raise-usock-err err-code socket)))
+                                    network-events)
+              (maybe-wsa-error rv socket))))))
+
+  (defun %setup-wait-list (wait-list)
+    (setf (wait-list-%wait wait-list) (wsa-event-create))
+    (sb-ext:finalize wait-list
+                     #'(lambda () (unless (null (wait-list-%wait wait-list))
+                                    (wsa-event-close (wait-list-%wait wait-list))))))
+
+  (defun %add-waiter (wait-list waiter)
+    (let ((events (etypecase waiter
+                    (stream-server-usocket (logior fd-connect fd-accept fd-close))
+                    (stream-usocket (logior fd-connect fd-read fd-oob fd-close))
+                    (datagram-usocket (logior fd-read)))))
+      (maybe-wsa-error
+       (wsa-event-select (os-socket-handle waiter) (wait-list-%wait wait-list) events)
+       waiter)))
+
+  (defun %remove-waiter (wait-list waiter)
+    (maybe-wsa-error
+     (wsa-event-select (os-socket-handle waiter) (wait-list-%wait wait-list) 0)
+     waiter))
+) ; progn
 
 #+ecl
 (progn
@@ -423,5 +557,4 @@
 
   (defun %remove-waiter (wl w)
     (declare (ignore wl w)))
-
-  )
+) ; progn
