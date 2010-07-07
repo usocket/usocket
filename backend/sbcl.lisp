@@ -427,9 +427,10 @@
   (defconstant fionread 1074030207)
 
   ;; For WaitForSingleObject
-  (defconstant +wait-failed+ -1) ; #xffffffff
-  (defconstant +wait-object-0+ 0)
-  (defconstant +wait-timeout+ 258)
+  (eval-when (:compile-toplevel)
+    (defconstant +wait-failed+ -1) ; #xffffffff
+    (defconstant +wait-object-0+ 0)
+    (defconstant +wait-timeout+ 258))
 
   (sb-alien:define-alien-type ws-socket sb-alien:unsigned-int)
 
@@ -466,7 +467,7 @@
       sb-alien:int
     (socket ws-socket)
     (cmd sb-alien:long)
-    (argp (* sb-alien::unsigned-long)))
+    (argp (* sb-alien:unsigned-long)))
 
   (defun raise-usock-err (errno socket)
     (error 'unknown-error
@@ -480,26 +481,34 @@
   (defun os-socket-handle (usocket)
     (sockint::fd->handle (sb-bsd-sockets:socket-file-descriptor (socket usocket))))
 
+  (defun socket-handle (usocket)
+    (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
+
   (defun bytes-available-for-read (socket)
-    (sb-alien:with-alien ((int-ptr (* sb-alien:unsigned-long)))
-      (let ((rv (wsa-ioctlsocket (os-socket-handle socket) fionread int-ptr)))
-        (prog1
-            (if (= 0 rv) (sb-alien:deref int-ptr) 0)
-          (sb-alien:free-alien int-ptr)))))
+    (sb-alien:with-alien ((int-ptr sb-alien:unsigned-long))
+      (maybe-wsa-error (wsa-ioctlsocket (os-socket-handle socket) fionread (sb-alien:addr int-ptr))
+                       socket)
+      int-ptr))
 
   (defun socket-ready-p (socket)
     (if (typep socket 'stream-usocket)
-        (< 0 (bytes-available-for-read socket))
+        (plusp (bytes-available-for-read socket))
       (%ready-p socket)))
 
   (defun waiting-required (sockets)
     (notany #'socket-ready-p sockets))
 
   (defun wait-for-input-internal (wait-list &key timeout)
+    (format t "timeout: ~A, ~A~%" timeout (truncate (* 1000000 timeout)))
     (when (waiting-required (wait-list-waiters wait-list))
       (let ((rv (wait-for-single-object (wait-list-%wait wait-list) (truncate (* 1000000 timeout)))))
-        (format t "rv: ~A~%" rv)))
-    (update-ready-and-state-slots (wait-list-waiters wait-list)))
+        (ecase rv
+          ((#.+wait-object-0+ #.+wait-timeout+)
+           (update-ready-and-state-slots (wait-list-waiters wait-list)))
+          (#.+wait-failed+
+           (raise-usock-err
+            (sb-win32::get-last-error-message (sb-win32::get-last-error))
+            wait-list))))))
 
   (defun map-network-events (func network-events)
     (let ((event-map (sb-alien:slot network-events 'network-events))

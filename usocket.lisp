@@ -311,13 +311,14 @@ the values documented in usocket.lisp in the usocket class."
     (dolist (x (wait-list-waiters socket-or-sockets))
       (when (setf (state x)
                   (if (and (stream-usocket-p x)
-                           (listen (socket-stream x)))
+                           (listen (socket-stream x))
+                           #+(and sbcl win32) nil) ; TODO: bug?!
                       :READ NIL))
         (incf sockets-ready)))
-         ;; the internal routine is responsibe for
-         ;; making sure the wait doesn't block on socket-streams of
-         ;; which theready- socket isn't ready, but there's space left in the
-         ;; buffer
+    ;; the internal routine is responsibe for
+    ;; making sure the wait doesn't block on socket-streams of
+    ;; which theready- socket isn't ready, but there's space left in the
+    ;; buffer
     (wait-for-input-internal socket-or-sockets
                              :timeout (if (zerop sockets-ready) timeout 0))
     (let ((to-result (when timeout
