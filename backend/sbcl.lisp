@@ -426,6 +426,11 @@
   (defconstant fd-max-events 10)
   (defconstant fionread 1074030207)
 
+  ;; For WaitForSingleObject
+  (defconstant +wait-failed+ -1) ; #xffffffff
+  (defconstant +wait-object-0+ 0)
+  (defconstant +wait-timeout+ 258)
+
   (sb-alien:define-alien-type ws-socket sb-alien:unsigned-int)
 
   (sb-alien:define-alien-type nil
@@ -492,9 +497,8 @@
 
   (defun wait-for-input-internal (wait-list &key timeout)
     (when (waiting-required (wait-list-waiters wait-list))
-      (maybe-wsa-error
-       (wait-for-single-object (wait-list-%wait wait-list) (truncate (* 1000 timeout)))
-       wait-list))
+      (let ((rv (wait-for-single-object (wait-list-%wait wait-list) (truncate (* 1000000 timeout)))))
+        (format t "rv: ~A~%" rv)))
     (update-ready-and-state-slots (wait-list-waiters wait-list)))
 
   (defun map-network-events (func network-events)
@@ -511,17 +515,16 @@
                      (listen (socket-stream socket)))
                 (%ready-p socket))
             (setf (state socket) :READ)
-          (multiple-value-bind
-              (rv network-events)
-              (wsa-enum-network-events (os-socket-handle socket) 0 t) ; ???
-            (if (zerop rv)
-                (map-network-events #'(lambda (err-code)
-                                        (if (zerop err-code)
-                                            (setf (%ready-p socket) t
-                                                  (state socket) :READ)
-                                          (raise-usock-err err-code socket)))
-                                    network-events)
-              (maybe-wsa-error rv socket))))))
+          (sb-alien:with-alien ((network-events (sb-alien:struct wsa-network-events)))
+            (let ((rv (wsa-enum-network-events (os-socket-handle socket) 0 network-events)))
+              (if (zerop rv)
+                  (map-network-events #'(lambda (err-code)
+                                          (if (zerop err-code)
+                                              (setf (%ready-p socket) t
+                                                    (state socket) :READ)
+                                            (raise-usock-err err-code socket)))
+                                      network-events)
+                (maybe-wsa-error rv socket)))))))
 
   (defun %setup-wait-list (wait-list)
     (setf (wait-list-%wait wait-list) (wsa-event-create))
