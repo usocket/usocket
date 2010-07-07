@@ -41,7 +41,6 @@
 
 #+ecl
 (progn
-
   #-:wsock
   (ffi:clines
    "#include <errno.h>"
@@ -150,8 +149,7 @@
                                          (socket sock)))
                (setf (state sock) :READ))))))))
 
-
-)
+) ; progn
 
 (defun map-socket-error (sock-err)
   (map-errno-error (sb-bsd-sockets::socket-error-errno sock-err)))
@@ -475,7 +473,7 @@
       (raise-usock-err (sockint::wsa-get-last-error) socket)))
 
   (defun os-socket-handle (usocket)
-    (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
+    (sockint::fd->handle (sb-bsd-sockets:socket-file-descriptor (socket usocket))))
 
   (defun bytes-available-for-read (socket)
     (sb-alien:with-alien ((int-ptr (* sb-alien:unsigned-long)))
@@ -546,7 +544,7 @@
      waiter))
 ) ; progn
 
-#+ecl
+#+(and ecl win32)
 (progn
   (defun wait-for-input-internal (wl &key timeout)
     (with-mapped-conditions ()
