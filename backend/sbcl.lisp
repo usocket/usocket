@@ -402,6 +402,12 @@
 ;;; Based on LispWorks version written by Erik Huelsmann.
 
 #+(and sbcl win32)
+(eval-when (:compile-toplevel)
+  (defconstant +wait-failed+ -1) ; #xffffffff
+  (defconstant +wait-object-0+ 0)
+  (defconstant +wait-timeout+ 258))
+
+#+(and sbcl win32)
 (progn
   (defconstant fd-read 1)
   (defconstant fd-read-bit 0)
@@ -425,12 +431,6 @@
   (defconstant fd-address-list-change-bit 9)
   (defconstant fd-max-events 10)
   (defconstant fionread 1074030207)
-
-  ;; For WaitForSingleObject
-  (eval-when (:compile-toplevel)
-    (defconstant +wait-failed+ -1) ; #xffffffff
-    (defconstant +wait-object-0+ 0)
-    (defconstant +wait-timeout+ 258))
 
   (sb-alien:define-alien-type ws-socket sb-alien:unsigned-int)
 
