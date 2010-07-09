@@ -144,6 +144,7 @@
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
+;;; TODO: use send() if already connected.
 (defmethod socket-send ((usocket datagram-usocket) buffer length &key host port)
   (with-mapped-conditions (usocket)
     (openmcl-socket:send-to (socket usocket) buffer length
