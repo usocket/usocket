@@ -144,12 +144,14 @@
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
-;;; TODO: use send() if already connected.
 (defmethod socket-send ((usocket datagram-usocket) buffer length &key host port)
   (with-mapped-conditions (usocket)
-    (openmcl-socket:send-to (socket usocket) buffer length
-			    :remote-host (if host (host-to-hbo host))
-			    :remote-port port)))
+    (if (and host port)
+	(openmcl-socket:send-to (socket usocket) buffer length
+				:remote-host (host-to-hbo host)
+				:remote-port port)
+	;; following functino was defined in "vendor/ccl-send.lisp"
+	(ccl::send-for-usocket (socket usocket) buffer length))))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
   (with-mapped-conditions (usocket)
