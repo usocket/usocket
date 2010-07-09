@@ -556,7 +556,7 @@
      waiter))
 ) ; progn
 
-#-(and ecl win32)
+#+(and ecl (not win32))
 (progn
   (defun wait-for-input-internal (wl &key timeout)
     (with-mapped-conditions ()
