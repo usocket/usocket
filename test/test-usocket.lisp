@@ -23,76 +23,79 @@
 (defmacro with-caught-conditions ((expect throw) &body body)
   `(catch 'caught-error
      (handler-case
-      (progn ,@body)
-      (usocket:unknown-error (c) (if (typep c ,expect)
-                                     (throw 'caught-error ,throw)
-                                   (progn
-                                     (describe c)
-                                     (describe
-                                      (usocket::usocket-real-error c))
-                                     c)))
-      (error (c) (if (typep c ,expect)
-                     (throw 'caught-error ,throw)
-                   (progn
-                     (describe c)
-                     c)))
-      (usocket:unknown-condition (c) (if (typep c ,expect)
-                                         (throw 'caught-error ,throw)
-                                       (progn
-                                         (describe c)
-                                         (describe
-                                          (usocket::usocket-real-condition c))
-                                         c)))
-      (condition (c) (if (typep c ,expect)
-                         (throw 'caught-error ,throw)
-                       (progn
-                         (describe c)
-                         c))))))
+         (handler-bind ((usocket:unsupported
+                         #'(lambda (c)
+                             (declare (ignore c)) (continue))))
+           (progn ,@body))
+       (usocket:unknown-error (c) (if (typep c ',expect)
+                                      (throw 'caught-error ,throw)
+                                    (progn
+                                      (describe c)
+                                      (describe
+                                       (usocket::usocket-real-error c))
+                                      c)))
+       (error (c) (if (typep c ',expect)
+                      (throw 'caught-error ,throw)
+                    (progn
+                      (describe c)
+                      c)))
+       (usocket:unknown-condition (c) (if (typep c ',expect)
+                                          (throw 'caught-error ,throw)
+                                        (progn
+                                          (describe c)
+                                          (describe
+                                           (usocket::usocket-real-condition c))
+                                          c)))
+       (condition (c) (if (typep c ',expect)
+                          (throw 'caught-error ,throw)
+                        (progn
+                          (describe c)
+                          c))))))
 
 (deftest make-socket.1 (usocket:socket *fake-usocket*) :my-socket)
 (deftest make-socket.2 (usocket:socket-stream *fake-usocket*) :my-stream)
 
 (deftest socket-no-connect.1
-  (with-caught-conditions ('usocket:socket-error nil)
-      (usocket:socket-connect "127.0.0.0" +unused-local-port+ :timeout 0)
-      t)
+  (with-caught-conditions (usocket:socket-error nil)
+    (usocket:socket-connect "127.0.0.0" +unused-local-port+ :timeout 1)
+    t)
   nil)
 
 (deftest socket-no-connect.2
-  (with-caught-conditions ('usocket:socket-error nil)
-    (usocket:socket-connect #(127 0 0 0) +unused-local-port+ :timeout 0)
+  (with-caught-conditions (usocket:socket-error nil)
+    (usocket:socket-connect #(127 0 0 0) +unused-local-port+ :timeout 1)
     t)
   nil)
 
 (deftest socket-no-connect.3
-  (with-caught-conditions ('usocket:socket-error nil)
-    (usocket:socket-connect 2130706432 +unused-local-port+ :timeout 0) ;; == #(127 0 0 0)
+  (with-caught-conditions (usocket:socket-error nil)
+    (usocket:socket-connect 2130706432 +unused-local-port+ :timeout 1) ;; == #(127 0 0 0)
     t)
   nil)
 
 (deftest socket-failure.1
   (with-caught-conditions (#-(or cmu lispworks armedbear openmcl mcl)
-                             'usocket:network-unreachable-error
+                           usocket:network-unreachable-error
                            #+(or cmu lispworks armedbear)
-                             'usocket:unknown-error
+                           usocket:unknown-error
                            #+(or openmcl mcl)
-                             'usocket:timeout-error
+                           usocket:timeout-error
                            nil)
-    (usocket:socket-connect 2130706432 +unused-local-port+ :timeout 0) ;; == #(127 0 0 0)
+    (usocket:socket-connect 2130706432 +unused-local-port+ :timeout 1) ;; == #(127 0 0 0)
     :unreach)
   nil)
 
 (deftest socket-failure.2
   (with-caught-conditions (#+(or lispworks armedbear)
-                             'usocket:unknown-error
+                           usocket:unknown-error
                            #+cmu
-                             'usocket:network-unreachable-error
+                           usocket:network-unreachable-error
                            #+(or openmcl mcl)
-                             'usocket:timeout-error
+                           usocket:timeout-error
                            #-(or lispworks armedbear cmu openmcl mcl)
-                             'usocket:host-unreachable-error
+                           usocket:host-unreachable-error
                            nil)
-    (usocket:socket-connect +non-existing-host+ 80 :timeout 0) ;; 80 = just a port
+    (usocket:socket-connect +non-existing-host+ 80 :timeout 1) ;; 80 = just a port
     :unreach)
   nil)
 

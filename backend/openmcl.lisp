@@ -190,7 +190,6 @@
      (list (hbo-to-vector-quad (openmcl-socket:lookup-hostname
                                 (host-to-hostname name))))))
 
-
 (defun %setup-wait-list (wait-list)
   (declare (ignore wait-list)))
 
@@ -205,5 +204,5 @@
     (let* ((ticks-timeout (truncate (* (or timeout 1)
                                        ccl::*ticks-per-second*))))
       (input-available-p (wait-list-waiters wait-list)
-                               (when timeout ticks-timeout))
+			 (when timeout ticks-timeout))
       wait-list)))
