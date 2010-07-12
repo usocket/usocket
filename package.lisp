@@ -94,5 +94,4 @@
                               :defaults defaults
 			      :version :newest)))
     (setf (logical-pathname-translations "usocket")
-          `(("**;*.*.newest" ,home)
-	    ("**;*.*" ,home)))))
+          `(("**;*.*" ,home)))))
