@@ -204,21 +204,16 @@ error available."))
     ((64 112) . host-down-error)
     ((65 113) . host-unreachable-error)))
 
-
 (defun map-errno-condition (errno)
   (cdr (assoc errno +unix-errno-error-map+ :test #'member)))
 
-
 (defun map-errno-error (errno)
   (cdr (assoc errno +unix-errno-error-map+ :test #'member)))
-
 
 (defparameter +unix-ns-error-map+
   `((1 . ns-host-not-found-error)
     (2 . ns-try-again-condition)
     (3 . ns-no-recovery-error)))
-
-
 
 (defmacro unsupported (feature context &key minimum)
   `(cerror "Ignore it and continue" 'unsupported
@@ -228,3 +223,11 @@ error available."))
 
 (defmacro unimplemented (feature context)
   `(signal 'unimplemented :feature ,feature :context ,context))
+
+
+;;; People may want to ignore all unsupported warnings, here it is.
+(defmacro ignore-unsupported-warnings (&body body)
+  `(handler-bind ((unsupported
+                   #'(lambda (c)
+                       (declare (ignore c)) (continue))))
+     (progn ,@body)))
