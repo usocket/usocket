@@ -80,3 +80,19 @@
              #:insufficient-implementation ; conditions regarding usocket support level
              #:unsupported
              #:unimplemented))
+
+(in-package :usocket)
+
+;;; Logical Pathname Translations, learn from CL-HTTP source code
+(eval-when (:load-toplevel :execute)
+  (let* ((defaults #+asdf (asdf:component-pathname (asdf:find-system :usocket))
+                   #-asdf *load-truename*)
+         (home (make-pathname :name :wild :type :wild
+                              :directory (append (pathname-directory defaults)
+                                                 '(:wild-inferiors))
+                              :host (pathname-host defaults)
+                              :defaults defaults
+			      :version :newest)))
+    (setf (logical-pathname-translations "usocket")
+          `(("**;*.*.newest" ,home)
+	    ("**;*.*" ,home)))))

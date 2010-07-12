@@ -298,10 +298,10 @@
     (:datagram
      (let ((usocket (make-datagram-socket
 		     (if (and host port)
-			 (connect-to-udp-server host port
-						:local-address local-host
+			 (connect-to-udp-server (host-to-hostname host) port
+						:local-address (and local-host (host-to-hostname local-host))
 						:local-port local-port)
-			 (open-udp-socket :local-address local-host
+			 (open-udp-socket :local-address (and local-host (host-to-hostname local-host))
 					  :local-port local-port))
 		     :connected-p t)))
        (hcl:flag-special-free-action usocket)
