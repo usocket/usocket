@@ -215,10 +215,10 @@ The `body' is an implied progn form."
 the arguments `socket-connect-args' to `socket-var' and if `stream-var' is
 non-nil, bind the associated socket stream to it."
   `(with-connected-socket (,socket-var (socket-connect ,@socket-connect-args))
-       ,(if (null stream-var)
-           `(progn ,@body)
-          `(let ((,stream-var (socket-stream ,socket-var)))
-             ,@body))))
+     ,(if (null stream-var)
+          `(progn ,@body)
+           `(let ((,stream-var (socket-stream ,socket-var)))
+              ,@body))))
 
 (defmacro with-server-socket ((var server-socket) &body body)
   "Bind `server-socket' to `var', ensuring socket destruction on exit.
@@ -227,21 +227,19 @@ non-nil, bind the associated socket stream to it."
 
 The `body' is an implied progn form."
   `(with-connected-socket (,var ,server-socket)
-      ,@body))
+     ,@body))
 
 (defmacro with-socket-listener ((socket-var &rest socket-listen-args)
                                 &body body)
   "Bind the socket resulting from a call to `socket-listen' with arguments
 `socket-listen-args' to `socket-var'."
   `(with-server-socket (,socket-var (socket-listen ,@socket-listen-args))
-      ,@body))
-
+     ,@body))
 
 (defstruct (wait-list (:constructor %make-wait-list))
   %wait     ;; implementation specific
   waiters ;; the list of all usockets
-  map  ;; maps implementation sockets to usockets
-  )
+  map)  ;; maps implementation sockets to usockets
 
 ;; Implementation specific:
 ;;
@@ -253,9 +251,8 @@ The `body' is an implied progn form."
   (let ((wl (%make-wait-list)))
     (setf (wait-list-map wl) (make-hash-table))
     (%setup-wait-list wl)
-    (dolist (x waiters)
-      (add-waiter wl x))
-    wl))
+    (dolist (x waiters wl)
+      (add-waiter wl x))))
 
 (defun add-waiter (wait-list input)
   (setf (gethash (socket input) (wait-list-map wait-list)) input
@@ -275,7 +272,6 @@ The `body' is an implied progn form."
     (%remove-waiter wait-list waiter))
   (setf (wait-list-waiters wait-list) nil)
   (clrhash (wait-list-map wait-list)))
-
 
 (defun wait-for-input (socket-or-sockets &key timeout ready-only)
   "Waits for one or more streams to become ready for reading from
@@ -352,7 +348,6 @@ the values documented in usocket.lisp in the usocket class."
          integer)
       (setf (ldb (byte 8 i) integer)
             (aref buffer b)))))
-
 
 (defmacro port-to-octet-buffer (port buffer &key (start 0))
   `(integer-to-octet-buffer ,port ,buffer 2 ,start))
@@ -507,9 +502,6 @@ Optionally, a different fractional part can be specified."
       (truncate timeout 1)
     (values secs
             (truncate (* fractional sec-frac) 1))))
-
-
-
 
 ;;
 ;; Setting of documentation for backend defined functions

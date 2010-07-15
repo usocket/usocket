@@ -38,7 +38,6 @@
          (when (= result 0)
            (sb-alien:cast buf sb-alien:c-string))))))
 
-
 #+ecl
 (progn
   #-:wsock
@@ -148,7 +147,6 @@
              (when (fdset-fd-isset rfds (sb-bsd-sockets:socket-file-descriptor
                                          (socket sock)))
                (setf (state sock) :READ))))))))
-
 ) ; progn
 
 (defun map-socket-error (sock-err)
@@ -343,7 +341,6 @@
 (defmethod get-peer-port ((usocket stream-usocket))
   (nth-value 1 (get-peer-name usocket)))
 
-
 (defun get-host-by-address (address)
   (with-mapped-conditions ()
     (sb-bsd-sockets::host-ent-name
@@ -396,7 +393,6 @@
                             rfds)
                        (setf (state x) :READ))))))))))
 ) ; progn
-
 
 ;;; WAIT-FOR-INPUT support for SBCL on Windows platform (Chun Tian (binghe))
 ;;; Based on LispWorks version written by Erik Huelsmann.
@@ -499,7 +495,6 @@
     (notany #'socket-ready-p sockets))
 
   (defun wait-for-input-internal (wait-list &key timeout)
-    (format t "timeout: ~A, ~A~%" timeout (truncate (* 1000000 timeout)))
     (when (waiting-required (wait-list-waiters wait-list))
       (let ((rv (wait-for-single-object (wait-list-%wait wait-list) (truncate (* 1000000 timeout)))))
         (ecase rv

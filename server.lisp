@@ -67,9 +67,9 @@
                               (error "send error: ~A~%" n))))))
                   (error "receive error: ~A" n))))
             #+scl (when thread:*quitting-lisp* (return))
-            #+(and cmu mp) (mp:process-yield))))
-    (socket-close socket)
-    (values)))
+            #+(and cmu mp) (mp:process-yield)))
+      (socket-close socket)
+      (values))))
 
 (defun default-tcp-handler (stream) ; null
   (declare (type stream stream))
