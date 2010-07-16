@@ -13,10 +13,6 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require :sockets))
 
-#+(and sbcl win32) ; for "WaitForSingleObject"
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (sb-alien:load-shared-object "kernel32.dll"))
-
 #+sbcl
 (progn
   #-win32
@@ -399,9 +395,9 @@
 
 #+(and sbcl win32)
 (eval-when (:compile-toplevel)
-  (defconstant +wait-failed+ -1) ; #xffffffff
-  (defconstant +wait-object-0+ 0)
-  (defconstant +wait-timeout+ 258))
+  (defconstant +wsa-wait-failed+ #xffffffff)
+  (defconstant +wsa-wait-event-0+ 0)
+  (defconstant +wsa-wait-timeout+ 258))
 
 #+(and sbcl win32)
 (progn
@@ -429,6 +425,8 @@
   (defconstant fionread 1074030207)
 
   (sb-alien:define-alien-type ws-socket sb-alien:unsigned-int)
+  (sb-alien:define-alien-type ws-dword sb-alien:unsigned-long)
+  (sb-alien:define-alien-type ws-event sb-alien::hinstance)
 
   (sb-alien:define-alien-type nil
     (sb-alien:struct wsa-network-events
@@ -436,28 +434,35 @@
       (error-code (array sb-alien:int 10)))) ; 10 = fd-max-events
 
   (sb-alien:define-alien-routine ("WSACreateEvent" wsa-event-create)
-      sb-alien::hinstance) ; return type only
+      ws-event) ; return type only
+
+  (sb-alien:define-alien-routine ("WSAResetEvent" wsa-event-reset)
+      (boolean #.sb-vm::n-machine-word-bits)
+    (event-object ws-event))
 
   (sb-alien:define-alien-routine ("WSACloseEvent" wsa-event-close)
-      (sb-alien:boolean #.sb-vm::n-machine-word-bits)
-    (event-object sb-alien::hinstance))
+      (boolean #.sb-vm::n-machine-word-bits)
+    (event-object ws-event))
 
   (sb-alien:define-alien-routine ("WSAEnumNetworkEvents" wsa-enum-network-events)
       sb-alien:int
     (socket ws-socket)
-    (event-object sb-alien::hinstance)
+    (event-object ws-event)
     (network-events (* (sb-alien:struct wsa-network-events))))
 
   (sb-alien:define-alien-routine ("WSAEventSelect" wsa-event-select)
       sb-alien:int
     (socket ws-socket)
-    (event-object sb-alien::hinstance)
+    (event-object ws-event)
     (network-events sb-alien:long))
 
-  (sb-alien:define-alien-routine ("WaitForSingleObject" wait-for-single-object)
-      sb-alien:long
-    (object sb-alien::hinstance)
-    (timeout sb-alien:long))
+  (sb-alien:define-alien-routine ("WSAWaitForMultipleEvents" wsa-wait-for-multiple-events)
+      ws-dword
+    (number-of-events ws-dword)
+    (events (* ws-event))
+    (wait-all-p (boolean #.sb-vm::n-machine-word-bits))
+    (timeout ws-dword)
+    (alertable-p (boolean #.sb-vm::n-machine-word-bits)))
 
   (sb-alien:define-alien-routine ("ioctlsocket" wsa-ioctlsocket)
       sb-alien:int
@@ -496,11 +501,12 @@
 
   (defun wait-for-input-internal (wait-list &key timeout)
     (when (waiting-required (wait-list-waiters wait-list))
-      (let ((rv (wait-for-single-object (wait-list-%wait wait-list) (truncate (* 1000000 timeout)))))
+      (let ((rv (wsa-wait-for-multiple-events 1 (wait-list-%wait wait-list)
+                                              nil (truncate (* 1000 timeout)) nil)))
         (ecase rv
-          ((#.+wait-object-0+ #.+wait-timeout+)
+          ((#.+wsa-wait-event-0+ #.+wsa-wait-timeout+)
            (update-ready-and-state-slots (wait-list-waiters wait-list)))
-          (#.+wait-failed+
+          ((#.+wsa-wait-failed+)
            (raise-usock-err
             (sb-win32::get-last-error-message (sb-win32::get-last-error))
             wait-list))))))
@@ -530,24 +536,32 @@
                                       network-events)
                 (maybe-wsa-error rv socket)))))))
 
+  (defun os-wait-list-%wait (wait-list)
+    (sb-alien:deref (wait-list-%wait wait-list)))
+
+  (defun (setf os-wait-list-%wait) (value wait-list)
+    (setf (sb-alien:deref (wait-list-%wait wait-list)) value))
+
   (defun %setup-wait-list (wait-list)
-    (setf (wait-list-%wait wait-list) (wsa-event-create))
+    (setf (wait-list-%wait wait-list) (sb-alien:make-alien ws-event))
+    (setf (os-wait-list-%wait wait-list) (wsa-event-create))
     (sb-ext:finalize wait-list
                      #'(lambda () (unless (null (wait-list-%wait wait-list))
-                                    (wsa-event-close (wait-list-%wait wait-list))))))
+                                    (wsa-event-close (os-wait-list-%wait wait-list))
+                                    (sb-alien:free-alien (wait-list-%wait wait-list))))))
 
   (defun %add-waiter (wait-list waiter)
     (let ((events (etypecase waiter
                     (stream-server-usocket (logior fd-connect fd-accept fd-close))
-                    (stream-usocket (logior fd-connect fd-read fd-oob fd-close))
+                    (stream-usocket (logior fd-read))
                     (datagram-usocket (logior fd-read)))))
       (maybe-wsa-error
-       (wsa-event-select (os-socket-handle waiter) (wait-list-%wait wait-list) events)
+       (wsa-event-select (os-socket-handle waiter) (os-wait-list-%wait wait-list) events)
        waiter)))
 
   (defun %remove-waiter (wait-list waiter)
     (maybe-wsa-error
-     (wsa-event-select (os-socket-handle waiter) (wait-list-%wait wait-list) 0)
+     (wsa-event-select (os-socket-handle waiter) (os-wait-list-%wait wait-list) 0)
      waiter))
 ) ; progn
 
