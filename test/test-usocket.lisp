@@ -196,5 +196,20 @@
         (usocket:socket-close sock))))
   #.*wait-for-input-timeout*)
 
+(deftest wait-for-input.3
+  (with-caught-conditions (nil nil)
+    (let ((sock (usocket:socket-connect *common-lisp-net* 80)))
+      (unwind-protect
+          (progn
+            (format (usocket:socket-stream sock)
+                    "GET / HTTP/1.0~c~c~c~c"
+                    #\Return #\linefeed #\Return #\linefeed)
+            (force-output (usocket:socket-stream sock))
+            (usocket:wait-for-input sock :timeout *wait-for-input-timeout*)
+            (read-line (usocket:socket-stream sock)))
+        (usocket:socket-close sock))))
+  #+(or mcl clisp) "HTTP/1.1 200 OK"
+  #-(or mcl clisp) #.(format nil "HTTP/1.1 200 OK~A" #\Return) nil)
+
 (defun run-usocket-tests ()
   (do-tests))
