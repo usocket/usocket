@@ -72,7 +72,9 @@
        (raise-error)))))
 
 (defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay 
-                            local-host local-port)
+                            local-host local-port (protocol :stream))
+  (when (eq protocol :datagram)
+    (unsupported '(protocol :datagram) 'socket-connect))
   (with-mapped-conditions ()
     (let* ((socket
             (make-instance 'active-socket
