@@ -393,14 +393,12 @@
 ;;; WAIT-FOR-INPUT support for SBCL on Windows platform (Chun Tian (binghe))
 ;;; Based on LispWorks version written by Erik Huelsmann.
 
-#+(and sbcl win32)
-(eval-when (:compile-toplevel)
+#+win32 ; shared by ECL and SBCL
+(progn
   (defconstant +wsa-wait-failed+ #xffffffff)
   (defconstant +wsa-wait-event-0+ 0)
-  (defconstant +wsa-wait-timeout+ 258))
+  (defconstant +wsa-wait-timeout+ 258)
 
-#+(and sbcl win32)
-(progn
   (defconstant fd-read 1)
   (defconstant fd-read-bit 0)
   (defconstant fd-write 2)
@@ -424,6 +422,22 @@
   (defconstant fd-max-events 10)
   (defconstant fionread 1074030207)
 
+  ;; Note: for ECL, socket-handle will return raw Windows Handle,
+  ;;       while SBCL returns OSF Handle instead.
+  (defun socket-handle (usocket)
+    (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
+
+  (defun socket-ready-p (socket)
+    (if (typep socket 'stream-usocket)
+        (plusp (bytes-available-for-read socket))
+      (%ready-p socket)))
+
+  (defun waiting-required (sockets)
+    (notany #'socket-ready-p sockets))
+) ; progn
+
+#+(and sbcl win32)
+(progn
   (sb-alien:define-alien-type ws-socket sb-alien:unsigned-int)
   (sb-alien:define-alien-type ws-dword sb-alien:unsigned-long)
   (sb-alien:define-alien-type ws-event sb-alien::hinstance)
@@ -482,22 +496,11 @@
   (defun os-socket-handle (usocket)
     (sockint::fd->handle (sb-bsd-sockets:socket-file-descriptor (socket usocket))))
 
-  (defun socket-handle (usocket)
-    (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
-
   (defun bytes-available-for-read (socket)
     (sb-alien:with-alien ((int-ptr sb-alien:unsigned-long))
       (maybe-wsa-error (wsa-ioctlsocket (os-socket-handle socket) fionread (sb-alien:addr int-ptr))
                        socket)
       int-ptr))
-
-  (defun socket-ready-p (socket)
-    (if (typep socket 'stream-usocket)
-        (plusp (bytes-available-for-read socket))
-      (%ready-p socket)))
-
-  (defun waiting-required (sockets)
-    (notany #'socket-ready-p sockets))
 
   (defun wait-for-input-internal (wait-list &key timeout)
     (when (waiting-required (wait-list-waiters wait-list))
@@ -588,4 +591,88 @@
 
   (defun %remove-waiter (wl w)
     (declare (ignore wl w)))
+) ; progn
+
+#+(and ecl win32)
+(progn
+  (defun maybe-wsa-error (rv &optional syscall)
+    (unless (zerop rv)
+      (sb-bsd-sockets::socket-error syscall)))
+
+  (defun %setup-wait-list (wl)
+    (setf (wait-list-%wait wl)
+          (ffi:c-inline () () :int
+           "WSAEVENT event;
+            event = WSACreateEvent();
+            @(return) = event;")))
+
+  (defun %add-waiter (wait-list waiter)
+    (let ((events (etypecase waiter
+                    (stream-server-usocket (logior fd-connect fd-accept fd-close))
+                    (stream-usocket (logior fd-read))
+                    (datagram-usocket (logior fd-read)))))
+      (maybe-wsa-error
+       (ffi:c-inline ((socket-handle waiter) (wait-list-%wait wait-list) events)
+                     (:fixnum :fixnum :fixnum) :fixnum
+        "int result;
+         result = WSAEventSelect((SOCKET)#0, (WSAEVENT)#1, (long)#2);
+         @(return) = result;")
+       '%add-waiter)))
+
+  (defun %remove-waiter (wait-list waiter)
+    (maybe-wsa-error
+     (ffi:c-inline ((socket-handle waiter) (wait-list-%wait wait-list))
+                   (:fixnum :fixnum) :fixnum
+      "int result;
+       result = WSAEventSelect((SOCKET)#0, (WSAEVENT)#1, 0L);
+       @(return) = result;")
+     '%remove-waiter))
+
+  ;; TODO: how to handle error (result) in this call?
+  (defun bytes-available-for-read (socket)
+    (ffi:c-inline ((socket-handle socket)) (:fixnum) :fixnum
+     "u_long nbytes;
+      int result;
+      nbytes = 0L;
+      result = ioctlsocket((SOCKET)#0, FIONREAD, &nbytes);
+      @(return) = nbytes;"))
+
+  (defun update-ready-and-state-slots (sockets)
+    (dolist (socket sockets)
+      (if (or (and (stream-usocket-p socket)
+                   (listen (socket-stream socket)))
+              (%ready-p socket))
+          (setf (state socket) :READ)
+        (let ((events (etypecase socket
+                        (stream-server-usocket (logior fd-connect fd-accept fd-close))
+                        (stream-usocket (logior fd-read))
+                        (datagram-usocket (logior fd-read)))))
+          ;; TODO: check the iErrorCode array
+          (if (ffi:c-inline ((socket-handle socket) events) (:fixnum :fixnum) :bool
+               "WSANETWORKEVENTS network_events;
+                int i, result;
+                result = WSAEnumNetworkEvents((SOCKET)#0, 0, &network_events);
+                if (!result) {
+                  @(return) = (#1 & network_events.lNetworkEvents)? Ct : Cnil;
+                } else
+                  @(return) = Cnil;")
+              (setf (%ready-p socket) t
+                    (state socket) :READ)
+            (sb-bsd-sockets::socket-error 'update-ready-and-state-slots))))))
+
+  (defun wait-for-input-internal (wait-list &key timeout)
+    (when (waiting-required (wait-list-waiters wait-list))
+      (let ((rv (ffi:c-inline ((wait-list-%wait wait-list) (truncate (* 1000 timeout)))
+                              (:fixnum :fixnum) :fixnum
+                 "DWORD result;
+                  WSAEVENT events[1];
+                  events[0] = (WSAEVENT)#0;
+                  result = WSAWaitForMultipleEvents(1, events, NULL, #1, NULL);
+                  @(return) = result;")))
+        (ecase rv
+          ((#.+wsa-wait-event-0+ #.+wsa-wait-timeout+)
+           (update-ready-and-state-slots (wait-list-waiters wait-list)))
+          ((#.+wsa-wait-failed+)
+           (sb-bsd-sockets::socket-error 'wait-for-input-internal))))))
+
 ) ; progn

@@ -35,7 +35,7 @@ The value stored in this slot can be any of
 
 The last two remain unused in the current version.
 ")
-   #+(and win32 (or sbcl lispworks))
+   #+(and win32 (or sbcl ecl lispworks))
    (%ready-p
     :initform nil
     :accessor %ready-p
@@ -304,11 +304,11 @@ the values documented in usocket.lisp in the usocket class."
           (values (if ready-only socks socket-or-sockets) to)))))
   (let* ((start (get-internal-real-time))
          (sockets-ready 0))
+    #-(and win32 (or sbcl ecl))
     (dolist (x (wait-list-waiters socket-or-sockets))
       (when (setf (state x)
                   (if (and (stream-usocket-p x)
-                           (listen (socket-stream x))
-                           #+(and sbcl win32) nil) ; TODO: bug?!
+                           (listen (socket-stream x)))
                       :READ NIL))
         (incf sockets-ready)))
     ;; the internal routine is responsibe for
