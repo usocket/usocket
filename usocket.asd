@@ -23,6 +23,7 @@
 		  :components ((:file "split-sequence")
 			       #+mcl (:file "kqueue")
 			       #+openmcl (:file "ccl-send")
+			       #+armedbear (:file "abcl-jdi")
                                (:file "spawn-thread")))
                  (:file "usocket" :depends-on ("vendor"))
                  (:file "condition" :depends-on ("usocket"))
