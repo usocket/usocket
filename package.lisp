@@ -5,10 +5,6 @@
 
 (in-package :usocket-system)
 
-#+lispworks
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (require "comm"))
-
 (defpackage :usocket
   (:use :common-lisp)
   (:export   #:*wildcard-host*

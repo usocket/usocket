@@ -431,7 +431,8 @@ such as 3232235777."
     ((or (vector t 4)
          (array (unsigned-byte 8) (4)))
      (vector-quad-to-dotted-quad host))
-    (integer (hbo-to-dotted-quad host))))
+    (integer (hbo-to-dotted-quad host))
+    (null "0.0.0.0")))
 
 (defun ip= (ip1 ip2)
   (etypecase ip1
@@ -452,7 +453,7 @@ such as 3232235777."
 ;; DNS helper functions
 ;;
 
-#-(or clisp armedbear)
+#-clisp
 (progn
   (defun get-host-by-name (name)
     (let ((hosts (get-hosts-by-name name)))
