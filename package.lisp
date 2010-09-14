@@ -6,7 +6,7 @@
 (in-package :usocket-system)
 
 (defpackage :usocket
-  (:use :common-lisp)
+  (:use :common-lisp #+abcl :java)
   (:export   #:*wildcard-host*
              #:*auto-port*
 

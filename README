@@ -22,14 +22,14 @@ The library currently supports:
 
  - SBCL
  - CMUCL
- - ArmedBear (post feb 11th, 2006 CVS or 0.0.10 and higher)
- - clisp
+ - ArmedBear Common Lisp
+ - GNU CLISP
  - Allegro Common Lisp
  - LispWorks
- - OpenMCL
+ - Clozure CL
  - ECL
  - Scieneer Common Lisp
- - <Your favorite Common Lisp here?>
+ - Macintosh Common Lisp
 
 If your favorite common lisp misses in the list above, please contact
 usocket-devel@common-lisp.net and submit a request.  Please include

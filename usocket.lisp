@@ -11,7 +11,7 @@
 (defparameter *auto-port* 0
   "Port number to pass when an auto-assigned port number is wanted.")
 
-(defconstant +max-datagram-packet-size+ 65536)
+(defconstant +max-datagram-packet-size+ 65507)
 
 (defclass usocket ()
   ((socket

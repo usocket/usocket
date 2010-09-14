@@ -8,29 +8,15 @@
 
 (in-package :usocket)
 
-;;; Symbols in JAVA package
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defparameter *java-package-symbols*
-    '(java:jarray-length
-      java:jarray-ref
-      java:java-exception
-      java:java-exception-cause
-      java:jconstructor
-      java:jcall
-      java:jclass
-      java:jclass-of
-      java:jfield
-      java:jmethod
-      java:jnew
-      java:jstatic
-      java:make-immediate-object))
-  (import *java-package-symbols*))
-
 ;;; Java Classes ($*...)
 (defvar $*boolean (jclass "boolean"))
+(defvar $*byte (jclass "byte"))
+(defvar $*byte[] (jclass "[B"))
 (defvar $*int (jclass "int"))
 (defvar $*long (jclass "long"))
+(defvar $*|Byte| (jclass "java.lang.Byte"))
 (defvar $*DatagramChannel (jclass "java.nio.channels.DatagramChannel"))
+(defvar $*DatagramPacket (jclass "java.net.DatagramPacket"))
 (defvar $*DatagramSocket (jclass "java.net.DatagramSocket"))
 (defvar $*Inet4Address (jclass "java.net.Inet4Address"))
 (defvar $*InetAddress (jclass "java.net.InetAddress"))
@@ -48,6 +34,9 @@
 (defvar $*String (jclass "java.lang.String"))
 
 ;;; Java Constructor ($%.../n)
+(defvar $%Byte/0 (jconstructor $*|Byte| $*byte))
+(defvar $%DatagramPacket/3 (jconstructor $*DatagramPacket $*byte[] $*int $*int))
+(defvar $%DatagramPacket/5 (jconstructor $*DatagramPacket $*byte[] $*int $*int $*InetAddress $*int))
 (defvar $%DatagramSocket/0 (jconstructor $*DatagramSocket))
 (defvar $%DatagramSocket/1 (jconstructor $*DatagramSocket $*int))
 (defvar $%DatagramSocket/2 (jconstructor $*DatagramSocket $*int $*InetAddress))
@@ -67,6 +56,7 @@
 (defvar $@bind/ServerSocket/1 (jmethod $*ServerSocket "bind" $*SocketAddress))
 (defvar $@bind/ServerSocket/2 (jmethod $*ServerSocket "bind" $*SocketAddress $*int))
 (defvar $@bind/Socket/1 (jmethod $*Socket "bind" $*SocketAddress))
+(defvar $@byteValue/0 (jmethod $*|Byte| "byteValue"))
 (defvar $@channel/0 (jmethod $*SelectionKey "channel"))
 (defvar $@close/DatagramSocket/0 (jmethod $*DatagramSocket "close"))
 (defvar $@close/Selector/0 (jmethod $*Selector "close"))
@@ -83,15 +73,19 @@
 (defvar $@getChannel/DatagramSocket/0 (jmethod $*DatagramSocket "getChannel"))
 (defvar $@getChannel/ServerSocket/0 (jmethod $*ServerSocket "getChannel"))
 (defvar $@getChannel/Socket/0 (jmethod $*Socket "getChannel"))
+(defvar $@getAddress/DatagramPacket/0 (jmethod $*DatagramPacket "getAddress"))
 (defvar $@getHostName/0 (jmethod $*InetAddress "getHostName"))
 (defvar $@getInetAddress/DatagramSocket/0 (jmethod $*DatagramSocket "getInetAddress"))
 (defvar $@getInetAddress/ServerSocket/0 (jmethod $*ServerSocket "getInetAddress"))
 (defvar $@getInetAddress/Socket/0 (jmethod $*Socket "getInetAddress"))
+(defvar $@getLength/DatagramPacket/0 (jmethod $*DatagramPacket "getLength"))
 (defvar $@getLocalAddress/DatagramSocket/0 (jmethod $*DatagramSocket "getLocalAddress"))
 (defvar $@getLocalAddress/Socket/0 (jmethod $*Socket "getLocalAddress"))
 (defvar $@getLocalPort/DatagramSocket/0 (jmethod $*DatagramSocket "getLocalPort"))
 (defvar $@getLocalPort/ServerSocket/0 (jmethod $*ServerSocket "getLocalPort"))
 (defvar $@getLocalPort/Socket/0 (jmethod $*Socket "getLocalPort"))
+(defvar $@getOffset/DatagramPacket/0 (jmethod $*DatagramPacket "getOffset"))
+(defvar $@getPort/DatagramPacket/0 (jmethod $*DatagramPacket "getPort"))
 (defvar $@getPort/DatagramSocket/0 (jmethod $*DatagramSocket "getPort"))
 (defvar $@getPort/Socket/0 (jmethod $*Socket "getPort"))
 (defvar $@hasNext/0 (jmethod $*Iterator "hasNext"))
@@ -101,10 +95,12 @@
 (defvar $@open/Selector/0 (jmethod $*Selector "open"))
 (defvar $@open/ServerSocketChannel/0 (jmethod $*ServerSocketChannel "open"))
 (defvar $@open/SocketChannel/0 (jmethod $*SocketChannel "open"))
+(defvar $@receive/1 (jmethod $*DatagramSocket "receive" $*DatagramPacket))
 (defvar $@register/2 (jmethod $*SelectableChannel "register" $*Selector $*int))
 (defvar $@select/0 (jmethod $*Selector "select"))
 (defvar $@select/1 (jmethod $*Selector "select" $*long))
 (defvar $@selectedKeys/0 (jmethod $*Selector "selectedKeys"))
+(defvar $@send/1 (jmethod $*DatagramSocket "send" $*DatagramPacket))
 (defvar $@setReuseAddress/1 (jmethod $*ServerSocket "setReuseAddress" $*boolean))
 (defvar $@setSoTimeout/DatagramSocket/1 (jmethod $*DatagramSocket "setSoTimeout" $*int))
 (defvar $@setSoTimeout/Socket/1 (jmethod $*Socket "setSoTimeout" $*int))
@@ -137,6 +133,18 @@
 
 ;;; HANDLE-CONTITION
 
+(defparameter +abcl-error-map+
+  `(("java.net.BindException" . operation-not-permitted-error)
+    ("java.net.ConnectException" . connection-refused-error)
+    ("java.net.NoRouteToHostException" . network-unreachable-error) ; untested
+    ("java.net.PortUnreachableException" . protocol-not-supported-error) ; untested
+    ("java.net.ProtocolException" . protocol-not-supported-error) ; untested
+    ("java.net.SocketException" . socket-type-not-supported-error) ; untested
+    ("java.net.SocketTimeoutException" . timeout-error)))
+
+(defparameter +abcl-nameserver-error-map+
+  `(("java.net.UnknownHostException" . ns-host-not-found-error)))
+
 (defun handle-condition (condition &optional (socket nil))
   (typecase condition
     (java-exception
@@ -153,27 +161,18 @@
 	     (when usock-error
 	       (error usock-error :socket socket))))))))
 
-(defparameter +abcl-error-map+
-  `(("java.net.ConnectException" . connection-refused-error)
-    ("java.net.SocketTimeoutException" . timeout-error)
-    ("java.net.BindException" . operation-not-permitted-error)))
-
-(defparameter +abcl-nameserver-error-map+
-  `(("java.net.UnknownHostException" . ns-host-not-found-error)))
-
 ;;; GET-HOSTS-BY-NAME
 
 (defun get-address (address)
-  (let* ((array (%get-address address))
-	 (length (jarray-length array)))
-    (labels ((jbyte (n)
-	       (let ((byte (jarray-ref array n)))
-		 (if (plusp byte)
-		     byte
-		     (+ 256 byte)))))
-      (if (= 4 length)
-	  (vector (jbyte 0) (jbyte 1) (jbyte 2) (jbyte 3))
-	  nil)))) ; not a IPv4 address?!
+  (when address
+    (let* ((array (%get-address address))
+	   (length (jarray-length array)))
+      (labels ((jbyte (n)
+		 (let ((byte (jarray-ref array n)))
+		   (if (minusp byte) (+ 256 byte) byte))))
+	(if (= 4 length)
+	    (vector (jbyte 0) (jbyte 1) (jbyte 2) (jbyte 3))
+	    nil))))) ; not a IPv4 address?!
 
 (defun get-hosts-by-name (name)
   (with-mapped-conditions ()
@@ -225,7 +224,7 @@
 	   (let ((address (jnew $%InetSocketAddress/2 (host-to-inet4 host) port)))
 	     (with-mapped-conditions ()
 	       (jcall $@connect/DatagramChannel/1 channel address))))
-	 (setq usocket (make-datagram-socket socket))
+	 (setq usocket (make-datagram-socket socket :connected-p (if (and host port) t nil)))
 	 (when timeout
 	   (jcall $@setSoTimeout/DatagramSocket/1 socket (truncate (* 1000 timeout)))))))
     usocket))
@@ -316,14 +315,54 @@
 
 ;;; SOCKET-SEND & SOCKET-RECEIVE
 
-(defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
-  (with-mapped-conditions (socket)
-    ))
+(defun *->byte (data)
+  (declare (type (unsigned-byte 8) data)) ; required by SOCKET-SEND
+  (jnew $%Byte/0 (if (> data 127) (- data 256) data)))
 
-(defmethod socket-receive ((socket datagram-usocket) buffer length
+(defun byte->* (byte &optional (element-type '(unsigned-byte 8)))
+  (let* ((ub8 (if (minusp byte) (+ 256 byte) byte)))
+    (if (eq element-type 'character)
+	(code-char ub8)
+	ub8)))
+
+(defmethod socket-send ((usocket datagram-usocket) buffer length &key host port)
+  (let* ((socket (socket usocket))
+	 (real-length (or length (length buffer)))
+	 (byte-array (jnew-array $*byte real-length))
+	 (packet (if (and host port)
+		     (jnew $%DatagramPacket/5 byte-array 0 real-length (host-to-inet4 host) port)
+		     (jnew $%DatagramPacket/3 byte-array 0 real-length))))
+    ;; prepare sending data
+    (loop for i from 0 below real-length
+       do (setf (jarray-ref byte-array i) (*->byte (aref buffer i))))
+    (with-mapped-conditions (usocket)
+      (jcall $@send/1 socket packet))
+    real-length))
+
+;;; TODO: return-host and return-port cannot be get ...
+(defmethod socket-receive ((usocket datagram-usocket) buffer length
 			   &key (element-type '(unsigned-byte 8)))
-  (with-mapped-conditions (socket)
-    ))
+  (let* ((socket (socket usocket))
+	 (real-length (or length +max-datagram-packet-size+))
+	 (byte-array (jnew-array $*byte real-length))
+	 (packet (jnew $%DatagramPacket/3 byte-array 0 real-length)))
+    (with-mapped-conditions (usocket)
+      (jcall $@receive/1 socket packet))
+    (let* ((receive-length (jcall $@getLength/DatagramPacket/0 packet))
+	   (return-buffer (or buffer (make-array receive-length :element-type element-type))))
+      (loop for i from 0 below receive-length
+	 do (setf (aref return-buffer i)
+		  (byte->* (jarray-ref byte-array i) element-type)))
+      (let ((return-host (if (connected-p usocket)
+			     (get-peer-address usocket)
+			     (get-address (jcall $@getAddress/DatagramPacket/0 packet))))
+	    (return-port (if (connected-p usocket)
+			     (get-peer-port usocket)
+			     (jcall $@getPort/DatagramPacket/0 packet))))
+	(values return-buffer
+		receive-length
+		return-host
+		return-port)))))
 
 ;;; WAIT-FOR-INPUT
 
