@@ -231,15 +231,16 @@
 
 ;;; SOCKET-LISTEN
 
-(defun socket-listen (host port &key (element-type 'character)
+(defun socket-listen (host port &key reuseaddress
                       (reuse-address nil reuse-address-supplied-p)
-		      (backlog 5 backlog-supplied-p))
+		      (backlog 5 backlog-supplied-p)
+		      (element-type 'character))
   (declare (type boolean reuse-address))
-  (let* ((channel (jstatic $@open/ServerSocketChannel/0 $*ServerSocketChannel))
+  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+	 (channel (jstatic $@open/ServerSocketChannel/0 $*ServerSocketChannel))
 	 (socket (jcall $@socket/ServerSocketChannel/0 channel))
 	 (endpoint (jnew $%InetSocketAddress/2 (host-to-inet4 host) (or port 0))))
-    (when reuse-address-supplied-p
-      (jcall $@setReuseAddress/1 socket (if reuse-address +java-true+ +java-false+)))
+    (jcall $@setReuseAddress/1 socket (if reuseaddress +java-true+ +java-false+))
     (with-mapped-conditions (socket)
       (if backlog-supplied-p
 	  (jcall $@bind/ServerSocket/2 socket endpoint backlog)

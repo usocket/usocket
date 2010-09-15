@@ -1,0 +1,7 @@
+0.5.0:
+
+* New supported platform: Macintosh Common Lisp (5.0 and up, plus RMCL)
+* Support for UDP (datagram-usocket) was added (for all supported platform except MCL)
+* Add WAIT-FOR-INPUT support for SBCL and ECL on win32.
+* Simple TCP and UDP server API: SOCKET-SERVER
+* Lots of bug fixed since 0.4.1

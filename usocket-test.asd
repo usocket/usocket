@@ -23,7 +23,9 @@
     :components ((:module "test"
 		  :components ((:file "package")
 			       (:file "test-usocket"
-				      :depends-on ("package"))))))
+				      :depends-on ("package"))
+			       (:file "test-condition"
+				      :depends-on ("test-usocket"))))))
 
 (defmethod perform ((op test-op) (c (eql (find-system :usocket-test))))
   (funcall (intern "DO-TESTS" "USOCKET-TEST")))

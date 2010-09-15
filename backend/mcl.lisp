@@ -94,13 +94,13 @@
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
-  (declare (ignore reuseaddress reuse-address-supplied-p))
-  (let ((socket (with-mapped-conditions ()
-                  (make-instance 'passive-socket 
-                    :local-port port
-                    :local-host host
-                    :reuse-address reuse-address
-                    :backlog backlog))))
+  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+	 (socket (with-mapped-conditions ()
+		   (make-instance 'passive-socket 
+				  :local-port port
+				  :local-host host
+				  :reuse-address reuseaddress
+				  :backlog backlog))))
     (make-stream-server-socket socket :element-type element-type)))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
