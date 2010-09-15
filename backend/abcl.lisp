@@ -249,9 +249,9 @@
 
 ;;; SOCKET-ACCEPT
 
-(defmethod socket-accept ((socket stream-server-usocket) &key (element-type 'character))
-  (with-mapped-conditions (socket)
-    (let* ((client-socket (jcall $@accept/0 socket))
+(defmethod socket-accept ((usocket stream-server-usocket) &key (element-type 'character))
+  (with-mapped-conditions (usocket)
+    (let* ((client-socket (jcall $@accept/0 (socket usocket)))
 	   (stream (ext:get-socket-stream client-socket :element-type element-type)))
       (make-stream-socket :stream stream :socket client-socket))))
 

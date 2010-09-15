@@ -9,7 +9,7 @@
                            (timeout 1) (max-buffer-size +max-datagram-packet-size+)
                            ;; for tcp
                            element-type reuse-address multi-threading)
-  (let* ((real-host (or host #(0 0 0 0)))
+  (let* ((real-host (or host *wildcard-host*))
          (socket (ecase protocol
                    (:stream
                     (apply #'socket-listen
