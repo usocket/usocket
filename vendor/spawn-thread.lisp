@@ -65,6 +65,9 @@
   #+scl
   (mp:make-process #'(lambda () (apply function args))
                    :name name)
+  #+abcl
+  (threads:make-thread #'(lambda () (apply function args))
+		       :name name)
   #+threads-not-available
   (declare (ignore name function args))
   #+threads-not-available
