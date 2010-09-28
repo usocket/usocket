@@ -132,7 +132,7 @@ condition available."))
 error available."))
 
 (define-usocket-condition-classes
-  (ns-try-again)
+  (ns-try-again-condition)
   (ns-condition))
 
 (define-condition ns-unknown-condition (ns-condition)

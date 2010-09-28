@@ -209,10 +209,10 @@
       ;; constants mentioned in C
       (let ((exception
              (second (assoc errno
-                            '((1 ns-host-not-found-error) ;; HOST_NOT_FOUND
-                              (2 ns-no-recovery-error)    ;; NO_DATA
-                              (3 ns-no-recovery-error)    ;; NO_RECOVERY
-                              (4 ns-try-again))))))       ;; TRY_AGAIN
+                            '((1 ns-host-not-found-error)     ;; HOST_NOT_FOUND
+                              (2 ns-no-recovery-error)        ;; NO_DATA
+                              (3 ns-no-recovery-error)        ;; NO_RECOVERY
+                              (4 ns-try-again-condition)))))) ;; TRY_AGAIN
         (when exception
           (error exception))))))
 
