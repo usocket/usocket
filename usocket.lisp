@@ -11,7 +11,18 @@
 (defparameter *auto-port* 0
   "Port number to pass when an auto-assigned port number is wanted.")
 
-(defconstant +max-datagram-packet-size+ 65507)
+(defconstant +max-datagram-packet-size+ 65507
+  "The theoretical maximum amount of data in a UDP datagram.
+
+The IPv4 UDP packets have a 16-bit length constraint, and IP+UDP header has 28-byte.
+
+IP_MAXPACKET = 65535,       /* netinet/ip.h */
+sizeof(struct ip) = 20,     /* netinet/ip.h */
+sizeof(struct udphdr) = 8,  /* netinet/udp.h */
+
+65535 - 20 - 8 = 65507
+
+(But for UDP broadcast, the maximum message size is limited by the MTU size of the underlying link)")
 
 (defclass usocket ()
   ((socket
