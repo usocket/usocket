@@ -300,9 +300,11 @@
 		     (if (and host port)
 			 (connect-to-udp-server (host-to-hostname host) port
 						:local-address (and local-host (host-to-hostname local-host))
-						:local-port local-port)
+						:local-port local-port
+                                                :read-timeout timeout)
 			 (open-udp-socket :local-address (and local-host (host-to-hostname local-host))
-					  :local-port local-port))
+					  :local-port local-port
+                                          :read-timeout timeout))
 		     :connected-p t)))
        (hcl:flag-special-free-action usocket)
        usocket))))
