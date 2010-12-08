@@ -442,11 +442,12 @@
                                                            :copy-foreign-object nil)))
               (values nil n 0 0)))))))
 
-(defmethod socket-receive ((socket datagram-usocket) buffer length &key)
+(defmethod socket-receive ((socket datagram-usocket) buffer length &key timeout)
   (multiple-value-bind (buffer size host port)
       (receive-message (socket socket)
                        (slot-value socket 'recv-buffer)
-                       buffer length)
+                       buffer length
+                       :read-timeout timeout)
     (values buffer size host port)))
 
 (defmethod get-local-name ((usocket usocket))
