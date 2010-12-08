@@ -104,7 +104,13 @@ be initiated from remote sockets."))
                 :accessor %open-p
                 :initform t
 		:documentation "Flag to indicate if usocket is open,
-for GC on implementions operate on raw socket fd."))
+for GC on implementions operate on raw socket fd.")
+   #+lispworks
+   (recv-buffer
+    :documentation "Private RECV buffer.")
+   #+lispworks
+   (send-buffer
+    :documentation "Private SEND buffer."))
   (:documentation "UDP (inet-datagram) socket"))
 
 (defun usocket-p (socket)

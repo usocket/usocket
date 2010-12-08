@@ -358,48 +358,41 @@
   "Additional socket-close method for datagram-usocket"
   (setf (%open-p socket) nil))
 
-(defvar *message-send-buffer*
-  (make-array +max-datagram-packet-size+
-              :element-type '(unsigned-byte 8)
-              :allocation :static))
+(defmethod initialize-instance :after ((socket datagram-usocket) &key)
+  (setf (slot-value socket 'send-buffer)
+        (make-array +max-datagram-packet-size+
+                    :element-type '(unsigned-byte 8)
+                    :allocation :static))
+  (setf (slot-value socket 'recv-buffer)
+        (make-array +max-datagram-packet-size+
+                    :element-type '(unsigned-byte 8)
+                    :allocation :static)))
 
-(defvar *message-send-lock*
-  (mp:make-lock :name "USOCKET message send lock"))
-
-(defun send-message (socket-fd buffer &optional (length (length buffer)) host service)
+(defun send-message (socket-fd message buffer &optional (length (length buffer)) host service)
   "Send message to a socket, using sendto()/send()"
   (declare (type integer socket-fd)
            (type sequence buffer))
-  (let ((message *message-send-buffer*))
-    (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in))
-                                       (len :int
-					    #-(or lispworks4 lispworks5.0) ; <= 5.0
-                                            :initial-element
-                                            (fli:size-of '(:struct comm::sockaddr_in))))
-      (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
-        (mp:with-lock (*message-send-lock*)
-          (replace message buffer :end2 length)
-          (if (and host service)
-              (progn
-                (comm::initialize-sockaddr_in client-addr comm::*socket_af_inet* host service "udp")
-                (%sendto socket-fd ptr (min length +max-datagram-packet-size+) 0
-                         (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
-                         (fli:dereference len)))
-              (comm::%send socket-fd ptr (min length +max-datagram-packet-size+) 0)))))))
+  (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in))
+                                     (len :int
+                                          #-(or lispworks4 lispworks5.0) ; <= 5.0
+                                          :initial-element
+                                          (fli:size-of '(:struct comm::sockaddr_in))))
+    (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
+      (replace message buffer :end2 length)
+      (if (and host service)
+          (progn
+            (comm::initialize-sockaddr_in client-addr comm::*socket_af_inet* host service "udp")
+            (%sendto socket-fd ptr (min length +max-datagram-packet-size+) 0
+                     (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
+                     (fli:dereference len)))
+          (comm::%send socket-fd ptr (min length +max-datagram-packet-size+) 0)))))
 
 (defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
-  (let ((s (socket socket)))
-    (send-message s buffer length (and host (host-to-hbo host)) port)))
+  (send-message (socket socket)
+                (slot-value socket 'send-buffer)
+                buffer length (and host (host-to-hbo host)) port))
 
-(defvar *message-receive-buffer*
-  (make-array +max-datagram-packet-size+
-              :element-type '(unsigned-byte 8)
-              :allocation :static))
-
-(defvar *message-receive-lock*
-  (mp:make-lock :name "USOCKET message receive lock"))
-
-(defun receive-message (socket-fd &optional buffer (length (length buffer))
+(defun receive-message (socket-fd message &optional buffer (length (length buffer))
 			&key read-timeout (max-buffer-size +max-datagram-packet-size+))
   "Receive message from socket, read-timeout is a float number in seconds.
 
@@ -410,8 +403,7 @@
    4. remote port"
   (declare (type integer socket-fd)
            (type sequence buffer))
-  (let ((message *message-receive-buffer*)
-        old-timeout)
+  (let (old-timeout)
     (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in))
                                        (len :int
 					    #-(or lispworks4 lispworks5.0) ; <= 5.0
@@ -422,40 +414,40 @@
         (when read-timeout
           (setf old-timeout (get-socket-receive-timeout socket-fd))
           (set-socket-receive-timeout socket-fd read-timeout))
-        (mp:with-lock (*message-receive-lock*)
-          (let ((n (%recvfrom socket-fd ptr max-buffer-size 0
-                              (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
-                              len)))
-            ;; restore old read timeout
-            (when (and read-timeout (/= old-timeout read-timeout))
-              (set-socket-receive-timeout socket-fd old-timeout))
-            (if (plusp n)
-                (values (if buffer
-                            (replace buffer message
-                                     :end1 (min length max-buffer-size)
-                                     :end2 (min n max-buffer-size))
+        (let ((n (%recvfrom socket-fd ptr max-buffer-size 0
+                            (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
+                            len)))
+          ;; restore old read timeout
+          (when (and read-timeout (/= old-timeout read-timeout))
+            (set-socket-receive-timeout socket-fd old-timeout))
+          (if (plusp n)
+              (values (if buffer
+                          (replace buffer message
+                                   :end1 (min length max-buffer-size)
+                                   :end2 (min n max-buffer-size))
                           (subseq message 0 (min n max-buffer-size)))
-                        (min n max-buffer-size)
-			(comm::ntohl (fli:foreign-slot-value
-				      (fli:foreign-slot-value client-addr
-							      'comm::sin_addr
-							      :object-type '(:struct comm::sockaddr_in)
-							      :type '(:struct comm::in_addr)
-							      :copy-foreign-object nil)
-				      'comm::s_addr
-				      :object-type '(:struct comm::in_addr)))
-                        (comm::ntohs (fli:foreign-slot-value client-addr
-							     'comm::sin_port
-							     :object-type '(:struct comm::sockaddr_in)
-							     :type '(:unsigned :short)
-							     :copy-foreign-object nil)))
-		(values nil n 0 0))))))))
+                      (min n max-buffer-size)
+                      (comm::ntohl (fli:foreign-slot-value
+                                    (fli:foreign-slot-value client-addr
+                                                            'comm::sin_addr
+                                                            :object-type '(:struct comm::sockaddr_in)
+                                                            :type '(:struct comm::in_addr)
+                                                            :copy-foreign-object nil)
+                                    'comm::s_addr
+                                    :object-type '(:struct comm::in_addr)))
+                      (comm::ntohs (fli:foreign-slot-value client-addr
+                                                           'comm::sin_port
+                                                           :object-type '(:struct comm::sockaddr_in)
+                                                           :type '(:unsigned :short)
+                                                           :copy-foreign-object nil)))
+              (values nil n 0 0)))))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length &key)
-  (let ((s (socket socket)))
-    (multiple-value-bind (buffer size host port)
-	(receive-message s buffer length)
-      (values buffer size host port))))
+  (multiple-value-bind (buffer size host port)
+      (receive-message (socket socket)
+                       (slot-value socket 'recv-buffer)
+                       buffer length)
+    (values buffer size host port)))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind
