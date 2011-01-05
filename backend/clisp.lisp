@@ -5,8 +5,8 @@
 
 (in-package :usocket)
 
-
 ;; utility routine for looking up the current host name
+#+ffi
 (FFI:DEF-CALL-OUT get-host-name-internal
          (:name "gethostname")
          (:arguments (name (FFI:C-PTR (FFI:C-ARRAY-MAX ffi:character 256))
@@ -19,11 +19,13 @@
          (:return-type ffi:int))
 
 (defun get-host-name ()
+  #+ffi
   (multiple-value-bind (retcode name)
       (get-host-name-internal 256)
     (when (= retcode 0)
-      name)))
-
+      name))
+  #-ffi
+  "localhost")
 
 #+win32
 (defun remap-maybe-for-win32 (z)
@@ -256,5 +258,4 @@ and the address of the sender as values."
   (warn "This image doesn't contain the RAWSOCK package.
 To enable UDP socket support, please be sure to use the -Kfull parameter
 at startup, or to enable RAWSOCK support during compilation.")
-
   )
