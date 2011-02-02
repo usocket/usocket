@@ -118,6 +118,7 @@
                            (backlog 5)
                            (element-type 'character))
   (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+	 (real-host (host-to-hostname host))
          (sock (with-mapped-conditions ()
                   (apply #'openmcl-socket:make-socket
                          (append (list :connect :passive
@@ -126,7 +127,7 @@
                                        :backlog backlog
                                        :format (to-format element-type))
                                  (when (ip/= host *wildcard-host*)
-                                   (list :local-host host)))))))
+                                   (list :local-host real-host)))))))
     (make-stream-server-socket sock :element-type element-type)))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
