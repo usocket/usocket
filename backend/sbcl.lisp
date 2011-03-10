@@ -199,6 +199,11 @@
                  (if usock-cond
                      (signal usock-cond :socket socket))))))
 
+(defvar *dummy-stream*
+  (let ((stream (make-broadcast-stream)))
+    (close stream)
+    stream))
+
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port
@@ -219,47 +224,53 @@
   (let ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                :type protocol
                                :protocol (case protocol
-					   (:stream :tcp)
-					   (:datagram :udp)))))
-    (handler-case
-        (ecase protocol
-          (:stream
-	   (let* ((stream
-		   (sb-bsd-sockets:socket-make-stream socket
-						      :input t
-						      :output t
-						      :buffering :full
-						      #+sbcl #+sbcl
-						      :timeout timeout
-						      :element-type element-type))
-		  ;;###FIXME: The above line probably needs an :external-format
-		  (usocket (make-stream-socket :stream stream :socket socket))
-		  (ip (host-to-vector-quad host)))
-	     ;; binghe: use SOCKOPT-TCP-NODELAY as internal symbol
-	     ;;         to pass compilation on ECL without it.
-	     (when (and nodelay-specified sockopt-tcp-nodelay-p)
-	       (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) nodelay))
-	     (when (or local-host local-port)
-	       (sb-bsd-sockets:socket-bind socket
-					   (host-to-vector-quad
-					    (or local-host *wildcard-host*))
-					   (or local-port *auto-port*)))
-	     (with-mapped-conditions (usocket)
-	       (sb-bsd-sockets:socket-connect socket ip port))
-	     usocket))
-          (:datagram
-	   (when (or local-host local-port)
-	     (sb-bsd-sockets:socket-bind socket
-					 (host-to-vector-quad
-					  (or local-host *wildcard-host*))
-					 (or local-port *auto-port*)))
-	   (when (and host port)
-	     (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port))
-	   (make-datagram-socket socket)))
-      (t (c)
-        ;; Make sure we don't leak filedescriptors
-        (sb-bsd-sockets:socket-close socket)
-        (error c)))))
+                                           (:stream :tcp)
+                                           (:datagram :udp))))
+        (ip (host-to-vector-quad host))
+        (local-host (host-to-vector-quad (or local-host *wildcard-host*)))
+        (local-port (or local-port *auto-port*))
+        usocket ok)
+    (unwind-protect
+         (progn
+           (ecase protocol
+             (:stream
+              ;; If make a real socket stream before the socket is
+              ;; connected, it gets a misleading name so supply a
+              ;; dummy value to start with.
+              (setf usocket (make-stream-socket :socket socket :stream *dummy-stream*))
+              ;; binghe: use SOCKOPT-TCP-NODELAY as internal symbol
+              ;;         to pass compilation on ECL without it.
+              (when (and nodelay-specified sockopt-tcp-nodelay-p)
+                (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) nodelay))
+              (when (or local-host local-port)
+                (sb-bsd-sockets:socket-bind socket local-host local-port))
+              (with-mapped-conditions (usocket)
+                (sb-bsd-sockets:socket-connect socket ip port)
+                ;; Now that we're connected make the stream.
+                (setf (socket-stream usocket)
+                      (sb-bsd-sockets:socket-make-stream socket
+                                                         :input t
+                                                         :output t
+                                                         :buffering :full
+                                                         #+sbcl #+sbcl
+                                                         :timeout timeout
+                                                         :element-type element-type))))
+             (:datagram
+              (when (or local-host local-port)
+                (sb-bsd-sockets:socket-bind socket
+                                            (host-to-vector-quad
+                                             (or local-host *wildcard-host*))
+                                            (or local-port *auto-port*)))
+              (setf usocket (make-datagram-socket socket))
+              (when (and host port)
+                (with-mapped-conditions (usocket)
+                  (sb-bsd-sockets:socket-connect socket ip port)
+                  (setf (connected-p usocket) t)))))
+           (setf ok t))
+      ;; Clean up in case of an error.
+      (unless ok
+        (sb-bsd-sockets:socket-close socket :abort t)))
+    usocket))
 
 (defun socket-listen (host port
                            &key reuseaddress
