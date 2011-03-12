@@ -14,7 +14,7 @@
 (defsystem usocket
     :name "usocket"
     :author "Erik Enge & Erik Huelsmann"
-    :version "0.5.0"
+    :version "0.6.0"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (#+sbcl :sb-bsd-sockets)
