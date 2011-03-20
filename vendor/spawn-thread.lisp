@@ -43,6 +43,9 @@
 (defun spawn-thread (name function &rest args)
   #-(or (and cmu mp) cormanlisp (and sbcl sb-thread))
   (declare (dynamic-extent args))
+  #+abcl
+  (threads:make-thread #'(lambda () (apply function args))
+		       :name name)
   #+allegro
   (apply #'mp:process-run-function name function args)
   #+(and clisp mt)
