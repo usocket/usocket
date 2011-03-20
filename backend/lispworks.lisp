@@ -305,7 +305,7 @@
 			 (open-udp-socket :local-address (and local-host (host-to-hostname local-host))
 					  :local-port local-port
                                           :read-timeout timeout))
-		     :connected-p t)))
+		     :connected-p (and host port t))))
        (hcl:flag-special-free-action usocket)
        usocket))))
 
