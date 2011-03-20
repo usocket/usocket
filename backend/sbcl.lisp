@@ -226,7 +226,6 @@
                                :protocol (case protocol
                                            (:stream :tcp)
                                            (:datagram :udp))))
-        (ip (host-to-vector-quad host))
         (local-host (host-to-vector-quad (or local-host *wildcard-host*)))
         (local-port (or local-port *auto-port*))
         usocket ok)
@@ -245,7 +244,7 @@
               (when (or local-host local-port)
                 (sb-bsd-sockets:socket-bind socket local-host local-port))
               (with-mapped-conditions (usocket)
-                (sb-bsd-sockets:socket-connect socket ip port)
+                (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)
                 ;; Now that we're connected make the stream.
                 (setf (socket-stream usocket)
                       (sb-bsd-sockets:socket-make-stream socket
@@ -264,7 +263,7 @@
               (setf usocket (make-datagram-socket socket))
               (when (and host port)
                 (with-mapped-conditions (usocket)
-                  (sb-bsd-sockets:socket-connect socket ip port)
+                  (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)
                   (setf (connected-p usocket) t)))))
            (setf ok t))
       ;; Clean up in case of an error.
