@@ -173,6 +173,8 @@
     (sb-bsd-sockets:operation-timeout-error . timeout-error)
     #-ecl
     (sb-sys:io-timeout . timeout-error)
+    #+sbcl
+    (sb-ext:timeout . timeout-error)
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
 
     ;; Nameservice errors: mapped to unknown-error
@@ -248,15 +250,17 @@
               (when (or local-host local-port)
                 (sb-bsd-sockets:socket-bind socket local-host local-port))
               (with-mapped-conditions (usocket)
-                (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)
+		(labels ((connect ()
+			   (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)))
+		  (if timeout
+		      (sb-ext:with-timeout timeout (connect))
+		      (connect)))
                 ;; Now that we're connected make the stream.
                 (setf (socket-stream usocket)
                       (sb-bsd-sockets:socket-make-stream socket
                                                          :input t
                                                          :output t
                                                          :buffering :full
-                                                         #+sbcl #+sbcl
-                                                         :timeout timeout
                                                          :element-type element-type))))
              (:datagram
               (when (or local-host local-port)
@@ -317,6 +321,7 @@
 
 	  ;; next time wait for event again if we had EAGAIN/EINTR
 	  ;; or else we'd enter a tight loop of failed accepts
+	  #+win32
 	  (setf (%ready-p socket) nil)))))
 
 ;; Sockets and their associated streams are modelled as
