@@ -210,6 +210,22 @@
     (close stream)
     stream))
 
+;;; A nested version of SB-EXT:WITH-TIMEOUT, from GBBopen's portable-threads.
+;;; I belive the author is Dan Corkill. -- binghe, 2011-3-29
+
+#+sbcl
+(defmacro %with-timeout ((seconds &body timeout-body) &body timed-body)
+  (let ((tag-sym (gensym))
+        (timer-sym (gensym)))
+    `(block ,tag-sym
+       (let ((,timer-sym 
+              (sb-ext:make-timer
+               #'(lambda () 
+                   (return-from ,tag-sym (progn ,@timeout-body))))))
+         (sb-ext:schedule-timer ,timer-sym ,seconds)
+         (unwind-protect (progn ,@timed-body)
+           (sb-ext:unschedule-timer ,timer-sym))))))
+
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port
@@ -254,7 +270,7 @@
 		(labels ((connect ()
 			   (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)))
 		  (if timeout
-		      (sb-ext:with-timeout timeout (connect))
+		      (%with-timeout (timeout (error 'sb-ext:timeout)) (connect))
 		      (connect)))
 		#+ecl
 		(sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)
