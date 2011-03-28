@@ -250,11 +250,14 @@
               (when (or local-host local-port)
                 (sb-bsd-sockets:socket-bind socket local-host local-port))
               (with-mapped-conditions (usocket)
+		#+sbcl
 		(labels ((connect ()
 			   (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)))
 		  (if timeout
 		      (sb-ext:with-timeout timeout (connect))
 		      (connect)))
+		#+ecl
+		(sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)
                 ;; Now that we're connected make the stream.
                 (setf (socket-stream usocket)
                       (sb-bsd-sockets:socket-make-stream socket
