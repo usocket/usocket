@@ -97,7 +97,6 @@
 					  :deadline deadline
 					  :nodelay nodelay
 					  :connect-timeout timeout)))
-	 (openmcl-socket:socket-connect mcl-sock)
 	 (make-stream-socket :stream mcl-sock :socket mcl-sock)))
       (:datagram
        (let* ((mcl-sock
@@ -105,6 +104,7 @@
                                            :type :datagram
                                            :local-host (when local-host (host-to-hostname local-host))
                                            :local-port local-port
+					   :input-timeout timeout
                                            :format :binary))
               (usocket (make-datagram-socket mcl-sock)))
 	 (when (and host port)
