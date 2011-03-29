@@ -5,9 +5,15 @@
 
 (in-package :usocket)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  #-ffi
+  (warn "This image doesn't contain FFI package, GET-HOST-NAME won't work.")
+  #-(or ffi rawsock)
+  (warn "This image doesn't contain either FFI or RAWSOCK package, no UDP support."))
+
 ;; utility routine for looking up the current host name
 #+ffi
-(FFI:DEF-CALL-OUT get-host-name-internal
+(ffi:def-call-out get-host-name-internal
          (:name "gethostname")
          (:arguments (name (FFI:C-PTR (FFI:C-ARRAY-MAX ffi:character 256))
                            :OUT :ALLOCA)
@@ -61,26 +67,36 @@
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port)
   (declare (ignore nodelay))
-  (when timeout (unsupported 'timeout 'socket-connect))
   (when deadline (unsupported 'deadline 'socket-connect))
   (when nodelay-specified (unsupported 'nodelay 'socket-connect))
   (when local-host (unsupported 'local-host 'socket-connect))
   (when local-port (unsupported 'local-port 'socket-connect))
-
-  (let ((socket)
-        (hostname (host-to-hostname host)))
-    (with-mapped-conditions (socket)
-      (setf socket
-            (if timeout
-                (socket:socket-connect port hostname
-                                       :element-type element-type
-                                       :buffered t
-                                       :timeout timeout)
-                (socket:socket-connect port hostname
-                                       :element-type element-type
-                                       :buffered t))))
-    (make-stream-socket :socket socket
-                        :stream socket))) ;; the socket is a stream too
+  (case protocol
+    (:stream
+     (let ((socket)
+	   (hostname (host-to-hostname host)))
+       (with-mapped-conditions (socket)
+	 (setf socket
+	       (if timeout
+		   (socket:socket-connect port hostname
+					  :element-type element-type
+					  :buffered t
+					  :timeout timeout)
+		   (socket:socket-connect port hostname
+					  :element-type element-type
+					  :buffered t))))
+       (make-stream-socket :socket socket
+			   :stream socket))) ;; the socket is a stream too
+    (:datagram
+     #+rawsock
+     (socket-create-datagram (or local-port *auto-port*)
+			     :local-host (or local-host *wildcard-host*)
+			     :remote-host host
+			     :remote-port port)
+     #+(and ffi (not rawsock))
+     ()
+     #-(or rawsock ffi)
+     (unsupported '(protocol :datagram) 'socket-connect))))
 
 (defun socket-listen (host port
                            &key reuseaddress
@@ -146,7 +162,6 @@
 (defmethod get-peer-port ((usocket stream-usocket))
   (nth-value 1 (get-peer-name usocket)))
 
-
 (defun %setup-wait-list (wait-list)
   (declare (ignore wait-list)))
 
@@ -176,14 +191,12 @@
             (setf (state x) :READ)))
         wait-list))))
 
-
-;;
-;; UDP/Datagram sockets!
-;;
+;;;
+;;; UDP/Datagram sockets (RAWSOCK version)
+;;;
 
 #+rawsock
 (progn
-
   (defun make-sockaddr_in ()
     (make-array 16 :element-type '(unsigned-byte 8) :initial-element 0))
 
@@ -209,7 +222,7 @@
         (connect sock rsock_addr))
       (make-datagram-socket sock :connected-p (if rsock_addr t nil))))
 
-  (defun socket-receive (socket buffer &key (size (length buffer)))
+  (defun socket-receive (socket buffer length &key)
     "Returns the buffer, the number of octets copied into the buffer (received)
 and the address of the sender as values."
     (let* ((sock (socket socket))
@@ -218,44 +231,74 @@ and the address of the sender as values."
            (rv (if sockaddr
                    (rawsock:recvfrom sock buffer sockaddr
                                      :start 0
-                                     :end size)
+                                     :end length)
                    (rawsock:recv sock buffer
                                  :start 0
-                                 :end size))))
+                                 :end length))))
       (values buffer
               rv
-              (list (ip-from-octet-buffer (sockaddr-data sockaddr) 4)
-                    (port-from-octet-buffer (sockaddr-data sockaddr) 2)))))
+              (ip-from-octet-buffer (sockaddr-data sockaddr) 4)
+              (port-from-octet-buffer (sockaddr-data sockaddr) 2))))
 
-  (defun socket-send (socket buffer &key address (size (length buffer)))
+  (defun socket-send (socket buffer length &key host port)
     "Returns the number of octets sent."
     (let* ((sock (socket socket))
-           (sockaddr (when address
+           (sockaddr (when (and host port)
                        (rawsock:make-sockaddr :INET
                                               (fill-sockaddr_in
                                                (make-sockaddr_in)
-                                               (host-byte-order
-                                                (second address))
-                                               (first address)))))
-           (rv (if address
+                                               (host-byte-order host)
+                                               port))))
+           (rv (if (and host port)
                    (rawsock:sendto sock buffer sockaddr
                                    :start 0
-                                   :end size)
+                                   :end length)
                    (rawsock:send sock buffer
                                  :start 0
-                                 :end size))))
+                                 :end length))))
       rv))
 
   (defmethod socket-close ((usocket datagram-usocket))
     (when (wait-list usocket)
        (remove-waiter (wait-list usocket) usocket))
     (rawsock:sock-close (socket usocket)))
-  
-  )
+) ; progn
 
-#-rawsock
+;;;
+;;; UDP/Datagram sockets (FFI version)
+;;;
+
+#+(and ffi (not rawsock))
 (progn
-  (warn "This image doesn't contain the RAWSOCK package.
-To enable UDP socket support, please be sure to use the -Kfull parameter
-at startup, or to enable RAWSOCK support during compilation.")
-  )
+  (ffi:def-c-struct sockaddr
+    )
+
+  (ffi:def-c-struct sockaddr_in
+    )
+
+  (ffi:def-call-out %sendto (:name "sendto")
+    (:arguments (socket ffi:int)
+		(buffer (ffi:c-ptr ffi:uint8))
+		(length ffi:int)
+		(flags ffi:int)
+		(address (ffi:c-ptr sockaddr))
+		(address-len ffi:int))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:int))
+
+  (ffi:def-call-out %recvfrom (:name "recvfrom")
+    (:arguments (socket ffi:int)
+		(buffer (ffi:c-ptr ffi:uint8) :out)
+		(length ffi:int)
+		(flags ffi:int)
+		(address (ffi:c-ptr sockaddr) :out)
+		(address-len (ffi:c-ptr ffi:int) :out))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:int))
+) ; progn
