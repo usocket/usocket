@@ -11,7 +11,7 @@
 
 (deftest timeout-error.1
   (with-caught-conditions (usocket:timeout-error nil)
-    (usocket:socket-connect "common-lisp.net" 81 :timeout 1)
+    (usocket:socket-connect "common-lisp.net" 81 :timeout 0)
     t)
   nil)
 
