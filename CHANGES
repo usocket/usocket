@@ -12,7 +12,9 @@
 * Bugfix: SOCKET-CONNECT didn't set CONNECTED-P for datagram usockets on most backends.
 * Bugfix: [SBCL] Fixed SOCKET-SERVER (UDP) on SBCL due to a issue in SOCKET-CONNECT when HOST is NIL.
 * Bugfix: [SBCL] SOCKET-CONNECT's TIMEOUT argument now works as a "connection timeout".
+* Bugfix: [CMUCL] Fixed SOCKET-SEND on unconnected usockets under Unicode version of CMUCL.
 * Enhancement: [LispWorks] Better network error type detection on LispWorks.
+* Enhancement: SOCKET-SERVER return a second value to indicate the created underlying usocket object when running in new thread mode. This make server debugging work easier.
 
 [TODO]
 
