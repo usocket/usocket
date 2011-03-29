@@ -210,21 +210,42 @@
     (close stream)
     stream))
 
-;;; A nested version of SB-EXT:WITH-TIMEOUT, from GBBopen's portable-threads.
-;;; I belive the author is Dan Corkill. -- binghe, 2011-3-29
+;;; Amusingly, neither SBCL's own, nor GBBopen's WITH-TIMEOUT is asynch
+;;; unwind safe. The one I posted is -- that's what the WITHOUT-INTERRUPTS
+;;; and WITH-LOCAL-INTERRUPTS were for. :) But yeah, it's miles saner than
+;;; the SB-EXT:WITH-TIMEOUT. -- Nikodemus Siivola <nikodemus@random-state.net>
 
 #+sbcl
-(defmacro %with-timeout ((seconds &body timeout-body) &body timed-body)
-  (let ((tag-sym (gensym))
-        (timer-sym (gensym)))
-    `(block ,tag-sym
-       (let ((,timer-sym 
-              (sb-ext:make-timer
-               #'(lambda () 
-                   (return-from ,tag-sym (progn ,@timeout-body))))))
-         (sb-ext:schedule-timer ,timer-sym ,seconds)
-         (unwind-protect (progn ,@timed-body)
-           (sb-ext:unschedule-timer ,timer-sym))))))
+(defmacro %with-timeout ((seconds timeout-form) &body body)
+  "Runs BODY as an implicit PROGN with timeout of SECONDS. If
+timeout occurs before BODY has finished, BODY is unwound and
+TIMEOUT-FORM is executed with its values returned instead.
+
+Note that BODY is unwound asynchronously when a timeout occurs,
+so unless all code executed during it -- including anything
+down the call chain -- is asynch unwind safe, bad things will
+happen. Use with care."
+  (let ((exec (gensym)) (unwind (gensym)) (timer (gensym))
+	(timeout (gensym)) (block (gensym)))
+    `(block ,block
+       (tagbody
+	  (flet ((,unwind ()
+		   (go ,timeout))
+		 (,exec ()
+		   ,@body))
+	    (declare (dynamic-extent #',exec #',unwind))
+	    (let ((,timer (sb-ext:make-timer #',unwind)))
+	      (declare (dynamic-extent ,timer))
+	      (sb-sys:without-interrupts
+		  (unwind-protect
+		       (progn
+			 (sb-ext:schedule-timer ,timer ,seconds)
+			 (return-from ,block
+			   (sb-sys:with-local-interrupts
+			       (,exec))))
+		    (sb-ext:unschedule-timer ,timer)))))
+	  ,timeout
+	  (return-from ,block ,timeout-form)))))
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
