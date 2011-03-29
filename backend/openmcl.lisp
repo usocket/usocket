@@ -108,10 +108,11 @@
                                            :format :binary))
               (usocket (make-datagram-socket mcl-sock)))
 	 (when (and host port)
-           (ccl::inet-connect (ccl::socket-device mcl-sock)
-                              (ccl::host-as-inet-host host)
-                              (ccl::port-as-inet-port port "udp"))
-           (setf (connected-p usocket) t)))))))
+	   (ccl::inet-connect (ccl::socket-device mcl-sock)
+			      (ccl::host-as-inet-host host)
+			      (ccl::port-as-inet-port port "udp")))
+	 (setf (connected-p usocket) t)
+	 usocket)))))
 
 (defun socket-listen (host port
                            &key reuseaddress
