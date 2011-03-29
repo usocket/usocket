@@ -3,10 +3,16 @@
 
 (in-package :usocket-test)
 
-(defvar *echo-server*
-  (usocket:socket-server "127.0.0.1" 10243 #'identity nil
-			 :in-new-thread t
-			 :protocol :datagram))
+(defvar *echo-server*)
+(defvar *echo-server-port*)
+
+(eval-when (:load-toplevel :execute)
+  (multiple-value-bind (thread socket)
+      (usocket:socket-server "127.0.0.1" 0 #'identity nil
+			     :in-new-thread t
+			     :protocol :datagram)
+    (setq *echo-server* thread
+	  *echo-server-port* (usocket:get-local-port socket))))
 
 (defparameter *max-buffer-size* 32)
 
@@ -22,13 +28,14 @@
 
 ;;; UDP Send Test #1: connected socket
 (deftest udp-send.1
-    (let ((s (usocket:socket-connect "127.0.0.1" 10243 :protocol :datagram)))
+    (let ((s (usocket:socket-connect "127.0.0.1" *echo-server-port* :protocol :datagram)))
       (clean-buffers)
       (replace *send-buffer* #(1 2 3 4 5))
       (usocket:socket-send s *send-buffer* 5)
       (usocket:wait-for-input s :timeout 3)
       (multiple-value-bind (buffer size host port)
 	  (usocket:socket-receive s *receive-buffer* *max-buffer-size*)
+	(declare (ignore buffer size host port))
 	(reduce #'+ *receive-buffer* :start 0 :end 5)))
   15)
 
@@ -37,9 +44,10 @@
     (let ((s (usocket:socket-connect nil nil :protocol :datagram)))
       (clean-buffers)
       (replace *send-buffer* #(1 2 3 4 5))
-      (usocket:socket-send s *send-buffer* 5 :host "127.0.0.1" :port 10243)
+      (usocket:socket-send s *send-buffer* 5 :host "127.0.0.1" :port *echo-server-port*)
       (usocket:wait-for-input s :timeout 3)
       (multiple-value-bind (buffer size host port)
 	  (usocket:socket-receive s *receive-buffer* *max-buffer-size*)
+	(declare (ignore buffer size host port))
 	(reduce #'+ *receive-buffer* :start 0 :end 5)))
   15)
