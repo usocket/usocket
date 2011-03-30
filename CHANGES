@@ -15,12 +15,12 @@
 * Bugfix: [SBCL] SOCKET-CONNECT's TIMEOUT argument now works as a "connection timeout".
 * Bugfix: [CMUCL] Fixed SOCKET-SEND on unconnected usockets under Unicode version of CMUCL.
 * Bugfix: [LispWorks] Better network error type detection on LispWorks.
-* Enhancement: SOCKET-SERVER return a second value to indicate the created underlying usocket object when running in new thread mode. This make server debugging work easier.
+* Bugfix: [CLISP] Fixed UDP (Datagram) support (RAWSOCK version), confirmed by CL-NET-SNMP.
+* Enhancement: SOCKET-SERVER return a second value (socket) when calling in new-thread mode.
 * Enhancement: [CLISP] Full support of DNS helper functions (GET-HOST-BY-NAME, ...) added.
 
 [TODO]
 
-* Bugfix: now SOCKET-CONNECT/Datagram works on CLISP
 * New feature: CLISP support UDP without RAWSOCK (using FFI interface)
 * New feature: CLISP support some advanced TCP features which CLISP's SOCKET interface not provide
 * New feature: Macintosh Common Lisp (MCL) support Datagram sockets (UDP)
