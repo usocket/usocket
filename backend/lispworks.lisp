@@ -74,14 +74,15 @@
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
   (typecase condition
-    (condition (let ((errno (lispworks:errno-value)))
+    (condition (let ((errno #-win32 (lw:errno-value)
+                            #+win32 (wsa-get-last-error)))
                  (raise-usock-err errno socket condition)))))
 
 (defconstant *socket_sock_dgram* 2
   "Connectionless, unreliable datagrams of fixed maximum length.")
 
 (defconstant *sockopt_so_rcvtimeo*
-  #+(not linux) #x1006
+  #-linux #x1006
   #+linux 20
   "Socket receive timeout")
 
