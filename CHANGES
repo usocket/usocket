@@ -24,3 +24,11 @@
 * New feature: CLISP support UDP without RAWSOCK (using FFI interface)
 * New feature: CLISP support some advanced TCP features which CLISP's SOCKET interface not provide
 * New feature: Macintosh Common Lisp (MCL) support Datagram sockets (UDP)
+
+0.6.0:
+
+* New feature: SOCKET-OPTION for seting and geting various socket options.
+
+[TODO for 0.6.x]
+
+* New feature: SOCKET-SHUTDOWN for TCP and UDP sockets
