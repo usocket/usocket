@@ -270,12 +270,35 @@ and the address of the sender as values."
 
 #+(and ffi (not rawsock))
 (progn
+  ;; C primitive types
+  (ffi:def-c-type size_t)
+  (ffi:def-c-type in_addr_t   ffi:uint32)
+  (ffi:def-c-type in_port_t   ffi:uint16)
+  (ffi:def-c-type sa_family_t ffi:uint8)
+  (ffi:def-c-type socklen_t   ffi:uint32)
+
+  ;; C structures
   (ffi:def-c-struct sockaddr
-    )
+    (sa_len     ffi:uint8)
+    (sa_family  sa_family_t)
+    (sa_data    (ffi:c-array ffi:char 14)))
+
+  #+ignore
+  (ffi:def-c-struct in_addr
+    (s_addr     in_addr_t))
 
   (ffi:def-c-struct sockaddr_in
-    )
+    (sin_len    ffi:uint8)
+    (sin_family sa_family_t)
+    (sin_port   in_port_t)
+    (sin_addr   in_addr_t) ; should be struct in_addr
+    (sin_zero   (ffi:c-array ffi:char 8)))
 
+  (ffi:def-c-struct timeval
+    (tv_sec     ffi:long)
+    (tv_usec    ffi:long))
+
+  ;; foreign functions
   (ffi:def-call-out %sendto (:name "sendto")
     (:arguments (socket ffi:int)
 		(buffer (ffi:c-ptr ffi:uint8))
@@ -301,4 +324,53 @@ and the address of the sender as values."
     (:language #-win32 :stdc
 	       #+win32 :stdc-stdcall)
     (:return-type ffi:int))
+
+  (ffi:def-call-out %socket (:name "socket")
+    (:arguments (family ffi:int)
+		(type ffi:int)
+		(protocol ffi:int))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:int))
+
+  (ffi:def-call-out %getsockopt (:name "getsockopt")
+    (:arguments (sockfd ffi:int)
+		(level ffi:int)
+		(optname ffi:int)
+		(optval ffi:c-pointer)
+		(optlen (ffi:c-ptr socklen_t) :out))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:int))
+
+  (ffi:def-call-out %setsockopt (:name "setsockopt")
+    (:arguments (sockfd ffi:int)
+		(level ffi:int)
+		(optname ffi:int)
+		(optval ffi:c-pointer)
+		(optlen socklen_t))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:int))
+
+  ;; socket constants
+  (defconstant +socket-af-inet+ 2)
+  (defconstant +socket-pf-unspec+ 0)
+  (defconstant +socket-sock-dgram+ 2)
+  (defconstant +sockopt-so-rcvtimeo+ #-linux #x1006 #+linux 20 "Socket receive timeout")
+
+  (defun open-udp-socket (&key local-address local-port read-timeout)
+    "Open a unconnected UDP socket. For binding on address ANY(*), just not set LOCAL-ADDRESS (NIL),
+for binding on random free unused port, set LOCAL-PORT to 0."
+    (let ((socket-fd (%socket +socket-af-inet+ +socket-sock-dgram+ +socket-pf-unspec+)))
+      (if socket-fd
+	  (progn
+	    )
+	  (error "cannot create socket"))))
 ) ; progn
