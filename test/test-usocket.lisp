@@ -118,13 +118,11 @@
       (unwind-protect
           (progn
             (format (usocket:socket-stream sock)
-                    "GET / HTTP/1.0~c~c~c~c"
-                    #\Return #\linefeed #\Return #\linefeed)
+                    "GET / HTTP/1.0~2%")
             (force-output (usocket:socket-stream sock))
-            (read-line (usocket:socket-stream sock)))
+            (subseq (read-line (usocket:socket-stream sock)) 0 15))
         (usocket:socket-close sock))))
-  #+(or mcl clisp) "HTTP/1.1 200 OK"
-  #-(or mcl clisp) #.(format nil "HTTP/1.1 200 OK~A" #\Return) nil)
+  "HTTP/1.1 200 OK")
 
 (deftest socket-name.1
   (with-caught-conditions (nil nil)
@@ -188,14 +186,12 @@
       (unwind-protect
           (progn
             (format (usocket:socket-stream sock)
-                    "GET / HTTP/1.0~c~c~c~c"
-                    #\Return #\linefeed #\Return #\linefeed)
+                    "GET / HTTP/1.0~2%")
             (force-output (usocket:socket-stream sock))
             (usocket:wait-for-input sock :timeout *wait-for-input-timeout*)
-            (read-line (usocket:socket-stream sock)))
+            (subseq (read-line (usocket:socket-stream sock)) 0 15))
         (usocket:socket-close sock))))
-  #+(or mcl clisp) "HTTP/1.1 200 OK"
-  #-(or mcl clisp) #.(format nil "HTTP/1.1 200 OK~A" #\Return) nil)
+  "HTTP/1.1 200 OK")
 
 (defun run-usocket-tests ()
   (do-tests))
