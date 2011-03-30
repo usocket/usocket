@@ -90,7 +90,7 @@
       (:stream
        (make-stream-socket :socket socket :stream socket))
       (:datagram
-       (make-datagram-socket socket)))))
+       (make-datagram-socket socket :connected-p (and host port t))))))
 
 ;; One socket close method is sufficient,
 ;; because socket-streams are also sockets.

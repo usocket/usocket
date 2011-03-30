@@ -97,20 +97,22 @@
 					  :deadline deadline
 					  :nodelay nodelay
 					  :connect-timeout timeout)))
-	 (openmcl-socket:socket-connect mcl-sock)
 	 (make-stream-socket :stream mcl-sock :socket mcl-sock)))
       (:datagram
-       (let ((mcl-sock
-	      (openmcl-socket:make-socket :address-family :internet
-					  :type :datagram
-					  :local-host (when local-host (host-to-hostname local-host))
-					  :local-port local-port
-					  :format :binary)))
+       (let* ((mcl-sock
+               (openmcl-socket:make-socket :address-family :internet
+                                           :type :datagram
+                                           :local-host (when local-host (host-to-hostname local-host))
+                                           :local-port local-port
+					   :input-timeout timeout
+                                           :format :binary))
+              (usocket (make-datagram-socket mcl-sock)))
 	 (when (and host port)
 	   (ccl::inet-connect (ccl::socket-device mcl-sock)
 			      (ccl::host-as-inet-host host)
 			      (ccl::port-as-inet-port port "udp")))
-	 (make-datagram-socket mcl-sock))))))
+	 (setf (connected-p usocket) t)
+	 usocket)))))
 
 (defun socket-listen (host port
                            &key reuseaddress

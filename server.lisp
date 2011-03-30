@@ -31,8 +31,8 @@
                                   :timeout timeout
                                   :max-buffer-size max-buffer-size)))))
       (if in-new-thread
-          (spawn-thread "USOCKET Server" #'real-call)
-        (real-call)))))
+	  (values (spawn-thread "USOCKET Server" #'real-call) socket)
+	  (real-call)))))
 
 (defvar *remote-host*)
 (defvar *remote-port*)

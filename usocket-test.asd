@@ -22,11 +22,11 @@
     :depends-on (:usocket
                  :rt)
     :components ((:module "test"
+		  :serial t
 		  :components ((:file "package")
-			       (:file "test-usocket"
-				      :depends-on ("package"))
-			       (:file "test-condition"
-				      :depends-on ("test-usocket"))))))
+			       (:file "test-usocket")
+			       (:file "test-condition")
+			       (:file "test-datagram")))))
 
 (defmethod perform ((op test-op) (c (eql (find-system :usocket-test))))
   (funcall (intern "DO-TESTS" "USOCKET-TEST")))

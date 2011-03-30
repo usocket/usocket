@@ -173,6 +173,8 @@
     (sb-bsd-sockets:operation-timeout-error . timeout-error)
     #-ecl
     (sb-sys:io-timeout . timeout-error)
+    #+sbcl
+    (sb-ext:timeout . timeout-error)
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
 
     ;; Nameservice errors: mapped to unknown-error
@@ -199,10 +201,51 @@
                  (if usock-cond
                      (signal usock-cond :socket socket))))))
 
+;;; "The socket stream ends up with a bogus name as it is created before
+;;; the socket is connected, making things harder to debug than they need
+;;; to be." -- Nikodemus Siivola <nikodemus@random-state.net>
+
 (defvar *dummy-stream*
   (let ((stream (make-broadcast-stream)))
     (close stream)
     stream))
+
+;;; Amusingly, neither SBCL's own, nor GBBopen's WITH-TIMEOUT is asynch
+;;; unwind safe. The one I posted is -- that's what the WITHOUT-INTERRUPTS
+;;; and WITH-LOCAL-INTERRUPTS were for. :) But yeah, it's miles saner than
+;;; the SB-EXT:WITH-TIMEOUT. -- Nikodemus Siivola <nikodemus@random-state.net>
+
+#+sbcl
+(defmacro %with-timeout ((seconds timeout-form) &body body)
+  "Runs BODY as an implicit PROGN with timeout of SECONDS. If
+timeout occurs before BODY has finished, BODY is unwound and
+TIMEOUT-FORM is executed with its values returned instead.
+
+Note that BODY is unwound asynchronously when a timeout occurs,
+so unless all code executed during it -- including anything
+down the call chain -- is asynch unwind safe, bad things will
+happen. Use with care."
+  (let ((exec (gensym)) (unwind (gensym)) (timer (gensym))
+	(timeout (gensym)) (block (gensym)))
+    `(block ,block
+       (tagbody
+	  (flet ((,unwind ()
+		   (go ,timeout))
+		 (,exec ()
+		   ,@body))
+	    (declare (dynamic-extent #',exec #',unwind))
+	    (let ((,timer (sb-ext:make-timer #',unwind)))
+	      (declare (dynamic-extent ,timer))
+	      (sb-sys:without-interrupts
+		  (unwind-protect
+		       (progn
+			 (sb-ext:schedule-timer ,timer ,seconds)
+			 (return-from ,block
+			   (sb-sys:with-local-interrupts
+			       (,exec))))
+		    (sb-ext:unschedule-timer ,timer)))))
+	  ,timeout
+	  (return-from ,block ,timeout-form)))))
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
@@ -226,7 +269,6 @@
                                :protocol (case protocol
                                            (:stream :tcp)
                                            (:datagram :udp))))
-        (ip (host-to-vector-quad host))
         (local-host (host-to-vector-quad (or local-host *wildcard-host*)))
         (local-port (or local-port *auto-port*))
         usocket ok)
@@ -245,15 +287,20 @@
               (when (or local-host local-port)
                 (sb-bsd-sockets:socket-bind socket local-host local-port))
               (with-mapped-conditions (usocket)
-                (sb-bsd-sockets:socket-connect socket ip port)
+		#+sbcl
+		(labels ((connect ()
+			   (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)))
+		  (if timeout
+		      (%with-timeout (timeout (error 'sb-ext:timeout)) (connect))
+		      (connect)))
+		#+ecl
+		(sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)
                 ;; Now that we're connected make the stream.
                 (setf (socket-stream usocket)
                       (sb-bsd-sockets:socket-make-stream socket
                                                          :input t
                                                          :output t
                                                          :buffering :full
-                                                         #+sbcl #+sbcl
-                                                         :timeout timeout
                                                          :element-type element-type))))
              (:datagram
               (when (or local-host local-port)
@@ -264,7 +311,7 @@
               (setf usocket (make-datagram-socket socket))
               (when (and host port)
                 (with-mapped-conditions (usocket)
-                  (sb-bsd-sockets:socket-connect socket ip port)
+                  (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)
                   (setf (connected-p usocket) t)))))
            (setf ok t))
       ;; Clean up in case of an error.
@@ -292,16 +339,30 @@
         (sb-bsd-sockets:socket-close sock)
         (error c)))))
 
+;;; "2. SB-BSD-SOCKETS:SOCKET-ACCEPT method returns NIL for EAGAIN/EINTR,
+;;; instead of raising a condition. It's always possible for
+;;; SOCKET-ACCEPT on non-blocking socket to fail, even after the socket
+;;; was detected to be ready: connection might be reset, for example.
+;;;
+;;; "I had to redefine SOCKET-ACCEPT method of STREAM-SERVER-USOCKET to
+;;; handle this situation. Here is the redefinition:" -- Anton Kovalenko <anton@sw4me.com>
+
 (defmethod socket-accept ((socket stream-server-usocket) &key element-type)
   (with-mapped-conditions (socket)
-     (let ((sock (sb-bsd-sockets:socket-accept (socket socket))))
-       (make-stream-socket
-        :socket sock
-        :stream (sb-bsd-sockets:socket-make-stream
-                 sock
-                 :input t :output t :buffering :full
-                 :element-type (or element-type
-                                   (element-type socket)))))))
+    (let ((sock (sb-bsd-sockets:socket-accept (socket socket))))
+      (if sock
+	  (make-stream-socket
+	   :socket sock
+	   :stream (sb-bsd-sockets:socket-make-stream
+		    sock
+		    :input t :output t :buffering :full
+		    :element-type (or element-type
+				      (element-type socket))))
+
+	  ;; next time wait for event again if we had EAGAIN/EINTR
+	  ;; or else we'd enter a tight loop of failed accepts
+	  #+win32
+	  (setf (%ready-p socket) nil)))))
 
 ;; Sockets and their associated streams are modelled as
 ;; different objects. Be sure to close the stream (which
@@ -449,7 +510,15 @@
 
 #+(and sbcl win32)
 (progn
-  (sb-alien:define-alien-type ws-socket sb-alien:unsigned-int)
+  ;; "SOCKET is defined as intptr_t in Windows headers; however, WS-SOCKET
+  ;; is defined as unsigned-int, i.e. 32-bit even on 64-bit platform.  It
+  ;; seems to be a good thing to redefine WS-SOCKET as SB-ALIEN:SIGNED,
+  ;; which is always machine word-sized (exactly as intptr_t;
+  ;; N.B. as of Windows/x64, long and signed-long are 32-bit, and thus not
+  ;; enough -- potentially)."
+  ;; -- Anton Kovalenko <anton@sw4me.com>, Mar 22, 2011
+  (sb-alien:define-alien-type ws-socket sb-alien:signed)
+
   (sb-alien:define-alien-type ws-dword sb-alien:unsigned-long)
   (sb-alien:define-alien-type ws-event sb-alien::hinstance)
 
@@ -557,13 +626,33 @@
   (defun (setf os-wait-list-%wait) (value wait-list)
     (setf (sb-alien:deref (wait-list-%wait wait-list)) value))
 
+  ;; "Event handles are leaking in current SBCL backend implementation,
+  ;; because of SBCL-unfriendly usage of finalizers.
+  ;;
+  ;; "SBCL never calls a finalizer that closes over a finalized object: a
+  ;; reference from that closure prevents its collection forever. That's
+  ;; the case with USOCKET in %SETUP-WAIT-LIST.
+  ;;
+  ;; "I use the following redefinition of %SETUP-WAIT-LIST: 
+  ;;
+  ;; "Of course it may be rewritten with more clarity, but you can see the
+  ;; core idea: I'm closing over those components of WAIT-LIST that I need
+  ;; for finalization, not the wait-list itself. With the original
+  ;; %SETUP-WAIT-LIST, hunchentoot stops working after ~100k accepted
+  ;; connections; it doesn't happen with redefined %SETUP-WAIT-LIST."
+  ;;
+  ;; -- Anton Kovalenko <anton@sw4me.com>, Mar 22, 2011
+
   (defun %setup-wait-list (wait-list)
     (setf (wait-list-%wait wait-list) (sb-alien:make-alien ws-event))
     (setf (os-wait-list-%wait wait-list) (wsa-event-create))
     (sb-ext:finalize wait-list
-                     #'(lambda () (unless (null (wait-list-%wait wait-list))
-                                    (wsa-event-close (os-wait-list-%wait wait-list))
-                                    (sb-alien:free-alien (wait-list-%wait wait-list))))))
+		     (let ((event-handle (os-wait-list-%wait wait-list))
+			   (alien (wait-list-%wait wait-list)))
+		       #'(lambda ()
+			   (wsa-event-close event-handle)
+			   (unless (null alien)
+			     (sb-alien:free-alien alien))))))
 
   (defun %add-waiter (wait-list waiter)
     (let ((events (etypecase waiter

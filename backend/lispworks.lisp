@@ -9,7 +9,7 @@
   (require "comm")
 
   #+lispworks3
-  (error "LispWorks 3 is not supported by USOCKET."))
+  (error "LispWorks 3 is not supported by USOCKET any more."))
 
 ;;; ---------------------------------------------------------------------------
 ;;;  Warn if multiprocessing is not running on Lispworks
@@ -40,17 +40,15 @@
       #+win32 "ws2_32")
 
 (defun get-host-name ()
-  (multiple-value-bind (retcode name)
+  (multiple-value-bind (return-code name)
       (get-host-name-internal)
-    (when (= 0 retcode)
+    (when (zerop return-code)
       name)))
 
 #+win32
 (defun remap-maybe-for-win32 (z)
   (mapcar #'(lambda (x)
-              (cons (mapcar #'(lambda (y)
-                                (+ 10000 y))
-                            (car x))
+              (cons (mapcar #'(lambda (y) (+ 10000 y)) (car x))
                     (cdr x)))
           z))
 
@@ -62,7 +60,7 @@
   (append +unix-errno-condition-map+
           +unix-errno-error-map+))
 
-(defun raise-or-signal-socket-error (errno socket)
+(defun raise-usock-err (errno socket &optional condition)
   (let ((usock-err
          (cdr (assoc errno +lispworks-error-map+ :test #'member))))
     (if usock-err
@@ -71,33 +69,20 @@
           (signal usock-err :socket socket))
       (error 'unknown-error
              :socket socket
-             :real-error nil))))
-
-(defun raise-usock-err (errno socket &optional condition)
-  (let* ((usock-err
-          (cdr (assoc errno +lispworks-error-map+
-                      :test #'member))))
-    (if usock-err
-        (if (subtypep usock-err 'error)
-            (error usock-err :socket socket)
-          (signal usock-err :socket))
-      (error 'unknown-error
-             :socket socket
              :real-error condition))))
 
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
   (typecase condition
-    (simple-error (destructuring-bind (&optional host port err-msg errno)
-                      (simple-condition-format-arguments condition)
-                    (declare (ignore host port err-msg))
-                    (raise-usock-err errno socket condition)))))
+    (condition (let ((errno #-win32 (lw:errno-value)
+                            #+win32 (wsa-get-last-error)))
+                 (raise-usock-err errno socket condition)))))
 
 (defconstant *socket_sock_dgram* 2
   "Connectionless, unreliable datagrams of fixed maximum length.")
 
 (defconstant *sockopt_so_rcvtimeo*
-  #+(not linux) #x1006
+  #-linux #x1006
   #+linux 20
   "Socket receive timeout")
 
@@ -294,18 +279,21 @@
        (if stream
 	   (make-stream-socket :socket (comm:socket-stream-socket stream)
 			       :stream stream)
-	   (error 'unknown-error))))
+         ;; if no other error catched by above with-mapped-conditions and still fails, then it's a timeout
+         (error 'timeout-error))))
     (:datagram
      (let ((usocket (make-datagram-socket
 		     (if (and host port)
-			 (connect-to-udp-server (host-to-hostname host) port
-						:local-address (and local-host (host-to-hostname local-host))
-						:local-port local-port
-                                                :read-timeout timeout)
-			 (open-udp-socket :local-address (and local-host (host-to-hostname local-host))
-					  :local-port local-port
-                                          :read-timeout timeout))
-		     :connected-p t)))
+                         (with-mapped-conditions ()
+                           (connect-to-udp-server (host-to-hostname host) port
+                                                  :local-address (and local-host (host-to-hostname local-host))
+                                                  :local-port local-port
+                                                  :read-timeout timeout))
+                         (with-mapped-conditions ()
+                           (open-udp-socket       :local-address (and local-host (host-to-hostname local-host))
+                                                  :local-port local-port
+                                                  :read-timeout timeout)))
+		     :connected-p (and host port t))))
        (hcl:flag-special-free-action usocket)
        usocket))))
 

@@ -82,7 +82,7 @@
 							     (host-to-hbo local-host)))))
 		     (with-mapped-conditions ()
 		       (ext:create-inet-socket protocol)))))
-       (let ((usocket (make-datagram-socket socket)))
+       (let ((usocket (make-datagram-socket socket :connected-p (and host port t))))
 	 (ext:finalize usocket #'(lambda ()
 				   (when (%open-p usocket)
 				     (ext:close-socket socket))))

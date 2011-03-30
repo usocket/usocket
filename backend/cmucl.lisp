@@ -106,7 +106,7 @@
 		     (with-mapped-conditions (socket)
 		       (ext:create-inet-socket protocol)))))
        (if socket
-	   (let ((usocket (make-datagram-socket socket)))
+	   (let ((usocket (make-datagram-socket socket :connected-p (and host port t))))
 	     (ext:finalize usocket #'(lambda () (when (%open-p usocket)
 						  (ext:close-socket socket))))
 	     usocket)
@@ -159,9 +159,28 @@
 (defmethod socket-close :after ((socket datagram-usocket))
   (setf (%open-p socket) nil))
 
+#+unicode
+(defun %unix-send (fd buffer length flags)
+  (alien:alien-funcall
+   (alien:extern-alien "send"
+		       (function c-call:int
+				 c-call:int
+				 system:system-area-pointer
+				 c-call:int
+				 c-call:int))
+   fd
+   (system:vector-sap buffer)
+   length
+   flags))
+
 (defmethod socket-send ((usocket datagram-usocket) buffer length &key host port)
   (with-mapped-conditions (usocket)
-    (ext:inet-sendto (socket usocket) buffer length (if host (host-to-hbo host)) port)))
+    (if (and host port)
+        (ext:inet-sendto (socket usocket) buffer length (host-to-hbo host) port)
+	#-unicode
+	(unix:unix-send (socket usocket) buffer length 0)
+	#+unicode
+	(%unix-send (socket usocket) buffer length 0))))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
   (let ((real-buffer (or buffer

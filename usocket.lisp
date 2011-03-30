@@ -367,16 +367,16 @@ the values documented in usocket.lisp in the usocket class."
             (aref buffer b)))))
 
 (defmacro port-to-octet-buffer (port buffer &key (start 0))
-  `(integer-to-octet-buffer ,port ,buffer 2 ,start))
+  `(integer-to-octet-buffer ,port ,buffer 2 :start ,start))
 
 (defmacro ip-to-octet-buffer (ip buffer &key (start 0))
-  `(integer-to-octet-buffer (host-byte-order ,ip) ,buffer 4 ,start))
+  `(integer-to-octet-buffer (host-byte-order ,ip) ,buffer 4 :start ,start))
 
 (defmacro port-from-octet-buffer (buffer &key (start 0))
-  `(octet-buffer-to-integer ,buffer 2 ,start))
+  `(octet-buffer-to-integer ,buffer 2 :start ,start))
 
 (defmacro ip-from-octet-buffer (buffer &key (start 0))
-  `(octet-buffer-to-integer ,buffer 4 ,start))
+  `(octet-buffer-to-integer ,buffer 4 :start ,start))
 
 ;;
 ;; IP(v4) utility functions
@@ -470,43 +470,41 @@ such as 3232235777."
 ;; DNS helper functions
 ;;
 
-#-clisp
-(progn
-  (defun get-host-by-name (name)
-    (let ((hosts (get-hosts-by-name name)))
-      (car hosts)))
+(defun get-host-by-name (name)
+  (let ((hosts (get-hosts-by-name name)))
+    (car hosts)))
 
-  (defun get-random-host-by-name (name)
-    (let ((hosts (get-hosts-by-name name)))
-      (when hosts
-        (elt hosts (random (length hosts))))))
+(defun get-random-host-by-name (name)
+  (let ((hosts (get-hosts-by-name name)))
+    (when hosts
+      (elt hosts (random (length hosts))))))
 
-  (defun host-to-vector-quad (host)
-    "Translate a host specification (vector quad, dotted quad or domain name)
+(defun host-to-vector-quad (host)
+  "Translate a host specification (vector quad, dotted quad or domain name)
 to a vector quad."
-    (etypecase host
-      (string (let* ((ip (when (ip-address-string-p host)
-                           (dotted-quad-to-vector-quad host))))
-                (if (and ip (= 4 (length ip)))
-                    ;; valid IP dotted quad?
-                    ip
-                  (get-random-host-by-name host))))
-      ((or (vector t 4)
-           (array (unsigned-byte 8) (4)))
-       host)
-      (integer (hbo-to-vector-quad host))))
+  (etypecase host
+    (string (let* ((ip (when (ip-address-string-p host)
+                         (dotted-quad-to-vector-quad host))))
+              (if (and ip (= 4 (length ip)))
+                  ;; valid IP dotted quad?
+                  ip
+                (get-random-host-by-name host))))
+    ((or (vector t 4)
+         (array (unsigned-byte 8) (4)))
+     host)
+    (integer (hbo-to-vector-quad host))))
 
-  (defun host-to-hbo (host)
-    (etypecase host
-      (string (let ((ip (when (ip-address-string-p host)
-                          (dotted-quad-to-vector-quad host))))
-                (if (and ip (= 4 (length ip)))
-                    (host-byte-order ip)
-            (host-to-hbo (get-host-by-name host)))))
-      ((or (vector t 4)
-           (array (unsigned-byte 8) (4)))
-       (host-byte-order host))
-      (integer host))))
+(defun host-to-hbo (host)
+  (etypecase host
+    (string (let ((ip (when (ip-address-string-p host)
+                        (dotted-quad-to-vector-quad host))))
+              (if (and ip (= 4 (length ip)))
+                  (host-byte-order ip)
+                (host-to-hbo (get-host-by-name host)))))
+    ((or (vector t 4)
+         (array (unsigned-byte 8) (4)))
+     (host-byte-order host))
+    (integer host)))
 
 ;;
 ;; Other utility functions
