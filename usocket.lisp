@@ -313,16 +313,16 @@ none."
 
 
 (defmacro port-to-octet-buffer (port buffer &key (start 0))
-  `(integer-to-octet-buffer ,port ,buffer 2 ,start))
+  `(integer-to-octet-buffer ,port ,buffer 2 :start ,start))
 
 (defmacro ip-to-octet-buffer (ip buffer &key (start 0))
-  `(integer-to-octet-buffer (host-byte-order ,ip) ,buffer 4 ,start))
+  `(integer-to-octet-buffer (host-byte-order ,ip) ,buffer 4 :start ,start))
 
 (defmacro port-from-octet-buffer (buffer &key (start 0))
-  `(octet-buffer-to-integer ,buffer 2 ,start))
+  `(octet-buffer-to-integer ,buffer 2 :start ,start))
 
 (defmacro ip-from-octet-buffer (buffer &key (start 0))
-  `(octet-buffer-to-integer ,buffer 4 ,start))
+  `(octet-buffer-to-integer ,buffer 4 :start ,start))
 
 ;;
 ;; IP(v4) utility functions
