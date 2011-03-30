@@ -14,6 +14,7 @@
 (defsystem usocket
     :name "usocket"
     :author "Erik Enge & Erik Huelsmann"
+    :maintainer "Chun Tian (binghe)"
     :version "0.6.0"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
@@ -36,7 +37,8 @@
 			       #+mcl		(:file "mcl")
 			       #+openmcl	(:file "openmcl")
 			       #+allegro	(:file "allegro")))
-		 (:file "server" :depends-on ("backend"))))
+                 (:file "option" :depends-on ("backend"))
+		 (:file "server" :depends-on ("backend" "option"))))
 
 (defmethod perform ((op test-op) (c (eql (find-system :usocket))))
   (oos 'load-op :usocket-test)
