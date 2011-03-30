@@ -33,6 +33,17 @@
   #-ffi
   "localhost")
 
+(defun get-host-by-address (address)
+  (with-mapped-conditions ()
+    (let ((hostent (posix:resolve-host-ipaddr (host-to-hostname address))))
+      (posix:hostent-name hostent))))
+
+(defun get-hosts-by-name (name)
+  (with-mapped-conditions ()
+    (let ((hostent (posix:resolve-host-ipaddr name)))
+      (mapcar #'host-to-vector-quad
+              (posix:hostent-addr-list hostent)))))
+
 #+win32
 (defun remap-maybe-for-win32 (z)
   (mapcar #'(lambda (x)
@@ -69,8 +80,6 @@
   (declare (ignore nodelay))
   (when deadline (unsupported 'deadline 'socket-connect))
   (when nodelay-specified (unsupported 'nodelay 'socket-connect))
-  (when local-host (unsupported 'local-host 'socket-connect))
-  (when local-port (unsupported 'local-port 'socket-connect))
   (case protocol
     (:stream
      (let ((socket)
@@ -202,8 +211,8 @@
 
   (declaim (inline fill-sockaddr_in))
   (defun fill-sockaddr_in (sockaddr_in ip port)
-    (port-to-octet-buffer sockaddr_in port)
-    (ip-to-octet-buffer sockaddr_in ip :start 2)
+    (port-to-octet-buffer port sockaddr_in)
+    (ip-to-octet-buffer ip sockaddr_in :start 2)
     sockaddr_in)
 
   (defun socket-create-datagram (local-port
@@ -217,17 +226,17 @@
                         (fill-sockaddr_in (make-sockaddr_in)
                                           remote-host (or remote-port
                                                           local-port)))))
-      (bind sock lsock_addr)
+      (rawsock:bind sock lsock_addr)
       (when rsock_addr
-        (connect sock rsock_addr))
+        (rawsock:connect sock rsock_addr))
       (make-datagram-socket sock :connected-p (if rsock_addr t nil))))
 
-  (defun socket-receive (socket buffer length &key)
+  (defmethod socket-receive ((socket datagram-usocket) buffer length &key)
     "Returns the buffer, the number of octets copied into the buffer (received)
 and the address of the sender as values."
     (let* ((sock (socket socket))
            (sockaddr (when (not (connected-p socket))
-                       (rawsock:make-sockaddr)))
+                       (rawsock:make-sockaddr :inet)))
            (rv (if sockaddr
                    (rawsock:recvfrom sock buffer sockaddr
                                      :start 0
@@ -237,10 +246,10 @@ and the address of the sender as values."
                                  :end length))))
       (values buffer
               rv
-              (ip-from-octet-buffer (sockaddr-data sockaddr) 4)
-              (port-from-octet-buffer (sockaddr-data sockaddr) 2))))
+              (ip-from-octet-buffer (rawsock:sockaddr-data sockaddr) :start 4)
+              (port-from-octet-buffer (rawsock:sockaddr-data sockaddr) :start 2))))
 
-  (defun socket-send (socket buffer length &key host port)
+  (defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
     "Returns the number of octets sent."
     (let* ((sock (socket socket))
            (sockaddr (when (and host port)

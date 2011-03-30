@@ -470,43 +470,41 @@ such as 3232235777."
 ;; DNS helper functions
 ;;
 
-#-clisp
-(progn
-  (defun get-host-by-name (name)
-    (let ((hosts (get-hosts-by-name name)))
-      (car hosts)))
+(defun get-host-by-name (name)
+  (let ((hosts (get-hosts-by-name name)))
+    (car hosts)))
 
-  (defun get-random-host-by-name (name)
-    (let ((hosts (get-hosts-by-name name)))
-      (when hosts
-        (elt hosts (random (length hosts))))))
+(defun get-random-host-by-name (name)
+  (let ((hosts (get-hosts-by-name name)))
+    (when hosts
+      (elt hosts (random (length hosts))))))
 
-  (defun host-to-vector-quad (host)
-    "Translate a host specification (vector quad, dotted quad or domain name)
+(defun host-to-vector-quad (host)
+  "Translate a host specification (vector quad, dotted quad or domain name)
 to a vector quad."
-    (etypecase host
-      (string (let* ((ip (when (ip-address-string-p host)
-                           (dotted-quad-to-vector-quad host))))
-                (if (and ip (= 4 (length ip)))
-                    ;; valid IP dotted quad?
-                    ip
-                  (get-random-host-by-name host))))
-      ((or (vector t 4)
-           (array (unsigned-byte 8) (4)))
-       host)
-      (integer (hbo-to-vector-quad host))))
+  (etypecase host
+    (string (let* ((ip (when (ip-address-string-p host)
+                         (dotted-quad-to-vector-quad host))))
+              (if (and ip (= 4 (length ip)))
+                  ;; valid IP dotted quad?
+                  ip
+                (get-random-host-by-name host))))
+    ((or (vector t 4)
+         (array (unsigned-byte 8) (4)))
+     host)
+    (integer (hbo-to-vector-quad host))))
 
-  (defun host-to-hbo (host)
-    (etypecase host
-      (string (let ((ip (when (ip-address-string-p host)
-                          (dotted-quad-to-vector-quad host))))
-                (if (and ip (= 4 (length ip)))
-                    (host-byte-order ip)
-            (host-to-hbo (get-host-by-name host)))))
-      ((or (vector t 4)
-           (array (unsigned-byte 8) (4)))
-       (host-byte-order host))
-      (integer host))))
+(defun host-to-hbo (host)
+  (etypecase host
+    (string (let ((ip (when (ip-address-string-p host)
+                        (dotted-quad-to-vector-quad host))))
+              (if (and ip (= 4 (length ip)))
+                  (host-byte-order ip)
+                (host-to-hbo (get-host-by-name host)))))
+    ((or (vector t 4)
+         (array (unsigned-byte 8) (4)))
+     (host-byte-order host))
+    (integer host)))
 
 ;;
 ;; Other utility functions
