@@ -8,13 +8,15 @@
 
 0.5.1:
 
-* Bugfix: [SBCL] Fixes for "SBCL/Win32: finalizer problem, etc", by Anton Kovalenko <anton@sw4me.com>
+* Bugfix: Fixed wrong macro expansions of {IP|PORT}-{FROM|TO}-OCTET-BUFFER functions!
 * Bugfix: SOCKET-CONNECT didn't set CONNECTED-P for datagram usockets on most backends.
+* Bugfix: [SBCL] Fixes for "SBCL/Win32: finalizer problem, etc", by Anton Kovalenko <anton@sw4me.com>
 * Bugfix: [SBCL] Fixed SOCKET-SERVER (UDP) on SBCL due to a issue in SOCKET-CONNECT when HOST is NIL.
 * Bugfix: [SBCL] SOCKET-CONNECT's TIMEOUT argument now works as a "connection timeout".
 * Bugfix: [CMUCL] Fixed SOCKET-SEND on unconnected usockets under Unicode version of CMUCL.
-* Enhancement: [LispWorks] Better network error type detection on LispWorks.
+* Bugfix: [LispWorks] Better network error type detection on LispWorks.
 * Enhancement: SOCKET-SERVER return a second value to indicate the created underlying usocket object when running in new thread mode. This make server debugging work easier.
+* Enhancement: [CLISP] Full support of DNS helper functions (GET-HOST-BY-NAME, ...) added.
 
 [TODO]
 
