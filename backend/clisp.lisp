@@ -97,13 +97,11 @@
        (make-stream-socket :socket socket
 			   :stream socket))) ;; the socket is a stream too
     (:datagram
-     #+rawsock
+     #+(or rawsock ffi)
      (socket-create-datagram (or local-port *auto-port*)
 			     :local-host (or local-host *wildcard-host*)
 			     :remote-host host
 			     :remote-port port)
-     #+(and ffi (not rawsock))
-     ()
      #-(or rawsock ffi)
      (unsupported '(protocol :datagram) 'socket-connect))))
 
@@ -342,6 +340,34 @@ and the address of the sender as values."
 	       #+win32 :stdc-stdcall)
     (:return-type ffi:int))
 
+  (ffi:def-call-out %connect (:name "connect")
+    (:arguments (socket ffi:int)
+		(address (ffi:c-ptr sockaddr) :in)
+		(address_len socklen_t))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:int))
+
+  (ffi:def-call-out %bind (:name "bind")
+    (:arguments (socket ffi:int)
+		(address (ffi:c-ptr sockaddr) :in)
+		(address_len socklen_t))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:int))
+
+  (ffi:def-call-out %close (:name #-win32 "close" #+win32 "closesocket")
+    (:arguments (socket ffi:int))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:int))
+
   (ffi:def-call-out %getsockopt (:name "getsockopt")
     (:arguments (sockfd ffi:int)
 		(level ffi:int)
@@ -366,18 +392,80 @@ and the address of the sender as values."
 	       #+win32 :stdc-stdcall)
     (:return-type ffi:int))
 
+  (ffi:def-call-out %htonl (:name "htonl")
+    (:arguments (hostlong ffi:uint32))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:uint32))
+
+  (ffi:def-call-out %htons (:name "htons")
+    (:arguments (hostshort ffi:uint16))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:uint16))
+
+  (ffi:def-call-out %ntohl (:name "ntohl")
+    (:arguments (netlong ffi:uint32))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:uint32))
+
+  (ffi:def-call-out %ntohs (:name "ntohs")
+    (:arguments (netshort ffi:uint16))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:uint16))
+
   ;; socket constants
   (defconstant +socket-af-inet+ 2)
-  (defconstant +socket-pf-unspec+ 0)
   (defconstant +socket-sock-dgram+ 2)
   (defconstant +sockopt-so-rcvtimeo+ #-linux #x1006 #+linux 20 "Socket receive timeout")
 
-  (defun open-udp-socket (&key local-address local-port read-timeout)
-    "Open a unconnected UDP socket. For binding on address ANY(*), just not set LOCAL-ADDRESS (NIL),
-for binding on random free unused port, set LOCAL-PORT to 0."
-    (let ((socket-fd (%socket +socket-af-inet+ +socket-sock-dgram+ +socket-pf-unspec+)))
-      (if socket-fd
-	  (progn
-	    )
-	  (error "cannot create socket"))))
+  (defvar *length-of-sockaddr_in* (ffi:sizeof 'sockaddr_in))
+
+  (declaim (inline fill-sockaddr_in))
+  (defun fill-sockaddr_in (sockaddr host port)
+    (let ((hbo (host-to-hbo #(127 0 0 1))))
+      (setf (ffi:slot (ffi:foreign-value sockaddr) 'sin_len) *length-of-sockaddr_in*
+	    (ffi:slot (ffi:foreign-value sockaddr) 'sin_family) +socket-af-inet+
+	    (ffi:slot (ffi:foreign-value sockaddr) 'sin_port) (%htons port)
+	    (ffi:slot (ffi:foreign-value sockaddr) 'sin_addr) (%htonl hbo))
+      sockaddr))
+
+  (defun socket-create-datagram (local-port
+				 &key (local-host *wildcard-host*)
+				      remote-host
+				      remote-port)
+    (let ((sock (%socket +socket-af-inet+ +socket-sock-dgram+ 0))
+	  (lsock_addr (fill-sockaddr_in (ffi:allocate-shallow 'sockaddr_in)
+					local-host local-port))
+	  (rsock_addr (when remote-host
+			(fill-sockaddr_in (ffi:allocate-shallow 'sockaddr_in)
+					  remote-host (or remote-port local-port)))))
+      (unwind-protect
+	   (progn
+	     (%bind sock (ffi:cast (ffi:foreign-value lsock_addr) 'sockaddr)
+		    *length-of-sockaddr_in*)
+	     (when rsock_addr
+	       (%connect sock
+			 (ffi:cast (ffi:foreign-value rsock_addr) 'sockaddr)
+			 *length-of-sockaddr_in*)))
+	(ffi:foreign-free lsock_addr)
+	(when remote-host
+	  (ffi:foreign-free rsock_addr)))
+      (make-datagram-socket sock :connected-p (if rsock_addr t nil))))
+
+  (defmethod socket-close ((usocket datagram-usocket))
+    (when (wait-list usocket)
+      (remove-waiter (wait-list usocket) usocket))
+    (zerop (%close (socket usocket))))
+
 ) ; progn
