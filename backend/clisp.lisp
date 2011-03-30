@@ -226,34 +226,32 @@
                         (fill-sockaddr_in (make-sockaddr_in)
                                           remote-host (or remote-port
                                                           local-port)))))
-      (rawsock:bind sock lsock_addr)
+      (rawsock:bind sock (rawsock:make-sockaddr :inet lsock_addr))
       (when rsock_addr
-        (rawsock:connect sock rsock_addr))
+        (rawsock:connect sock (rawsock:make-sockaddr :inet rsock_addr)))
       (make-datagram-socket sock :connected-p (if rsock_addr t nil))))
 
   (defmethod socket-receive ((socket datagram-usocket) buffer length &key)
     "Returns the buffer, the number of octets copied into the buffer (received)
 and the address of the sender as values."
     (let* ((sock (socket socket))
-           (sockaddr (when (not (connected-p socket))
+           (sockaddr (unless (connected-p socket)
                        (rawsock:make-sockaddr :inet)))
            (rv (if sockaddr
-                   (rawsock:recvfrom sock buffer sockaddr
-                                     :start 0
-                                     :end length)
-                   (rawsock:recv sock buffer
-                                 :start 0
-                                 :end length))))
-      (values buffer
-              rv
-              (ip-from-octet-buffer (rawsock:sockaddr-data sockaddr) :start 4)
-              (port-from-octet-buffer (rawsock:sockaddr-data sockaddr) :start 2))))
+                   (rawsock:recvfrom sock buffer sockaddr :start 0 :end length)
+                   (rawsock:recv sock buffer :start 0 :end length)))
+           (host 0) (port 0))
+      (unless (connected-p socket)
+        (let ((data (rawsock:sockaddr-data sockaddr)))
+          (setq host (ip-from-octet-buffer data :start 4)
+                port (port-from-octet-buffer data :start 2))))
+      (values buffer rv host port)))
 
   (defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
     "Returns the number of octets sent."
     (let* ((sock (socket socket))
            (sockaddr (when (and host port)
-                       (rawsock:make-sockaddr :INET
+                       (rawsock:make-sockaddr :inet
                                               (fill-sockaddr_in
                                                (make-sockaddr_in)
                                                (host-byte-order host)
