@@ -111,8 +111,7 @@ for GC on implementions operate on raw socket fd.")
    #+(or lispworks
          (and clisp ffi (not rawsock)))
    (recv-buffer :documentation "Private RECV buffer.")
-   #+(or lispworks
-         (and clisp ffi (not rawsock)))
+   #+lispworks
    (send-buffer :documentation "Private SEND buffer."))
   (:documentation "UDP (inet-datagram) socket"))
 
