@@ -194,8 +194,7 @@
     (multiple-value-bind (nbytes remote-host remote-port)
         (with-mapped-conditions (usocket)
           (ext:inet-recvfrom (socket usocket) real-buffer real-length))
-      (when (plusp nbytes)
-        (values real-buffer nbytes remote-host remote-port)))))
+      (values real-buffer nbytes remote-host remote-port))))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind
@@ -273,17 +272,17 @@
        (multiple-value-bind
            (secs musecs)
            (split-timeout (or timeout 1))
-         (multiple-value-bind
-             (count err)
-             (unix:unix-fast-select (1+ (reduce #'max
-                                                (wait-list-%wait wait-list)))
-                                    (alien:addr rfds) nil nil
-                                    (when timeout secs) musecs)
+         (multiple-value-bind (count err)
+	     (unix:unix-fast-select (1+ (reduce #'max
+						(wait-list-%wait wait-list)))
+				    (alien:addr rfds) nil nil
+				    (when timeout secs) musecs)
+	   (declare (ignore err))
            (if (<= 0 count)
                ;; process the result...
                (dolist (x (wait-list-waiters wait-list))
                  (when (unix:fd-isset (socket x) rfds)
                    (setf (state x) :READ)))
-             (progn
-	       ;;###FIXME generate an error, except for EINTR
-               )))))))
+	       (progn
+		 ;;###FIXME generate an error, except for EINTR
+		 )))))))
