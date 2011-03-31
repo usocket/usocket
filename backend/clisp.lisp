@@ -233,10 +233,6 @@
   (defmethod socket-receive ((socket datagram-usocket) buffer length &key)
     "Returns the buffer, the number of octets copied into the buffer (received)
 and the address of the sender as values."
-    (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
-		     (integer 0)                          ; size
-		     (unsigned-byte 32)                   ; host
-		     (unsigned-byte 16)))                 ; port
     (let* ((sock (socket socket))
            (sockaddr (unless (connected-p socket)
                        (rawsock:make-sockaddr :inet)))
@@ -311,9 +307,7 @@ and the address of the sender as values."
   ;; foreign functions
   (ffi:def-call-out %sendto (:name "sendto")
     (:arguments (socket ffi:int)
-		(buffer (ffi:c-ptr (ffi:c-array-max ffi:uint8
-						    #.+max-datagram-packet-size+))
-			:in)
+		(buffer ffi:c-pointer)
 		(length ffi:int)
 		(flags ffi:int)
 		(address (ffi:c-ptr sockaddr))
@@ -326,9 +320,7 @@ and the address of the sender as values."
 
   (ffi:def-call-out %send (:name "send")
     (:arguments (socket ffi:int)
-		(buffer (ffi:c-ptr (ffi:c-array-max ffi:uint8
-						    #.+max-datagram-packet-size+))
-			:in)
+		(buffer ffi:c-pointer)
 		(length ffi:int)
 		(flags ffi:int))
     #+win32 (:library "WS2_32")
@@ -339,9 +331,7 @@ and the address of the sender as values."
 
   (ffi:def-call-out %recvfrom (:name "recvfrom")
     (:arguments (socket ffi:int)
-		(buffer (ffi:c-ptr (ffi:c-array-max ffi:uint8
-						    #.+max-datagram-packet-size+))
-			:in-out)
+		(buffer ffi:c-pointer)
 		(length ffi:int)
 		(flags ffi:int)
 		(address (ffi:c-ptr sockaddr) :in-out)
@@ -509,35 +499,31 @@ and the address of the sender as values."
       (zerop (%close socket))))
 
   (defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
-    (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
-		     (integer 0)                          ; size
-		     (unsigned-byte 32)                   ; host
-		     (unsigned-byte 16)))                 ; port
     (let ((remote-address (ffi:allocate-shallow 'sockaddr_in))
 	  (remote-address-length (ffi:allocate-shallow 'ffi:int))
 	  nbytes (host 0) (port 0))
       (setf (ffi:foreign-value remote-address-length)
 	    *length-of-sockaddr_in*)
       (unwind-protect
-	   (multiple-value-bind (n return-buffer address address-length)
+	   (multiple-value-bind (n address address-length)
 	       (%recvfrom (socket usocket)
-			  (ffi:foreign-value (slot-value usocket 'recv-buffer))
+			  (ffi:foreign-address (slot-value usocket 'recv-buffer))
 			  +max-datagram-packet-size+
 			  0 ; flags
 			  (ffi:cast (ffi:foreign-value remote-address) 'sockaddr)
 			  (ffi:foreign-value remote-address-length))
-	     (assert (= n (length return-buffer)))
 	     (setq nbytes n)
 	     (when (= address-length *length-of-sockaddr_in*)
 	       (let ((data (sockaddr-sa_data address)))
 		 (setq host (ip-from-octet-buffer data :start 2)
 		       port (port-from-octet-buffer data))))
 	     (cond ((plusp n)
-		    (if buffer ; replace exist buffer of create new return buffer
-			(let ((end-1 (min (or length (length buffer)) +max-datagram-packet-size+))
-			      (end-2 (min n +max-datagram-packet-size+)))
-			  (replace buffer return-buffer :end1 end-1 :end2 end-2))
-			(setq buffer (subseq return-buffer 0 (min n +max-datagram-packet-size+)))))
+		    (let ((return-buffer (ffi:foreign-value (slot-value usocket 'recv-buffer))))
+		      (if buffer ; replace exist buffer of create new return buffer
+			  (let ((end-1 (min (or length (length buffer)) +max-datagram-packet-size+))
+				(end-2 (min n +max-datagram-packet-size+)))
+			    (replace buffer return-buffer :end1 end-1 :end2 end-2))
+			  (setq buffer (subseq return-buffer 0 (min n +max-datagram-packet-size+))))))
 		   ((zerop n)) ; do nothing
 		   (t))) ; TODO: handle error here.
 	(ffi:foreign-free remote-address)
@@ -564,12 +550,13 @@ and the address of the sender as values."
       (unwind-protect
 	   (let ((n (if remote-address
 			(%sendto (socket usocket)
-				 (ffi:foreign-value send-buffer)
+				 (ffi:foreign-address send-buffer)
 				 (min length +max-datagram-packet-size+) 0
 				 (ffi:cast (ffi:foreign-value remote-address) 'sockaddr)
 				 *length-of-sockaddr_in*)
 			(%send (socket usocket)
-			       (ffi:foreign-value send-buffer)
+			       ;; (ffi:cast (ffi:foreign-value send-buffer) 'ffi:c-pointer)
+			       (ffi:foreign-address send-buffer)
 			       (min length +max-datagram-packet-size+) 0))))
 	     (cond ((plusp n)
 		    (setq nbytes n))
