@@ -101,7 +101,7 @@
      #+(or rawsock ffi)
      (socket-create-datagram (or local-port *auto-port*)
 			     :local-host (or local-host *wildcard-host*)
-			     :remote-host host
+			     :remote-host (and host (host-to-vector-quad host))
 			     :remote-port port)
      #-(or rawsock ffi)
      (unsupported '(protocol :datagram) 'socket-connect))))
@@ -234,17 +234,18 @@
     "Returns the buffer, the number of octets copied into the buffer (received)
 and the address of the sender as values."
     (let* ((sock (socket socket))
-           (sockaddr (unless (connected-p socket)
-                       (rawsock:make-sockaddr :inet)))
-           (rv (if sockaddr
-                   (rawsock:recvfrom sock buffer sockaddr :start 0 :end length)
-                   (rawsock:recv sock buffer :start 0 :end length)))
+           (sockaddr (rawsock:make-sockaddr :inet))
+           (real-length (or length +max-datagram-packet-size+))
+           (real-buffer (or buffer
+                            (make-array real-length :element-type '(unsigned-byte 8))))
+           (rv (rawsock:recvfrom sock real-buffer sockaddr
+                                 :start 0 :end real-length))
            (host 0) (port 0))
       (unless (connected-p socket)
         (let ((data (rawsock:sockaddr-data sockaddr)))
           (setq host (ip-from-octet-buffer data :start 4)
                 port (port-from-octet-buffer data :start 2))))
-      (values buffer rv host port)))
+      (values real-buffer rv host port)))
 
   (defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
     "Returns the number of octets sent."
@@ -255,19 +256,40 @@ and the address of the sender as values."
                                                (make-sockaddr_in)
                                                (host-byte-order host)
                                                port))))
+           (real-length (or length (length buffer)))
+           (real-buffer (if (typep buffer '(simple-array (unsigned-byte 8) (*)))
+                            buffer
+                          (make-array real-length
+                                      :element-type '(unsigned-byte 8)
+                                      :initial-contents (subseq buffer 0 real-length))))
            (rv (if (and host port)
-                   (rawsock:sendto sock buffer sockaddr
+                   (rawsock:sendto sock real-buffer sockaddr
                                    :start 0
-                                   :end length)
-                   (rawsock:send sock buffer
+                                   :end real-length)
+                   (rawsock:send sock real-buffer
                                  :start 0
-                                 :end length))))
+                                 :end real-length))))
       rv))
 
   (defmethod socket-close ((usocket datagram-usocket))
     (when (wait-list usocket)
        (remove-waiter (wait-list usocket) usocket))
     (rawsock:sock-close (socket usocket)))
+
+  (declaim (inline get-socket-name))
+  (defun get-socket-name (socket function)
+    (let ((sockaddr (rawsock:make-sockaddr :inet (make-sockaddr_in))))
+      (funcall function socket sockaddr)
+      (let ((data (rawsock:sockaddr-data sockaddr)))
+        (values (hbo-to-vector-quad (ip-from-octet-buffer data :start 2))
+                (port-from-octet-buffer data :start 0)))))
+
+  (defmethod get-local-name ((usocket datagram-usocket))
+    (get-socket-name (socket usocket) 'rawsock:getsockname))
+
+  (defmethod get-peer-name ((usocket datagram-usocket))
+    (get-socket-name (socket usocket) 'rawsock:getpeername))
+
 ) ; progn
 
 ;;;
@@ -288,10 +310,6 @@ and the address of the sender as values."
     (sa_len     ffi:uint8)
     (sa_family  sa_family_t)
     (sa_data    (ffi:c-array ffi:char 14)))
-
-  #+ignore
-  (ffi:def-c-struct in_addr
-    (s_addr     in_addr_t))
 
   (ffi:def-c-struct sockaddr_in
     (sin_len    ffi:uint8)
@@ -466,11 +484,6 @@ and the address of the sender as values."
   (declaim (inline fill-sockaddr_in))
   (defun fill-sockaddr_in (sockaddr host port)
     (let ((hbo (host-to-hbo host)))
-      #+ignore
-      (setf (ffi:slot (ffi:foreign-value sockaddr) 'sin_len) *length-of-sockaddr_in*
-	    (ffi:slot (ffi:foreign-value sockaddr) 'sin_family) +socket-af-inet+
-	    (ffi:slot (ffi:foreign-value sockaddr) 'sin_port) (%htons port)
-	    (ffi:slot (ffi:foreign-value sockaddr) 'sin_addr) (%htonl hbo))
       (ffi:with-c-place (place sockaddr)
 	(setf (ffi:slot place 'sin_len) *length-of-sockaddr_in*
 	      (ffi:slot place 'sin_family) +socket-af-inet+
@@ -616,6 +629,3 @@ and the address of the sender as values."
     (get-socket-name (socket usocket) '%getpeername))
 
 ) ; progn
-
-;;; TODO: get-local-name & get-peer-name
-
