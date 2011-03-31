@@ -146,7 +146,7 @@
      (remove-waiter (wait-list usocket) usocket))
   (socket:socket-server-close (socket usocket)))
 
-(defmethod get-local-name ((usocket usocket))
+(defmethod get-local-name ((usocket stream-usocket))
   (multiple-value-bind
       (address port)
       (socket:socket-stream-local (socket usocket) t)
@@ -161,13 +161,13 @@
 (defmethod get-local-address ((usocket usocket))
   (nth-value 0 (get-local-name usocket)))
 
-(defmethod get-peer-address ((usocket stream-usocket))
+(defmethod get-peer-address ((usocket usocket))
   (nth-value 0 (get-peer-name usocket)))
 
 (defmethod get-local-port ((usocket usocket))
   (nth-value 1 (get-local-name usocket)))
 
-(defmethod get-peer-port ((usocket stream-usocket))
+(defmethod get-peer-port ((usocket usocket))
   (nth-value 1 (get-peer-name usocket)))
 
 (defun %setup-wait-list (wait-list)
@@ -436,6 +436,26 @@ and the address of the sender as values."
 	       #+win32 :stdc-stdcall)
     (:return-type ffi:uint16))
 
+  (ffi:def-call-out %getsockname (:name "getsockname")
+    (:arguments (sockfd ffi:int)
+		(localaddr (ffi:c-ptr sockaddr) :in-out)
+		(addrlen (ffi:c-ptr socklen_t) :in-out))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:int))
+
+  (ffi:def-call-out %getpeername (:name "getpeername")
+    (:arguments (sockfd ffi:int)
+		(peeraddr (ffi:c-ptr sockaddr) :in-out)
+		(addrlen (ffi:c-ptr socklen_t) :in-out))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:int))
+
   ;; socket constants
   (defconstant +socket-af-inet+ 2)
   (defconstant +socket-sock-dgram+ 2)
@@ -567,12 +587,35 @@ and the address of the sender as values."
 	(when remote-address
 	  (ffi:foreign-free remote-address))
 	nbytes)))
+
+  (declaim (inline get-socket-name))
+  (defun get-socket-name (socket function)
+    (let ((address (ffi:allocate-shallow 'sockaddr_in))
+	  (address-length (ffi:allocate-shallow 'ffi:int))
+	  (host 0) (port 0))
+      (setf (ffi:foreign-value address-length) *length-of-sockaddr_in*)
+      (unwind-protect
+	   (multiple-value-bind (rv return-address return-address-length)
+	       (funcall function socket
+			(ffi:cast (ffi:foreign-value address) 'sockaddr)
+			(ffi:foreign-value address-length))
+	     (declare (ignore return-address-length))
+	     (if (zerop rv)
+		 (let ((data (sockaddr-sa_data return-address)))
+		   (setq host (ip-from-octet-buffer data :start 2)
+			 port (port-from-octet-buffer data)))
+		 (error "get-socket-name error"))) ; TODO: convert this
+	(ffi:foreign-free address)
+	(ffi:foreign-free address-length))
+      (values (hbo-to-vector-quad host) port)))
+
+  (defmethod get-local-name ((usocket datagram-usocket))
+    (get-socket-name (socket usocket) '%getsockname))
+
+  (defmethod get-peer-name ((usocket datagram-usocket))
+    (get-socket-name (socket usocket) '%getpeername))
+
 ) ; progn
 
 ;;; TODO: get-local-name & get-peer-name
 
-(defmethod get-local-name ((usocket datagram-usocket))
-  )
-
-(defmethod get-peer-name ((usocket datagram-usocket))
-  )
