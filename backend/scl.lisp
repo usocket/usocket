@@ -145,6 +145,10 @@
 	  (scl-map-socket-error errno :socket socket)))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length &key)
+  (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
+		   (integer 0)                          ; size
+		   (unsigned-byte 32)                   ; host
+		   (unsigned-byte 16)))                 ; port
   (let ((s (socket socket)))
     (let ((real-buffer (or buffer
 			   (make-array length :element-type '(unsigned-byte 8))))

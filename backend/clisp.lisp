@@ -232,6 +232,10 @@
   (defmethod socket-receive ((socket datagram-usocket) buffer length &key)
     "Returns the buffer, the number of octets copied into the buffer (received)
 and the address of the sender as values."
+    (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
+		     (integer 0)                          ; size
+		     (unsigned-byte 32)                   ; host
+		     (unsigned-byte 16)))                 ; port
     (let* ((sock (socket socket))
            (sockaddr (unless (connected-p socket)
                        (rawsock:make-sockaddr :inet)))
@@ -468,4 +472,13 @@ and the address of the sender as values."
       (remove-waiter (wait-list usocket) usocket))
     (zerop (%close (socket usocket))))
 
+  (defmethod socket-receive ((socket datagram-usocket) buffer length &key)
+    (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
+		     (integer 0)                          ; size
+		     (unsigned-byte 32)                   ; host
+		     (unsigned-byte 16)))                 ; port
+    )
+
+  (defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
+    )
 ) ; progn

@@ -157,6 +157,10 @@
 	(ccl::send-for-usocket (socket usocket) buffer length))))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
+  (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
+		   (integer 0)                          ; size
+		   (unsigned-byte 32)                   ; host
+		   (unsigned-byte 16)))                 ; port
   (with-mapped-conditions (usocket)
     (openmcl-socket:receive-from (socket usocket) length :buffer buffer)))
 

@@ -183,6 +183,10 @@
 	(%unix-send (socket usocket) buffer length 0))))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
+  (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
+		   (integer 0)                          ; size
+		   (unsigned-byte 32)                   ; host
+		   (unsigned-byte 16)))                 ; port
   (let ((real-buffer (or buffer
                          (make-array length :element-type '(unsigned-byte 8))))
         (real-length (or length

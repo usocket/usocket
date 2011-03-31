@@ -433,6 +433,10 @@
               (values nil n 0 0)))))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length &key timeout)
+  (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
+		   (integer 0)                          ; size
+		   (unsigned-byte 32)                   ; host
+		   (unsigned-byte 16)))                 ; port
   (multiple-value-bind (buffer size host port)
       (receive-message (socket socket)
                        (slot-value socket 'recv-buffer)

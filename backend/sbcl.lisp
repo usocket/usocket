@@ -387,6 +387,10 @@ happen. Use with care."
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length
 			   &key (element-type '(unsigned-byte 8)))
+  (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
+		   (integer 0)                          ; size
+		   (unsigned-byte 32)                   ; host
+		   (unsigned-byte 16)))                 ; port
   (with-mapped-conditions (socket)
     (let ((s (socket socket)))
       (sb-bsd-sockets:socket-receive s buffer length :element-type element-type))))
