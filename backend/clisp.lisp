@@ -323,11 +323,11 @@ and the address of the sender as values."
 
   (ffi:def-call-out %recvfrom (:name "recvfrom")
     (:arguments (socket ffi:int)
-		(buffer (ffi:c-ptr ffi:uint8) :out)
+		(buffer (ffi:c-ptr ffi:uint8) :in-out)
 		(length ffi:int)
 		(flags ffi:int)
-		(address (ffi:c-ptr sockaddr) :out)
-		(address-len (ffi:c-ptr ffi:int) :out))
+		(address (ffi:c-ptr sockaddr) :in-out)
+		(address-len (ffi:c-ptr ffi:int) :in-out))
     #+win32 (:library "WS2_32")
     #-win32 (:library :default)
     (:language #-win32 :stdc
@@ -438,10 +438,16 @@ and the address of the sender as values."
   (declaim (inline fill-sockaddr_in))
   (defun fill-sockaddr_in (sockaddr host port)
     (let ((hbo (host-to-hbo #(127 0 0 1))))
+      #+ignore
       (setf (ffi:slot (ffi:foreign-value sockaddr) 'sin_len) *length-of-sockaddr_in*
 	    (ffi:slot (ffi:foreign-value sockaddr) 'sin_family) +socket-af-inet+
 	    (ffi:slot (ffi:foreign-value sockaddr) 'sin_port) (%htons port)
 	    (ffi:slot (ffi:foreign-value sockaddr) 'sin_addr) (%htonl hbo))
+      (ffi:with-c-place (place sockaddr)
+	(setf (ffi:slot place 'sin_len) *length-of-sockaddr_in*
+	      (ffi:slot place 'sin_family) +socket-af-inet+
+	      (ffi:slot place 'sin_port) (%htons port)
+	      (ffi:slot place 'sin_addr) (%htonl hbo)))
       sockaddr))
 
   (defun socket-create-datagram (local-port
@@ -467,17 +473,49 @@ and the address of the sender as values."
 	  (ffi:foreign-free rsock_addr)))
       (make-datagram-socket sock :connected-p (if rsock_addr t nil))))
 
+  (defmethod initialize-instance :after ((usocket datagram-usocket) &key)
+    (with-slots (send-buffer recv-buffer) usocket
+      (setf send-buffer (ffi:allocate-shallow 'ffi:uint8 :count +max-datagram-packet-size+)
+	    recv-buffer (ffi:allocate-shallow 'ffi:uint8 :count +max-datagram-packet-size+))))
+
   (defmethod socket-close ((usocket datagram-usocket))
     (when (wait-list usocket)
       (remove-waiter (wait-list usocket) usocket))
-    (zerop (%close (socket usocket))))
+    (with-slots (send-buffer recv-buffer socket) usocket
+      (ffi:foreign-free send-buffer)
+      (ffi:foreign-free recv-buffer)
+      (zerop (%close socket))))
 
-  (defmethod socket-receive ((socket datagram-usocket) buffer length &key)
+  (defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
     (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
 		     (integer 0)                          ; size
 		     (unsigned-byte 32)                   ; host
 		     (unsigned-byte 16)))                 ; port
-    )
+    (let ((remote-address (ffi:allocate-shallow 'sockaddr_in))
+	  (remote-address-length (ffi:allocate-shallow 'ffi:int))
+	  nbytes)
+      (unwind-protect
+	   (with-slots (recv-buffer) usocket
+	     (multiple-value-bind (n buffer address address-len)
+		 (%recvfrom (socket usocket)
+			    recv-buffer
+			    +max-datagram-packet-size+
+			    0 ; flags
+			    remote-address
+			    remote-address-length)
+	       (setq nbytes n)
+	       (cond ((plusp n)
+		      (if buffer ; replace exist buffer of create new return buffer
+			  (replace buffer (ffi:foreign-value recv-buffer)
+				   :end1 (min length +max-datagram-packet-size+)
+				   :end2 (min n +max-datagram-packet-size+))
+			  (setq buffer (subseq (ffi:foreign-value recv-buffer)
+					       0 (min n +max-datagram-packet-size+)))))
+		     ((zerop n)) ; do nothing
+		     (t)))) ; TODO: handle error here.
+	(ffi:foreign-free remote-address)
+	(ffi:foreign-free remote-address-length))
+  (values buffer nbytes 0 0))) ; TODO: remote-host and remote-port needed
 
   (defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
     )
