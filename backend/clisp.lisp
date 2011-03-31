@@ -77,7 +77,8 @@
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port)
-  (declare (ignore nodelay))
+  (declare (ignore nodelay)
+	   (ignorable timeout local-host local-port))
   (when deadline (unsupported 'deadline 'socket-connect))
   (when nodelay-specified (unsupported 'nodelay 'socket-connect))
   (case protocol
@@ -310,7 +311,9 @@ and the address of the sender as values."
   ;; foreign functions
   (ffi:def-call-out %sendto (:name "sendto")
     (:arguments (socket ffi:int)
-		(buffer (ffi:c-ptr ffi:uint8))
+		(buffer (ffi:c-ptr (ffi:c-array-max ffi:uint8
+						    #.+max-datagram-packet-size+))
+			:in)
 		(length ffi:int)
 		(flags ffi:int)
 		(address (ffi:c-ptr sockaddr))
@@ -321,9 +324,24 @@ and the address of the sender as values."
 	       #+win32 :stdc-stdcall)
     (:return-type ffi:int))
 
+  (ffi:def-call-out %send (:name "send")
+    (:arguments (socket ffi:int)
+		(buffer (ffi:c-ptr (ffi:c-array-max ffi:uint8
+						    #.+max-datagram-packet-size+))
+			:in)
+		(length ffi:int)
+		(flags ffi:int))
+    #+win32 (:library "WS2_32")
+    #-win32 (:library :default)
+    (:language #-win32 :stdc
+	       #+win32 :stdc-stdcall)
+    (:return-type ffi:int))
+
   (ffi:def-call-out %recvfrom (:name "recvfrom")
     (:arguments (socket ffi:int)
-		(buffer (ffi:c-ptr ffi:uint8) :in-out)
+		(buffer (ffi:c-ptr (ffi:c-array-max ffi:uint8
+						    #.+max-datagram-packet-size+))
+			:in-out)
 		(length ffi:int)
 		(flags ffi:int)
 		(address (ffi:c-ptr sockaddr) :in-out)
@@ -437,7 +455,7 @@ and the address of the sender as values."
 
   (declaim (inline fill-sockaddr_in))
   (defun fill-sockaddr_in (sockaddr host port)
-    (let ((hbo (host-to-hbo #(127 0 0 1))))
+    (let ((hbo (host-to-hbo host)))
       #+ignore
       (setf (ffi:slot (ffi:foreign-value sockaddr) 'sin_len) *length-of-sockaddr_in*
 	    (ffi:slot (ffi:foreign-value sockaddr) 'sin_family) +socket-af-inet+
@@ -473,16 +491,20 @@ and the address of the sender as values."
 	  (ffi:foreign-free rsock_addr)))
       (make-datagram-socket sock :connected-p (if rsock_addr t nil))))
 
+  (defun finalize-datagram-usocket (object)
+    (when (datagram-usocket-p object)
+      (socket-close object)))
+
   (defmethod initialize-instance :after ((usocket datagram-usocket) &key)
-    (with-slots (send-buffer recv-buffer) usocket
-      (setf send-buffer (ffi:allocate-shallow 'ffi:uint8 :count +max-datagram-packet-size+)
-	    recv-buffer (ffi:allocate-shallow 'ffi:uint8 :count +max-datagram-packet-size+))))
+    (setf (slot-value usocket 'recv-buffer)
+	  (ffi:allocate-shallow 'ffi:uint8 :count +max-datagram-packet-size+))
+    ;; finalize the object
+    (ext:finalize usocket 'finalize-datagram-usocket))
 
   (defmethod socket-close ((usocket datagram-usocket))
     (when (wait-list usocket)
       (remove-waiter (wait-list usocket) usocket))
-    (with-slots (send-buffer recv-buffer socket) usocket
-      (ffi:foreign-free send-buffer)
+    (with-slots (recv-buffer socket) usocket
       (ffi:foreign-free recv-buffer)
       (zerop (%close socket))))
 
@@ -493,30 +515,67 @@ and the address of the sender as values."
 		     (unsigned-byte 16)))                 ; port
     (let ((remote-address (ffi:allocate-shallow 'sockaddr_in))
 	  (remote-address-length (ffi:allocate-shallow 'ffi:int))
-	  nbytes)
+	  nbytes (host 0) (port 0))
       (unwind-protect
-	   (with-slots (recv-buffer) usocket
-	     (multiple-value-bind (n buffer address address-len)
-		 (%recvfrom (socket usocket)
-			    recv-buffer
-			    +max-datagram-packet-size+
-			    0 ; flags
-			    remote-address
-			    remote-address-length)
-	       (setq nbytes n)
-	       (cond ((plusp n)
-		      (if buffer ; replace exist buffer of create new return buffer
-			  (replace buffer (ffi:foreign-value recv-buffer)
-				   :end1 (min length +max-datagram-packet-size+)
-				   :end2 (min n +max-datagram-packet-size+))
-			  (setq buffer (subseq (ffi:foreign-value recv-buffer)
-					       0 (min n +max-datagram-packet-size+)))))
-		     ((zerop n)) ; do nothing
-		     (t)))) ; TODO: handle error here.
+	   (multiple-value-bind (n return-buffer address address-length)
+	       (%recvfrom (socket usocket)
+			  (ffi:foreign-value (slot-value usocket 'recv-buffer))
+			  +max-datagram-packet-size+
+			  0 ; flags
+			  (ffi:cast (ffi:foreign-value remote-address) 'sockaddr)
+			  (ffi:foreign-value remote-address-length))
+	     (assert (= n (length return-buffer)))
+	     (setq nbytes n)
+	     (when (= address-length *length-of-sockaddr_in*)
+	       (let ((in (ffi:cast (ffi:foreign-value address) 'sockaddr_in)))
+		 (setq host (%ntohl (ffi:slot (ffi:foreign-value in) 'sin_addr))
+		       port (%ntohs (ffi:slot (ffi:foreign-value in) 'sin_port)))))
+	     (cond ((plusp n)
+		    (if buffer ; replace exist buffer of create new return buffer
+			(let ((end-1 (min (or length (length buffer)) +max-datagram-packet-size+))
+			      (end-2 (min n +max-datagram-packet-size+)))
+			  (replace buffer return-buffer :end1 end-1 :end2 end-2))
+			(setq buffer (subseq return-buffer 0 (min n +max-datagram-packet-size+)))))
+		   ((zerop n)) ; do nothing
+		   (t))) ; TODO: handle error here.
 	(ffi:foreign-free remote-address)
 	(ffi:foreign-free remote-address-length))
-  (values buffer nbytes 0 0))) ; TODO: remote-host and remote-port needed
+      (values buffer nbytes host port)))
 
-  (defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
-    )
+  ;; implementation note: different from socket-receive, we know how many bytes we want to send everytime,
+  ;; so, a send buffer will not needed, and if there is a buffer, it's hard to fill its content like those
+  ;; in LispWorks. So, we allocate new foreign buffer for holding data (unknown sequence subtype) every time.
+  ;; 
+  ;; I don't know if anyone is watching my coding work, but I think this design is reasonable for CLISP.
+  (defmethod socket-send ((usocket datagram-usocket) buffer length &key host port)
+    (declare (type sequence buffer)
+	     (type integer length))
+    (let ((remote-address (when (and host port)
+			    (fill-sockaddr_in (ffi:allocate-shallow 'sockaddr_in) host port)))
+	  (send-buffer (let ((buffer-length (length buffer)))
+			 (if (> buffer-length (* length 2))
+			     ;; if buffer is too big, then we copy out a subseq and only allocate as need
+			     (ffi:allocate-deep 'ffi:uint8 (subseq buffer 0 length) :count length :read-only t)
+			     ;; then we allocate the whole buffer directly, that should be faster.
+			     (ffi:allocate-deep 'ffi:uint8 buffer :count (length buffer) :read-only t))))
+	  nbytes)
+      (unwind-protect
+	   (let ((n (if remote-address
+			(%sendto (socket usocket)
+				 (ffi:foreign-value send-buffer)
+				 (min length +max-datagram-packet-size+) 0
+				 (ffi:cast (ffi:foreign-value remote-address) 'sockaddr)
+				 *length-of-sockaddr_in*)
+			(%send (socket usocket)
+			       (ffi:foreign-value send-buffer)
+			       (min length +max-datagram-packet-size+) 0))))
+	     (cond ((plusp n)
+		    (setq nbytes n))
+		   ((zerop n)
+		    (setq nbytes n))
+		   (t))) ; TODO: error handling
+	(ffi:foreign-free send-buffer)
+	(when remote-address
+	  (ffi:foreign-free remote-address))
+	nbytes)))
 ) ; progn
