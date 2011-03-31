@@ -358,15 +358,14 @@
                     :element-type '(unsigned-byte 8)
                     :allocation :static)))
 
+(defvar *length-of-sockaddr_in*
+  (fli:size-of '(:struct comm::sockaddr_in)))
+
 (defun send-message (socket-fd message buffer &optional (length (length buffer)) host service)
   "Send message to a socket, using sendto()/send()"
   (declare (type integer socket-fd)
            (type sequence buffer))
-  (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in))
-                                     (len :int
-                                          #-(or lispworks4 lispworks5.0) ; <= 5.0
-                                          :initial-element
-                                          (fli:size-of '(:struct comm::sockaddr_in))))
+  (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in)))
     (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
       (replace message buffer :end2 length)
       (if (and host service)
@@ -374,7 +373,7 @@
             (comm::initialize-sockaddr_in client-addr comm::*socket_af_inet* host service "udp")
             (%sendto socket-fd ptr (min length +max-datagram-packet-size+) 0
                      (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
-                     (fli:dereference len)))
+                     *length-of-sockaddr_in*))
           (comm::%send socket-fd ptr (min length +max-datagram-packet-size+) 0)))))
 
 (defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
@@ -397,8 +396,9 @@
     (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in))
                                        (len :int
 					    #-(or lispworks4 lispworks5.0) ; <= 5.0
-                                            :initial-element
-                                            (fli:size-of '(:struct comm::sockaddr_in))))
+                                            :initial-element *length-of-sockaddr_in*))
+      #+(or lispworks4 lispworks5.0) ; <= 5.0
+      (setf (fli:dereference len) *length-of-sockaddr_in*)
       (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
         ;; setup new read timeout
         (when read-timeout
