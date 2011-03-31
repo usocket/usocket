@@ -516,6 +516,8 @@ and the address of the sender as values."
     (let ((remote-address (ffi:allocate-shallow 'sockaddr_in))
 	  (remote-address-length (ffi:allocate-shallow 'ffi:int))
 	  nbytes (host 0) (port 0))
+      (setf (ffi:foreign-value remote-address-length)
+	    *length-of-sockaddr_in*)
       (unwind-protect
 	   (multiple-value-bind (n return-buffer address address-length)
 	       (%recvfrom (socket usocket)
@@ -527,9 +529,9 @@ and the address of the sender as values."
 	     (assert (= n (length return-buffer)))
 	     (setq nbytes n)
 	     (when (= address-length *length-of-sockaddr_in*)
-	       (let ((in (ffi:cast (ffi:foreign-value address) 'sockaddr_in)))
-		 (setq host (%ntohl (ffi:slot (ffi:foreign-value in) 'sin_addr))
-		       port (%ntohs (ffi:slot (ffi:foreign-value in) 'sin_port)))))
+	       (let ((data (sockaddr-sa_data address)))
+		 (setq host (ip-from-octet-buffer data :start 2)
+		       port (port-from-octet-buffer data))))
 	     (cond ((plusp n)
 		    (if buffer ; replace exist buffer of create new return buffer
 			(let ((end-1 (min (or length (length buffer)) +max-datagram-packet-size+))
@@ -579,3 +581,11 @@ and the address of the sender as values."
 	  (ffi:foreign-free remote-address))
 	nbytes)))
 ) ; progn
+
+;;; TODO: get-local-name & get-peer-name
+
+(defmethod get-local-name ((usocket datagram-usocket))
+  )
+
+(defmethod get-peer-name ((usocket datagram-usocket))
+  )
