@@ -15,7 +15,8 @@
 (defsystem usocket-test
     :name "usocket test"
     :author "Erik Enge"
-    :version "0.1.0"
+    :maintainer "Chun Tian (binghe)"
+    :version "0.2.0"
     :licence "MIT"
     :description "Tests for usocket"
     :depends-on (:usocket

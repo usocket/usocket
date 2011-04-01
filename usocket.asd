@@ -14,6 +14,7 @@
 (defsystem usocket
     :name "usocket"
     :author "Erik Enge & Erik Huelsmann"
+    :maintainer "Chun Tian (binghe)"
     :version "0.5.1"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
