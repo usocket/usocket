@@ -237,15 +237,19 @@ and the address of the sender as values."
            (sockaddr (rawsock:make-sockaddr :inet))
            (real-length (or length +max-datagram-packet-size+))
            (real-buffer (or buffer
-                            (make-array real-length :element-type '(unsigned-byte 8))))
-           (rv (rawsock:recvfrom sock real-buffer sockaddr
+                            (make-array real-length
+                                        :element-type '(unsigned-byte 8)))))
+      (let ((rv (rawsock:recvfrom sock real-buffer sockaddr
                                  :start 0 :end real-length))
-           (host 0) (port 0))
-      (unless (connected-p socket)
-        (let ((data (rawsock:sockaddr-data sockaddr)))
-          (setq host (ip-from-octet-buffer data :start 4)
-                port (port-from-octet-buffer data :start 2))))
-      (values real-buffer rv host port)))
+            (host 0) (port 0))
+        (unless (connected-p socket)
+          (let ((data (rawsock:sockaddr-data sockaddr)))
+            (setq host (ip-from-octet-buffer data :start 4)
+                  port (port-from-octet-buffer data :start 2))))
+        (values (if buffer real-buffer (subseq real-buffer 0 rv))
+                rv
+                host
+                port))))
 
   (defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
     "Returns the number of octets sent."
