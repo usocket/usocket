@@ -44,35 +44,74 @@
       (mapcar #'host-to-vector-quad
               (posix:hostent-addr-list hostent)))))
 
-#+win32
-(defun remap-maybe-for-win32 (z)
-  (mapcar #'(lambda (x)
-              (cons (mapcar #'(lambda (y)
-                                (+ 10000 y))
-                            (car x))
-                    (cdr x)))
-          z))
-
+;; Format: ((UNIX Windows) . CONDITION)
 (defparameter +clisp-error-map+
-  #+win32
-  (append (remap-maybe-for-win32 +unix-errno-condition-map+)
-          (remap-maybe-for-win32 +unix-errno-error-map+))
   #-win32
-  (append +unix-errno-condition-map+
-          +unix-errno-error-map+))
+  `((:EADDRINUSE . address-in-use-error)
+    (:EADDRNOTAVAIL . address-not-available-error)
+    (:EBADF . bad-file-descriptor-error)
+    (:ECONNREFUSED  . connection-refused-error)
+    (:ECONNRESET . connection-reset-error)
+    (:ECONNABORTED . connection-aborted-error)
+    (:EINVAL . invalid-argument-error)
+    (:ENOBUFS . no-buffers-error)
+    (:ENOMEM . out-of-memory-error)
+    (:ENOTSUP . operation-not-supported-error)
+    (:EPERM . operation-not-permitted-error)
+    (:EPROTONOSUPPORT . protocol-not-supported-error)
+    (:ESOCKTNOSUPPORT . socket-type-not-supported-error)
+    (:ENETUNREACH . network-unreachable-error)
+    (:ENETDOWN . network-down-error)
+    (:ENETRESET . network-reset-error)
+    (:ESHUTDOWN . already-shutdown-error)
+    (:ETIMEDOUT . timeout-error)
+    (:EHOSTDOWN . host-down-error)
+    (:EHOSTUNREACH . host-unreachable-error))
+  #+win32
+  `((:WSAEADDRINUSE . address-in-use-error)
+    (:WSAEADDRNOTAVAIL . address-not-available-error)
+    (:WSAEBADF . bad-file-descriptor-error)
+    (:WSAECONNREFUSED  . connection-refused-error)
+    (:WSAECONNRESET . connection-reset-error)
+    (:WSAECONNABORTED . connection-aborted-error)
+    (:WSAEINVAL . invalid-argument-error)
+    (:WSAENOBUFS . no-buffers-error)
+    (:WSAENOMEM . out-of-memory-error)
+    (:WSAENOTSUP . operation-not-supported-error)
+    (:WSAEPERM . operation-not-permitted-error)
+    (:WSAEPROTONOSUPPORT . protocol-not-supported-error)
+    (:WSAESOCKTNOSUPPORT . socket-type-not-supported-error)
+    (:WSAENETUNREACH . network-unreachable-error)
+    (:WSAENETDOWN . network-down-error)
+    (:WSAENETRESET . network-reset-error)
+    (:WSAESHUTDOWN . already-shutdown-error)
+    (:WSAETIMEDOUT . timeout-error)
+    (:WSAEHOSTDOWN . host-down-error)
+    (:WSAEHOSTUNREACH . host-unreachable-error)))
 
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
-  (typecase condition
-    (system::simple-os-error
-       (let ((usock-err
-              (cdr (assoc (car (simple-condition-format-arguments condition))
-                          +clisp-error-map+ :test #'member))))
-         (when usock-err ;; don't claim the error if we don't know
-	   ;; it's actually a socket error ...
-             (if (subtypep usock-err 'error)
-                 (error usock-err :socket socket)
-               (signal usock-err :socket socket)))))))
+  (let (error-keyword error-string)
+    (typecase condition
+      (system::simple-os-error
+       (let ((errno (car (simple-condition-format-arguments condition))))
+	 (setq error-keyword (os:errno errno)
+	       error-string (os:strerror errno))))
+      (simple-error
+       (let ((keyword
+	      (car (simple-condition-format-arguments condition))))
+	 (setq error-keyword keyword
+	       error-string (os:strerror keyword))))
+      (error (error 'unknown-error :real-error condition))
+      (condition (signal 'unknown-condition :real-condition condition)))
+    (when error-keyword
+      (let ((usocket-error
+	     (cdr (assoc error-keyword +clisp-error-map+ :test #'eq))))
+	(if usocket-error
+	    (if (subtypep usocket-error 'error)
+		(error usocket-error :socket socket)
+		(signal usocket-error :socket socket))
+	    (error "Unknown OS error: ~A (~A)" error-string error-keyword))))))
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
@@ -505,14 +544,19 @@ and the address of the sender as values."
 	  (rsock_addr (when remote-host
 			(fill-sockaddr_in (ffi:allocate-shallow 'sockaddr_in)
 					  remote-host (or remote-port local-port)))))
+      (unless (plusp sock)
+	(error "SOCKET-CREATE-DATAGRAM ERROR (socket): ~A" (os:errno)))
       (unwind-protect
-	   (progn
-	     (%bind sock (ffi:cast (ffi:foreign-value lsock_addr) 'sockaddr)
-		    *length-of-sockaddr_in*)
+	   (let ((rv (%bind sock (ffi:cast (ffi:foreign-value lsock_addr) 'sockaddr)
+			    *length-of-sockaddr_in*)))
+	     (unless (zerop rv)
+	       (error "SOCKET-CREATE-DATAGRAM ERROR (bind): ~A" (os:errno)))
 	     (when rsock_addr
-	       (%connect sock
-			 (ffi:cast (ffi:foreign-value rsock_addr) 'sockaddr)
-			 *length-of-sockaddr_in*)))
+	       (let ((rv (%connect sock
+				   (ffi:cast (ffi:foreign-value rsock_addr) 'sockaddr)
+				   *length-of-sockaddr_in*)))
+		 (unless (zerop rv)
+		   (error "SOCKET-CREATE-DATAGRAM ERROR (connect): ~A" (os:errno))))))
 	(ffi:foreign-free lsock_addr)
 	(when remote-host
 	  (ffi:foreign-free rsock_addr)))
@@ -549,6 +593,8 @@ and the address of the sender as values."
 			  0 ; flags
 			  (ffi:cast (ffi:foreign-value remote-address) 'sockaddr)
 			  (ffi:foreign-value remote-address-length))
+	     (when (minusp n)
+	       (error "SOCKET-RECEIVE ERROR: ~A" (os:errno)))
 	     (setq nbytes n)
 	     (when (= address-length *length-of-sockaddr_in*)
 	       (let ((data (sockaddr-sa_data address)))
@@ -561,8 +607,7 @@ and the address of the sender as values."
 				(end-2 (min n +max-datagram-packet-size+)))
 			    (replace buffer return-buffer :end1 end-1 :end2 end-2))
 			  (setq buffer (subseq return-buffer 0 (min n +max-datagram-packet-size+))))))
-		   ((zerop n)) ; do nothing
-		   (t))) ; TODO: handle error here.
+		   ((zerop n))))
 	(ffi:foreign-free remote-address)
 	(ffi:foreign-free remote-address-length))
       (values buffer nbytes host port)))
@@ -583,23 +628,25 @@ and the address of the sender as values."
 			     (ffi:allocate-deep 'ffi:uint8 (subseq buffer 0 length) :count length :read-only t)
 			     ;; then we allocate the whole buffer directly, that should be faster.
 			     (ffi:allocate-deep 'ffi:uint8 buffer :count (length buffer) :read-only t))))
-	  nbytes)
+	  (real-length (min length +max-datagram-packet-size+))
+	  (nbytes 0))
       (unwind-protect
 	   (let ((n (if remote-address
 			(%sendto (socket usocket)
 				 (ffi:foreign-address send-buffer)
-				 (min length +max-datagram-packet-size+) 0
+				 real-length
+				 0 ; flags
 				 (ffi:cast (ffi:foreign-value remote-address) 'sockaddr)
 				 *length-of-sockaddr_in*)
 			(%send (socket usocket)
-			       ;; (ffi:cast (ffi:foreign-value send-buffer) 'ffi:c-pointer)
 			       (ffi:foreign-address send-buffer)
-			       (min length +max-datagram-packet-size+) 0))))
+			       real-length
+			       0))))
 	     (cond ((plusp n)
 		    (setq nbytes n))
 		   ((zerop n)
 		    (setq nbytes n))
-		   (t))) ; TODO: error handling
+		   (t (error "SOCKET-SEND ERROR: ~A" (os:errno)))))
 	(ffi:foreign-free send-buffer)
 	(when remote-address
 	  (ffi:foreign-free remote-address))
@@ -621,7 +668,7 @@ and the address of the sender as values."
 		 (let ((data (sockaddr-sa_data return-address)))
 		   (setq host (ip-from-octet-buffer data :start 2)
 			 port (port-from-octet-buffer data)))
-		 (error "get-socket-name error"))) ; TODO: convert this
+		 (error "GET-SOCKET-NAME ERROR: ~A" (os:errno))))
 	(ffi:foreign-free address)
 	(ffi:foreign-free address-length))
       (values (hbo-to-vector-quad host) port)))
