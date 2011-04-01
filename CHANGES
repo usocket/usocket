@@ -8,20 +8,21 @@
 
 0.5.1:
 
-* Bugfix: Fixed wrong macro expansions of {IP|PORT}-{FROM|TO}-OCTET-BUFFER functions!
+* New feature: [CLISP] UDP (Datagram) support based on FFI (Win/Mac/Linux), no RAWSOCK needed.
+* Enhancement: SOCKET-SERVER return a second value (socket) when calling in new-thread mode.
+* Enhancement: [CLISP] Full support of DNS helper functions (GET-HOST-BY-NAME, ...) added.
+* Enhancement: [CLISP] Better network error type detection based on OS error code.
+* Enhancement: [LispWorks] Better network error type detection based on OS error code.
+* Bugfix: Fixed wrong macro expansions of {IP|PORT}-{FROM|TO}-OCTET-BUFFER functions (since 0.4.0)
 * Bugfix: SOCKET-CONNECT didn't set CONNECTED-P for datagram usockets on most backends.
 * Bugfix: [SBCL] Fixes for "SBCL/Win32: finalizer problem, etc", by Anton Kovalenko <anton@sw4me.com>
 * Bugfix: [SBCL] Fixed SOCKET-SERVER (UDP) on SBCL due to a issue in SOCKET-CONNECT when HOST is NIL.
 * Bugfix: [SBCL] SOCKET-CONNECT's TIMEOUT argument now works as a "connection timeout".
 * Bugfix: [CMUCL] Fixed SOCKET-SEND on unconnected usockets under Unicode version of CMUCL.
-* Bugfix: [LispWorks] Better network error type detection on LispWorks.
-* Bugfix: [CLISP] Fixed UDP (Datagram) support (RAWSOCK version), confirmed by CL-NET-SNMP.
-* Enhancement: SOCKET-SERVER return a second value (socket) when calling in new-thread mode.
-* Enhancement: [CLISP] Full support of DNS helper functions (GET-HOST-BY-NAME, ...) added.
+* Bugfix: [CLISP] Fixed and confirmed UDP (Datagram) support (RAWSOCK version).
 
 [TODO]
 
-* New feature: CLISP support UDP without RAWSOCK (using FFI interface)
 * New feature: CLISP support some advanced TCP features which CLISP's SOCKET interface not provide
 * New feature: Macintosh Common Lisp (MCL) support Datagram sockets (UDP)
 

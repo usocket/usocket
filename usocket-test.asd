@@ -16,7 +16,7 @@
     :name "usocket test"
     :author "Erik Enge"
     :maintainer "Chun Tian (binghe)"
-    :version "0.1.0"
+    :version "0.2.0"
     :licence "MIT"
     :description "Tests for usocket"
     :depends-on (:usocket

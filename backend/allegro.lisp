@@ -155,6 +155,10 @@
       (socket:send-to s buffer length :remote-host host :remote-port port))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length &key)
+  (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
+		   (integer 0)                          ; size
+		   (unsigned-byte 32)                   ; host
+		   (unsigned-byte 16)))                 ; port
   (with-mapped-conditions (socket)
     (let ((s (socket socket)))
       (socket:receive-from s length :buffer buffer :extract t))))

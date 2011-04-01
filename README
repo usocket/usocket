@@ -1,6 +1,5 @@
-                                                                -*- text -*-
-
-$Id$
+;;;; -*- Mode: Text -*-
+;;;; $Id$
 
 Content
 =======
@@ -164,14 +163,3 @@ Known problems
   reuse the FFI code on all platforms (including Windows).  This benefit
   currently outweighs the additional requirement. (hey, it's *Embeddable*
   Common Lisp, so, you probably wanted to embed it all along, right?)
-
-- LispWorks has a bug(?) in wait-for-input-streams which make it
-  unsuited for waiting for input on stream socket servers, making it
-  necessary to resort to different  means.  With the absence of notice-fd
-  on Windows, that currenty leaves Windows unsupported.
-
-- SBCL can't use select() on Windows because it would mean porting
-  the FD_* macros and the select structures which I'm not sure
-  is the right way yet (if I need to write custom Win32 code anyway...)
-  The alternative is to use WSAEventSelect() and friends (which don't
-  have a limited number of sockets).

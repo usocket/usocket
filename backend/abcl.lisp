@@ -343,6 +343,10 @@
 ;;; TODO: return-host and return-port cannot be get ...
 (defmethod socket-receive ((usocket datagram-usocket) buffer length
 			   &key (element-type '(unsigned-byte 8)))
+  (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
+		   (integer 0)                          ; size
+		   (unsigned-byte 32)                   ; host
+		   (unsigned-byte 16)))                 ; port
   (let* ((socket (socket usocket))
 	 (real-length (or length +max-datagram-packet-size+))
 	 (byte-array (jnew-array $*byte real-length))
