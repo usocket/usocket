@@ -342,23 +342,22 @@ and the address of the sender as values."
 #+(and ffi (not rawsock))
 (progn
   ;; C primitive types
-  (ffi:def-c-type size_t)
-  (ffi:def-c-type in_addr_t   ffi:uint32)
-  (ffi:def-c-type in_port_t   ffi:uint16)
-  (ffi:def-c-type sa_family_t ffi:uint8)
-  (ffi:def-c-type socklen_t   ffi:uint32)
+  (ffi:def-c-type socklen_t ffi:uint32)
 
   ;; C structures
   (ffi:def-c-struct sockaddr
-    (sa_len     ffi:uint8)
-    (sa_family  sa_family_t)
+    #+macos (sa_len ffi:uint8)
+    (sa_family  #-macos ffi:ushort
+		#+macos ffi:uint8)
     (sa_data    (ffi:c-array ffi:char 14)))
 
   (ffi:def-c-struct sockaddr_in
-    (sin_len    ffi:uint8)
-    (sin_family sa_family_t)
-    (sin_port   in_port_t)
-    (sin_addr   in_addr_t) ; should be struct in_addr
+    #+macos (sin_len ffi:uint8)
+    (sin_family #-macos ffi:short
+		#+macos ffi:uint8)
+    (sin_port   #-macos ffi:ushort
+		#+macos ffi:uint16)
+    (sin_addr   ffi:uint32)
     (sin_zero   (ffi:c-array ffi:char 8)))
 
   (ffi:def-c-struct timeval
@@ -524,14 +523,15 @@ and the address of the sender as values."
 
   (defconstant +sockopt-so-rcvtimeo+ #-linux #x1006 #+linux 20 "Socket receive timeout")
 
-  (defvar *length-of-sockaddr_in* (ffi:sizeof 'sockaddr_in))
+  (defparameter *length-of-sockaddr_in* (ffi:sizeof 'sockaddr_in))
 
   (declaim (inline fill-sockaddr_in))
   (defun fill-sockaddr_in (sockaddr host port)
     (let ((hbo (host-to-hbo host)))
       (ffi:with-c-place (place sockaddr)
-	(setf (ffi:slot place 'sin_len) *length-of-sockaddr_in*
-	      (ffi:slot place 'sin_family) +socket-af-inet+
+	#+macos
+	(setf (ffi:slot place 'sin_len) *length-of-sockaddr_in*)
+	(setf (ffi:slot place 'sin_family) +socket-af-inet+
 	      (ffi:slot place 'sin_port) (%htons port)
 	      (ffi:slot place 'sin_addr) (%htonl hbo)))
       sockaddr))
