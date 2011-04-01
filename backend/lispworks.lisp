@@ -81,6 +81,8 @@
 (defconstant *socket_sock_dgram* 2
   "Connectionless, unreliable datagrams of fixed maximum length.")
 
+(defconstant *socket_ip_proto_udp* 17)
+
 (defconstant *sockopt_so_rcvtimeo*
   #-linux #x1006
   #+linux 20
@@ -186,7 +188,7 @@
   "Open a unconnected UDP socket.
    For binding on address ANY(*), just not set LOCAL-ADDRESS (NIL),
    for binding on random free unused port, set LOCAL-PORT to 0."
-  (let ((socket-fd (comm::socket comm::*socket_af_inet* *socket_sock_dgram* comm::*socket_pf_unspec*)))
+  (let ((socket-fd (comm::socket comm::*socket_af_inet* *socket_sock_dgram* *socket_ip_proto_udp*)))
     (if socket-fd
       (progn
         (when read-timeout (set-socket-receive-timeout socket-fd read-timeout))

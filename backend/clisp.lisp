@@ -520,6 +520,8 @@ and the address of the sender as values."
   ;; socket constants
   (defconstant +socket-af-inet+ 2)
   (defconstant +socket-sock-dgram+ 2)
+  (defconstant +socket-ip-proto-udp+ 17)
+
   (defconstant +sockopt-so-rcvtimeo+ #-linux #x1006 #+linux 20 "Socket receive timeout")
 
   (defvar *length-of-sockaddr_in* (ffi:sizeof 'sockaddr_in))
@@ -538,7 +540,7 @@ and the address of the sender as values."
 				 &key (local-host *wildcard-host*)
 				      remote-host
 				      remote-port)
-    (let ((sock (%socket +socket-af-inet+ +socket-sock-dgram+ 0))
+    (let ((sock (%socket +socket-af-inet+ +socket-sock-dgram+ +socket-ip-proto-udp+))
 	  (lsock_addr (fill-sockaddr_in (ffi:allocate-shallow 'sockaddr_in)
 					local-host local-port))
 	  (rsock_addr (when remote-host
