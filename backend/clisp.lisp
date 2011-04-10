@@ -232,9 +232,9 @@
                             (socket:socket-status request-list)))
              (sockets (wait-list-waiters wait-list)))
         (do* ((x (pop sockets) (pop sockets))
-              (y (pop status-list) (pop status-list)))
+              (y (cdr (pop status-list)) (cdr (pop status-list))))
              ((null x))
-          (when (eq y :INPUT)
+          (when (member y '(T :INPUT))
             (setf (state x) :READ)))
         wait-list))))
 
