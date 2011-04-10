@@ -1,10 +1,6 @@
-0.5.0:
+0.5.2:
 
-* New supported platform: Macintosh Common Lisp (5.0 and up, plus RMCL)
-* Support for UDP (datagram-usocket) was added (for all supported platform except MCL)
-* Add WAIT-FOR-INPUT support for SBCL and ECL on win32.
-* Simple TCP and UDP server API: SOCKET-SERVER
-* Lots of bug fixed since 0.4.1
+* Bugfix: CLISP's WAIT-FOR-INPUT misused underlying CLISP API, this made Hunchentoot working on CLISP. (Thanks to Anton Vodonosov <avodonosov@yandex.ru>)
 
 0.5.1:
 
@@ -20,6 +16,14 @@
 * Bugfix: [SBCL] SOCKET-CONNECT's TIMEOUT argument now works as a "connection timeout".
 * Bugfix: [CMUCL] Fixed SOCKET-SEND on unconnected usockets under Unicode version of CMUCL.
 * Bugfix: [CLISP] Fixed and confirmed UDP (Datagram) support (RAWSOCK version).
+
+0.5.0:
+
+* New supported platform: Macintosh Common Lisp (5.0 and up, plus RMCL)
+* Support for UDP (datagram-usocket) was added (for all supported platform except MCL)
+* Add WAIT-FOR-INPUT support for SBCL and ECL on win32.
+* Simple TCP and UDP server API: SOCKET-SERVER
+* Lots of bug fixed since 0.4.1
 
 [TODO]
 
