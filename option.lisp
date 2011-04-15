@@ -41,7 +41,9 @@
 
 (defmethod socket-option ((usocket stream-usocket)
                           (option (eql :receive-timeout)) &key)
+  (declare (ignore option))
   (let ((socket (socket usocket)))
+    (declare (ignorable socket))
     #+abcl
     () ; TODO
     #+allegro
@@ -65,9 +67,11 @@
 
 (defmethod (setf socket-option) (new-value (usocket stream-usocket)
                                            (option (eql :receive-timeout)) &key)
-  (declare (type number new-value))
+  (declare (type number new-value)
+	   (ignore option))
   (let ((socket (socket usocket))
         (timeout new-value))
+    (declare (ignorable socket timeout))
     #+abcl
     () ; TODO
     #+allegro
