@@ -1,6 +1,9 @@
 0.5.2:
 
-* Bugfix: CLISP's WAIT-FOR-INPUT misused underlying CLISP API, this made Hunchentoot working on CLISP. (Thanks to Anton Vodonosov <avodonosov@yandex.ru>)
+* Bugfix: [CLISP] WAIT-FOR-INPUT now functions right (with/without READY-ONLY), this made Hunchentoot working on CLISP. (Thanks to Anton Vodonosov <avodonosov@yandex.ru>)
+* Bugfix: [ABCL] Fix SOCKET-ACCEPT to follow the documented API so that when called without an :ELEMENT-TYPE argument, use the ELEMENT-TYPE of specified in the call to SOCKET-LISTEN (Thanks to Mark Evenson, the ABCL developer)
+* Enhancement: Additional NAME keyword argument for SOCKET-SERVER for setting the server thread name.
+* Enhancement: [ABCL] GET-ADDRESS now works with underlying IP6 addresses
 
 0.5.1:
 
@@ -23,6 +26,7 @@
 * Support for UDP (datagram-usocket) was added (for all supported platform except MCL)
 * Add WAIT-FOR-INPUT support for SBCL and ECL on win32.
 * Simple TCP and UDP server API: SOCKET-SERVER
+* Completely rewritten full-feature ABCL backends using latest Java interfaces
 * Lots of bug fixed since 0.4.1
 
 [TODO]

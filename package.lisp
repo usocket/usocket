@@ -82,6 +82,7 @@
 (in-package :usocket)
 
 ;;; Logical Pathname Translations, learn from CL-HTTP source code
+
 (eval-when (:load-toplevel :execute)
   (let* ((defaults #+asdf (asdf:component-pathname (asdf:find-system :usocket))
                    #-asdf *load-truename*)
@@ -92,4 +93,5 @@
                               :defaults defaults
 			      :version :newest)))
     (setf (logical-pathname-translations "usocket")
-          `(("**;*.*" ,home)))))
+          `(("**;*.*.NEWEST" ,home)
+            ("**;*.*" ,home)))))
