@@ -8,7 +8,8 @@
                            ;; for udp
                            (timeout 1) (max-buffer-size +max-datagram-packet-size+)
                            ;; for tcp
-                           element-type reuse-address multi-threading)
+                           element-type reuse-address multi-threading
+                           name)
   (let* ((real-host (or host *wildcard-host*))
          (socket (ecase protocol
                    (:stream
@@ -31,7 +32,7 @@
                                   :timeout timeout
                                   :max-buffer-size max-buffer-size)))))
       (if in-new-thread
-	  (values (spawn-thread "USOCKET Server" #'real-call) socket)
+	  (values (spawn-thread (or name "USOCKET Server") #'real-call) socket)
 	  (real-call)))))
 
 (defvar *remote-host*)
@@ -81,7 +82,8 @@
                            (unwind-protect
                                (apply function (socket-stream client-socket) arguments)
                              (close (socket-stream client-socket))
-                             (socket-close client-socket)))))
+                             (socket-close client-socket)
+                             nil))))
     (unwind-protect
         (loop do
           (let* ((client-socket (apply #'socket-accept
