@@ -62,12 +62,13 @@
     (format t "First time (before client connects) is ~s.~%"
 	    *socket-server-connection*)))
 
+;; TODO: original test code have addition (:TIMEOUT 0) when doing the SOCKET-CONNECT,
+;; it seems cannot work on SBCL/Windows, need to investigate, but here we ignore it.
+
 (defun stage-2 ()
   (setf *socket-client-connection*
-	(usocket::ignore-unsupported-warnings ; some backends have no timeout support
-	 (socket-connect "localhost" *socket-server-port* :protocol :stream
-			 :element-type '(unsigned-byte 8)
-			 :timeout 5))) ; 0 is too small, could trigger a timeout-error
+        (socket-connect "localhost" *socket-server-port* :protocol :stream
+			 :element-type '(unsigned-byte 8)))
 
   (setf *socket-server-connection*
 	(when (usocket:wait-for-input *socket-server-listen* :timeout 0 :ready-only t)
