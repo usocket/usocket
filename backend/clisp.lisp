@@ -191,6 +191,10 @@
       (socket:socket-stream-local (socket usocket) t)
     (values (dotted-quad-to-vector-quad address) port)))
 
+(defmethod get-local-name ((usocket stream-server-usocket))
+  (values (get-local-address usocket)
+          (get-local-port usocket)))
+
 (defmethod get-peer-name ((usocket stream-usocket))
   (multiple-value-bind
       (address port)
@@ -200,11 +204,18 @@
 (defmethod get-local-address ((usocket usocket))
   (nth-value 0 (get-local-name usocket)))
 
+(defmethod get-local-address ((usocket stream-server-usocket))
+  (dotted-quad-to-vector-quad
+   (socket:socket-server-host (socket usocket))))
+
 (defmethod get-peer-address ((usocket usocket))
   (nth-value 0 (get-peer-name usocket)))
 
 (defmethod get-local-port ((usocket usocket))
   (nth-value 1 (get-local-name usocket)))
+
+(defmethod get-local-port ((usocket stream-server-usocket))
+  (socket:socket-server-port (socket usocket)))
 
 (defmethod get-peer-port ((usocket usocket))
   (nth-value 1 (get-peer-name usocket)))
