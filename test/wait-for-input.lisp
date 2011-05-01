@@ -55,12 +55,14 @@
     (setf *socket-server-port* (get-local-port *socket-server-listen*)))
 
   (setf *socket-server-connection*
-	(when (usocket:wait-for-input *socket-server-listen* :timeout 0 :ready-only t)
+	(when (wait-for-input *socket-server-listen* :timeout 0 :ready-only t)
 	  (socket-accept *socket-server-listen*)))
   
   (when *output-p* ; should be NIL
     (format t "First time (before client connects) is ~s.~%"
-	    *socket-server-connection*)))
+	    *socket-server-connection*))
+
+  *socket-server-connection*)
 
 ;; TODO: original test code have addition (:TIMEOUT 0) when doing the SOCKET-CONNECT,
 ;; it seems cannot work on SBCL/Windows, need to investigate, but here we ignore it.
@@ -69,23 +71,30 @@
   (setf *socket-client-connection*
         (socket-connect "localhost" *socket-server-port* :protocol :stream
 			 :element-type '(unsigned-byte 8)))
-
   (setf *socket-server-connection*
-	(when (usocket:wait-for-input *socket-server-listen* :timeout 0 :ready-only t)
+	(when (wait-for-input *socket-server-listen* :timeout 0 :ready-only t)
+          (when *output-p*
+            (format t "%READY-P: ~D~%" (usocket::%ready-p *socket-server-listen*)))
 	  (socket-accept *socket-server-listen*)))
 
   (when *output-p* ; should be a usocket object
     (format t "Second time (after client connects) is ~s.~%"
-	    *socket-server-connection*)))
+	    *socket-server-connection*))
+
+  *socket-server-connection*)
 
 (defun stage-3 ()
   (setf *socket-server-connection*
 	(when (wait-for-input *socket-server-listen* :timeout 0 :ready-only t)
+          (when *output-p*
+            (format t "%READY-P: ~D~%" (usocket::%ready-p *socket-server-listen*)))
 	  (socket-accept *socket-server-listen*)))
 
   (when *output-p* ; should be NIL again
     (format t "Third time (before second client) is ~s.~%"
-	    *socket-server-connection*)))
+	    *socket-server-connection*))
+
+  *socket-server-connection*)
 
 (deftest elliott-slaughter.1
     (let ((*output-p* nil))
