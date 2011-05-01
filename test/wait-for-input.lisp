@@ -73,6 +73,7 @@
 			 :element-type '(unsigned-byte 8)))
   (setf *socket-server-connection*
 	(when (wait-for-input *socket-server-listen* :timeout 0 :ready-only t)
+	  #+(and win32 (or lispworks ecl sbcl))
           (when *output-p*
             (format t "%READY-P: ~D~%" (usocket::%ready-p *socket-server-listen*)))
 	  (socket-accept *socket-server-listen*)))
@@ -86,6 +87,7 @@
 (defun stage-3 ()
   (setf *socket-server-connection*
 	(when (wait-for-input *socket-server-listen* :timeout 0 :ready-only t)
+	  #+(and win32 (or lispworks ecl sbcl))
           (when *output-p*
             (format t "%READY-P: ~D~%" (usocket::%ready-p *socket-server-listen*)))
 	  (socket-accept *socket-server-listen*)))
