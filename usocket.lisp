@@ -323,9 +323,10 @@ the values documented in usocket.lisp in the usocket class."
           (values (if ready-only socks socket-or-sockets) to)))))
   (let* ((start (get-internal-real-time))
          (sockets-ready 0))
-    #-(and win32 (or sbcl ecl))
     (dolist (x (wait-list-waiters socket-or-sockets))
       (when (setf (state x)
+                  #+(and win32 (or sbcl ecl)) NIL ; they cannot relay on LISTEN
+                  #-(and win32 (or sbcl ecl))
                   (if (and (stream-usocket-p x)
                            (listen (socket-stream x)))
                       :READ NIL))
