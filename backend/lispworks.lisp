@@ -318,18 +318,28 @@
                   #+lispworks4.1 (comm::create-tcp-socket-for-service port))))
     (make-stream-server-socket sock :element-type element-type)))
 
+;; Note: COMM::GET-FD-FROM-SOCKET contains addition socket wait operations, which
+;; should NOT be applied on socket FDs who have already been called on W-F-I,
+;; so we have to check the %READY-P slot to decide if this waiting is necessary,
+;; or SOCKET-ACCEPT will just hang. -- Chun Tian (binghe), May 1, 2011
+
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
-  (let* ((sock (with-mapped-conditions (usocket)
-                 (comm::get-fd-from-socket (socket usocket))))
+  (let* ((socket (with-mapped-conditions (usocket)
+                   #+win32
+                   (if (%ready-p usocket)
+                       (comm::accept-connection-to-socket (socket usocket))
+                     (comm::get-fd-from-socket (socket usocket)))
+                   #-win32
+                   (comm::get-fd-from-socket (socket usocket))))
          (stream (make-instance 'comm:socket-stream
-                                :socket sock
+                                :socket socket
                                 :direction :io
                                 :element-type (or element-type
                                                   (element-type usocket)))))
     #+win32
-    (when sock
+    (when socket
       (setf (%ready-p usocket) nil))
-    (make-stream-socket :socket sock :stream stream)))
+    (make-stream-socket :socket socket :stream stream)))
 
 ;; Sockets and their streams are different objects
 ;; close the stream in order to make sure buffers
