@@ -26,7 +26,8 @@
 		  :components ((:file "package")
 			       (:file "test-usocket")
 			       (:file "test-condition")
-			       (:file "test-datagram")))))
+			       (:file "test-datagram")
+			       (:file "wait-for-input")))))
 
 (defmethod perform ((op test-op) (c (eql (find-system :usocket-test))))
   (funcall (intern "DO-TESTS" "USOCKET-TEST")))
