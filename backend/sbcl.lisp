@@ -215,7 +215,7 @@
 ;;; and WITH-LOCAL-INTERRUPTS were for. :) But yeah, it's miles saner than
 ;;; the SB-EXT:WITH-TIMEOUT. -- Nikodemus Siivola <nikodemus@random-state.net>
 
-#+sbcl
+#+(and sbcl (not win32))
 (defmacro %with-timeout ((seconds timeout-form) &body body)
   "Runs BODY as an implicit PROGN with timeout of SECONDS. If
 timeout occurs before BODY has finished, BODY is unwound and
@@ -287,13 +287,13 @@ happen. Use with care."
               (when (or local-host local-port)
                 (sb-bsd-sockets:socket-bind socket local-host local-port))
               (with-mapped-conditions (usocket)
-		#+sbcl
+		#+(and sbcl (not win32))
 		(labels ((connect ()
 			   (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)))
 		  (if timeout
 		      (%with-timeout (timeout (error 'sb-ext:timeout)) (connect))
 		      (connect)))
-		#+ecl
+		#+(or ecl (and sbcl win32))
 		(sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)
                 ;; Now that we're connected make the stream.
                 (setf (socket-stream usocket)
@@ -347,22 +347,23 @@ happen. Use with care."
 ;;; "I had to redefine SOCKET-ACCEPT method of STREAM-SERVER-USOCKET to
 ;;; handle this situation. Here is the redefinition:" -- Anton Kovalenko <anton@sw4me.com>
 
-(defmethod socket-accept ((socket stream-server-usocket) &key element-type)
-  (with-mapped-conditions (socket)
-    (let ((sock (sb-bsd-sockets:socket-accept (socket socket))))
-      (if sock
+(defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
+  (with-mapped-conditions (usocket)
+    (let ((socket (sb-bsd-sockets:socket-accept (socket usocket))))
+      (when socket
+        (prog1
 	  (make-stream-socket
-	   :socket sock
+	   :socket socket
 	   :stream (sb-bsd-sockets:socket-make-stream
-		    sock
+		    socket
 		    :input t :output t :buffering :full
 		    :element-type (or element-type
-				      (element-type socket))))
+				      (element-type usocket))))
 
-	  ;; next time wait for event again if we had EAGAIN/EINTR
-	  ;; or else we'd enter a tight loop of failed accepts
-	  #+win32
-	  (setf (%ready-p socket) nil)))))
+          ;; next time wait for event again if we had EAGAIN/EINTR
+          ;; or else we'd enter a tight loop of failed accepts
+          #+win32
+          (setf (%ready-p usocket) nil))))))
 
 ;; Sockets and their associated streams are modelled as
 ;; different objects. Be sure to close the stream (which
