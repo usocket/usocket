@@ -42,7 +42,7 @@
 
 ;;; Advanced W-F-I tests by Elliott Slaughter <elliottslaughter@gmail.com>
 
-(defvar *socket-server-port* 12345)
+(defvar *socket-server-port* 0)
 (defvar *socket-server-listen* nil)
 (defvar *socket-server-connection*)
 (defvar *socket-client-connection*)
@@ -51,7 +51,8 @@
 (defun stage-1 ()
   (unless *socket-server-listen*
     (setf *socket-server-listen*
-	  (socket-listen *wildcard-host* *socket-server-port* :element-type '(unsigned-byte 8))))
+	  (socket-listen *wildcard-host* 0 :element-type '(unsigned-byte 8)))
+    (setf *socket-server-port* (get-local-port *socket-server-listen*)))
 
   (setf *socket-server-connection*
 	(when (usocket:wait-for-input *socket-server-listen* :timeout 0 :ready-only t)
@@ -63,8 +64,10 @@
 
 (defun stage-2 ()
   (setf *socket-client-connection*
-	(socket-connect "localhost" *socket-server-port* :protocol :stream
-			:element-type '(unsigned-byte 8) :timeout 5)) ; old timeout (0) is too small
+	(usocket::ignore-unsupported-warnings ; some backends have no timeout support
+	 (socket-connect "localhost" *socket-server-port* :protocol :stream
+			 :element-type '(unsigned-byte 8)
+			 :timeout 5))) ; 0 is too small, could trigger a timeout-error
 
   (setf *socket-server-connection*
 	(when (usocket:wait-for-input *socket-server-listen* :timeout 0 :ready-only t)
