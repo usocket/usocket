@@ -594,8 +594,9 @@ happen. Use with care."
       (let ((rv (wsa-wait-for-multiple-events 1 (wait-list-%wait wait-list)
                                               nil (truncate (* 1000 timeout)) nil)))
         (ecase rv
-          ((#.+wsa-wait-event-0+ #.+wsa-wait-timeout+)
+          ((#.+wsa-wait-event-0+)
            (update-ready-and-state-slots (wait-list-waiters wait-list)))
+          ((#.+wsa-wait-timeout+)) ; do nothing here
           ((#.+wsa-wait-failed+)
            (raise-usock-err
             (sb-win32::get-last-error-message (sb-win32::get-last-error))
@@ -762,19 +763,25 @@ happen. Use with care."
                         (stream-usocket (logior fd-read))
                         (datagram-usocket (logior fd-read)))))
           ;; TODO: check the iErrorCode array
-          (if (ffi:c-inline ((socket-handle socket) events) (:fixnum :fixnum) :bool
-               "WSANETWORKEVENTS network_events;
-                int i, result;
-                result = WSAEnumNetworkEvents((SOCKET)#0, 0, &network_events);
-                if (!result) {
-                  @(return) = (#1 & network_events.lNetworkEvents)? Ct : Cnil;
-                } else
-                  @(return) = Cnil;")
-              (progn
-		(setf (state socket) :READ)
-		(when (stream-server-usocket-p socket)
-		  (setf (%ready-p socket) t)))
-            (sb-bsd-sockets::socket-error 'update-ready-and-state-slots))))))
+          (multiple-value-bind (valid-p ready-p)
+              (ffi:c-inline ((socket-handle socket) events) (:fixnum :fixnum)
+                                                            (values :bool :bool)
+                "WSANETWORKEVENTS network_events;
+                 int i, result;
+                 result = WSAEnumNetworkEvents((SOCKET)#0, 0, &network_events);
+                 if (!result) {
+                   @(return 0) = Ct;
+                   @(return 1) = (#1 & network_events.lNetworkEvents)? Ct : Cnil;
+                 } else {
+                   @(return 0) = Cnil;
+                   @(return 1) = Cnil;
+                 }")
+            (if valid-p
+                (when ready-p
+                  (setf (state socket) :READ)
+                  (when (stream-server-usocket-p socket)
+                    (setf (%ready-p socket) t)))
+              (sb-bsd-sockets::socket-error 'update-ready-and-state-slots)))))))
 
   (defun wait-for-input-internal (wait-list &key timeout)
     (when (waiting-required (wait-list-waiters wait-list))
@@ -786,8 +793,9 @@ happen. Use with care."
                   result = WSAWaitForMultipleEvents(1, events, NULL, #1, NULL);
                   @(return) = result;")))
         (ecase rv
-          ((#.+wsa-wait-event-0+ #.+wsa-wait-timeout+)
+          ((#.+wsa-wait-event-0+)
            (update-ready-and-state-slots (wait-list-waiters wait-list)))
+          ((#.+wsa-wait-timeout+)) ; do nothing here
           ((#.+wsa-wait-failed+)
            (sb-bsd-sockets::socket-error 'wait-for-input-internal))))))
 
