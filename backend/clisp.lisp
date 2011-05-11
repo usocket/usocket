@@ -191,6 +191,10 @@
       (socket:socket-stream-local (socket usocket) t)
     (values (dotted-quad-to-vector-quad address) port)))
 
+(defmethod get-local-name ((usocket stream-server-usocket))
+  (values (get-local-address usocket)
+          (get-local-port usocket)))
+
 (defmethod get-peer-name ((usocket stream-usocket))
   (multiple-value-bind
       (address port)
@@ -200,11 +204,18 @@
 (defmethod get-local-address ((usocket usocket))
   (nth-value 0 (get-local-name usocket)))
 
+(defmethod get-local-address ((usocket stream-server-usocket))
+  (dotted-quad-to-vector-quad
+   (socket:socket-server-host (socket usocket))))
+
 (defmethod get-peer-address ((usocket usocket))
   (nth-value 0 (get-peer-name usocket)))
 
 (defmethod get-local-port ((usocket usocket))
   (nth-value 1 (get-local-name usocket)))
+
+(defmethod get-local-port ((usocket stream-server-usocket))
+  (socket:socket-server-port (socket usocket)))
 
 (defmethod get-peer-port ((usocket usocket))
   (nth-value 1 (get-peer-name usocket)))
@@ -232,9 +243,9 @@
                             (socket:socket-status request-list)))
              (sockets (wait-list-waiters wait-list)))
         (do* ((x (pop sockets) (pop sockets))
-              (y (pop status-list) (pop status-list)))
+              (y (cdr (pop status-list)) (cdr (pop status-list))))
              ((null x))
-          (when (eq y :INPUT)
+          (when (member y '(T :INPUT))
             (setf (state x) :READ)))
         wait-list))))
 

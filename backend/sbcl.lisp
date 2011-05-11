@@ -215,7 +215,7 @@
 ;;; and WITH-LOCAL-INTERRUPTS were for. :) But yeah, it's miles saner than
 ;;; the SB-EXT:WITH-TIMEOUT. -- Nikodemus Siivola <nikodemus@random-state.net>
 
-#+sbcl
+#+(and sbcl (not win32))
 (defmacro %with-timeout ((seconds timeout-form) &body body)
   "Runs BODY as an implicit PROGN with timeout of SECONDS. If
 timeout occurs before BODY has finished, BODY is unwound and
@@ -287,13 +287,13 @@ happen. Use with care."
               (when (or local-host local-port)
                 (sb-bsd-sockets:socket-bind socket local-host local-port))
               (with-mapped-conditions (usocket)
-		#+sbcl
+		#+(and sbcl (not win32))
 		(labels ((connect ()
 			   (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)))
 		  (if timeout
 		      (%with-timeout (timeout (error 'sb-ext:timeout)) (connect))
 		      (connect)))
-		#+ecl
+		#+(or ecl (and sbcl win32))
 		(sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)
                 ;; Now that we're connected make the stream.
                 (setf (socket-stream usocket)
@@ -347,22 +347,23 @@ happen. Use with care."
 ;;; "I had to redefine SOCKET-ACCEPT method of STREAM-SERVER-USOCKET to
 ;;; handle this situation. Here is the redefinition:" -- Anton Kovalenko <anton@sw4me.com>
 
-(defmethod socket-accept ((socket stream-server-usocket) &key element-type)
-  (with-mapped-conditions (socket)
-    (let ((sock (sb-bsd-sockets:socket-accept (socket socket))))
-      (if sock
+(defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
+  (with-mapped-conditions (usocket)
+    (let ((socket (sb-bsd-sockets:socket-accept (socket usocket))))
+      (when socket
+        (prog1
 	  (make-stream-socket
-	   :socket sock
+	   :socket socket
 	   :stream (sb-bsd-sockets:socket-make-stream
-		    sock
+		    socket
 		    :input t :output t :buffering :full
 		    :element-type (or element-type
-				      (element-type socket))))
+				      (element-type usocket))))
 
-	  ;; next time wait for event again if we had EAGAIN/EINTR
-	  ;; or else we'd enter a tight loop of failed accepts
-	  #+win32
-	  (setf (%ready-p socket) nil)))))
+          ;; next time wait for event again if we had EAGAIN/EINTR
+          ;; or else we'd enter a tight loop of failed accepts
+          #+win32
+          (setf (%ready-p usocket) nil))))))
 
 ;; Sockets and their associated streams are modelled as
 ;; different objects. Be sure to close the stream (which
@@ -584,15 +585,18 @@ happen. Use with care."
     (sb-alien:with-alien ((int-ptr sb-alien:unsigned-long))
       (maybe-wsa-error (wsa-ioctlsocket (os-socket-handle socket) fionread (sb-alien:addr int-ptr))
                        socket)
-      int-ptr))
+      (prog1 int-ptr
+        (when (plusp int-ptr)
+          (setf (state socket) :read)))))
 
   (defun wait-for-input-internal (wait-list &key timeout)
     (when (waiting-required (wait-list-waiters wait-list))
       (let ((rv (wsa-wait-for-multiple-events 1 (wait-list-%wait wait-list)
                                               nil (truncate (* 1000 timeout)) nil)))
         (ecase rv
-          ((#.+wsa-wait-event-0+ #.+wsa-wait-timeout+)
+          ((#.+wsa-wait-event-0+)
            (update-ready-and-state-slots (wait-list-waiters wait-list)))
+          ((#.+wsa-wait-timeout+)) ; do nothing here
           ((#.+wsa-wait-failed+)
            (raise-usock-err
             (sb-win32::get-last-error-message (sb-win32::get-last-error))
@@ -608,20 +612,22 @@ happen. Use with care."
 
   (defun update-ready-and-state-slots (sockets)
     (dolist (socket sockets)
-      (if (or (and (stream-usocket-p socket)
-                   (listen (socket-stream socket)))
-              (%ready-p socket))
-          (setf (state socket) :READ)
+      (if (%ready-p socket)
+          (progn
+            (setf (state socket) :READ))
         (sb-alien:with-alien ((network-events (sb-alien:struct wsa-network-events)))
           (let ((rv (wsa-enum-network-events (os-socket-handle socket) 0
                                              (sb-alien:addr network-events))))
             (if (zerop rv)
-                (map-network-events #'(lambda (err-code)
-                                        (if (zerop err-code)
-                                            (setf (%ready-p socket) t
-                                                  (state socket) :READ)
-                                          (raise-usock-err err-code socket)))
-                                    network-events)
+                (map-network-events
+                 #'(lambda (err-code)
+                     (if (zerop err-code)
+                         (progn
+                           (setf (state socket) :READ)
+                           (when (stream-server-usocket-p socket)
+                             (setf (%ready-p socket) t)))
+                       (raise-usock-err err-code socket)))
+                 network-events)
               (maybe-wsa-error rv socket)))))))
 
   (defun os-wait-list-%wait (wait-list)
@@ -733,7 +739,8 @@ happen. Use with care."
      '%remove-waiter))
 
   ;; TODO: how to handle error (result) in this call?
-  (defun bytes-available-for-read (socket)
+  (declaim (inline %bytes-available-for-read))
+  (defun %bytes-available-for-read (socket)
     (ffi:c-inline ((socket-handle socket)) (:fixnum) :fixnum
      "u_long nbytes;
       int result;
@@ -741,28 +748,40 @@ happen. Use with care."
       result = ioctlsocket((SOCKET)#0, FIONREAD, &nbytes);
       @(return) = nbytes;"))
 
+  (defun bytes-available-for-read (socket)
+    (let ((nbytes (%bytes-available-for-read socket)))
+      (when (plusp nbytes)
+	(setf (state socket) :read))
+      nbytes))
+
   (defun update-ready-and-state-slots (sockets)
     (dolist (socket sockets)
-      (if (or (and (stream-usocket-p socket)
-                   (listen (socket-stream socket)))
-              (%ready-p socket))
+      (if (%ready-p socket)
           (setf (state socket) :READ)
         (let ((events (etypecase socket
                         (stream-server-usocket (logior fd-connect fd-accept fd-close))
                         (stream-usocket (logior fd-read))
                         (datagram-usocket (logior fd-read)))))
           ;; TODO: check the iErrorCode array
-          (if (ffi:c-inline ((socket-handle socket) events) (:fixnum :fixnum) :bool
-               "WSANETWORKEVENTS network_events;
-                int i, result;
-                result = WSAEnumNetworkEvents((SOCKET)#0, 0, &network_events);
-                if (!result) {
-                  @(return) = (#1 & network_events.lNetworkEvents)? Ct : Cnil;
-                } else
-                  @(return) = Cnil;")
-              (setf (%ready-p socket) t
-                    (state socket) :READ)
-            (sb-bsd-sockets::socket-error 'update-ready-and-state-slots))))))
+          (multiple-value-bind (valid-p ready-p)
+              (ffi:c-inline ((socket-handle socket) events) (:fixnum :fixnum)
+                                                            (values :bool :bool)
+                "WSANETWORKEVENTS network_events;
+                 int i, result;
+                 result = WSAEnumNetworkEvents((SOCKET)#0, 0, &network_events);
+                 if (!result) {
+                   @(return 0) = Ct;
+                   @(return 1) = (#1 & network_events.lNetworkEvents)? Ct : Cnil;
+                 } else {
+                   @(return 0) = Cnil;
+                   @(return 1) = Cnil;
+                 }")
+            (if valid-p
+                (when ready-p
+                  (setf (state socket) :READ)
+                  (when (stream-server-usocket-p socket)
+                    (setf (%ready-p socket) t)))
+              (sb-bsd-sockets::socket-error 'update-ready-and-state-slots)))))))
 
   (defun wait-for-input-internal (wait-list &key timeout)
     (when (waiting-required (wait-list-waiters wait-list))
@@ -774,8 +793,9 @@ happen. Use with care."
                   result = WSAWaitForMultipleEvents(1, events, NULL, #1, NULL);
                   @(return) = result;")))
         (ecase rv
-          ((#.+wsa-wait-event-0+ #.+wsa-wait-timeout+)
+          ((#.+wsa-wait-event-0+)
            (update-ready-and-state-slots (wait-list-waiters wait-list)))
+          ((#.+wsa-wait-timeout+)) ; do nothing here
           ((#.+wsa-wait-failed+)
            (sb-bsd-sockets::socket-error 'wait-for-input-internal))))))
 

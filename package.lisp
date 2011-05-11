@@ -49,6 +49,14 @@
              #:socket-stream
              #:datagram-usocket
 
+	     ;; predicates (for version 0.6 or 1.0 ?)
+	     #|
+	     #:usocket-p
+	     #:stream-usocket-p
+	     #:stream-server-usocket-p
+	     #:datagram-usocket-p
+	     |#
+
              #:host-byte-order ; IP(v4) utility functions
              #:hbo-to-dotted-quad
              #:hbo-to-vector-quad
@@ -83,6 +91,7 @@
 (in-package :usocket)
 
 ;;; Logical Pathname Translations, learn from CL-HTTP source code
+
 (eval-when (:load-toplevel :execute)
   (let* ((defaults #+asdf (asdf:component-pathname (asdf:find-system :usocket))
                    #-asdf *load-truename*)
@@ -93,4 +102,5 @@
                               :defaults defaults
 			      :version :newest)))
     (setf (logical-pathname-translations "usocket")
-          `(("**;*.*" ,home)))))
+          `(("**;*.*.NEWEST" ,home)
+            ("**;*.*" ,home)))))

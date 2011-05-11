@@ -1,10 +1,13 @@
-0.5.0:
+0.5.2:
 
-* New supported platform: Macintosh Common Lisp (5.0 and up, plus RMCL)
-* Support for UDP (datagram-usocket) was added (for all supported platform except MCL)
-* Add WAIT-FOR-INPUT support for SBCL and ECL on win32.
-* Simple TCP and UDP server API: SOCKET-SERVER
-* Lots of bug fixed since 0.4.1
+* General: [SBCL] SOCKET-CONNECT's TIMEOUT argument was limited on non-Windows platforms.
+* Bugfix: [CLISP] WAIT-FOR-INPUT now functions right (with/without READY-ONLY), this made Hunchentoot working on CLISP. (Thanks to Anton Vodonosov <avodonosov@yandex.ru>)
+* Bugfix: [ABCL] Fix SOCKET-ACCEPT to follow the documented API so that when called without an :ELEMENT-TYPE argument. (Thanks to Mark Evenson, the ABCL developer)
+* Bugfix: [LispWorks] Fixed SOCKET-ACCEPT (Windows only) on WAIT-FOR-INPUTed sockets.
+* Bugfix: [SBCL, ECL] Fixed wrongly STATE set/unset for WAIT-FOR-INPUT on Windows (report by Elliott Slaughter)
+* Enhancement: Additional NAME keyword argument for SOCKET-SERVER for setting the server thread name.
+* Enhancement: [ABCL] GET-ADDRESS now works with underlying IP6 addresses.
+* Enhancement: [CLISP] missing GET-LOCAL-* methods for STREAM-SERVER-USOCKET was now added.
 
 0.5.1:
 
@@ -20,6 +23,15 @@
 * Bugfix: [SBCL] SOCKET-CONNECT's TIMEOUT argument now works as a "connection timeout".
 * Bugfix: [CMUCL] Fixed SOCKET-SEND on unconnected usockets under Unicode version of CMUCL.
 * Bugfix: [CLISP] Fixed and confirmed UDP (Datagram) support (RAWSOCK version).
+
+0.5.0:
+
+* New supported platform: Macintosh Common Lisp (5.0 and up, plus RMCL)
+* Support for UDP (datagram-usocket) was added (for all supported platform except MCL)
+* Add WAIT-FOR-INPUT support for SBCL and ECL on win32.
+* Simple TCP and UDP server API: SOCKET-SERVER
+* Completely rewritten full-feature ABCL backends using latest Java interfaces
+* Lots of bug fixed since 0.4.1
 
 [TODO]
 

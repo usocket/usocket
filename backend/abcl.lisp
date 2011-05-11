@@ -67,7 +67,7 @@
 (defvar $@connect/Socket/1 (jmethod $*Socket "connect" $*SocketAddress))
 (defvar $@connect/Socket/2 (jmethod $*Socket "connect" $*SocketAddress $*int))
 (defvar $@connect/SocketChannel/1 (jmethod $*SocketChannel "connect" $*SocketAddress))
-(defvar $@getAddress/0 (jmethod $*Inet4Address "getAddress"))
+(defvar $@getAddress/0 (jmethod $*InetAddress "getAddress"))
 (defvar $@getAllByName/1 (jmethod $*InetAddress "getAllByName" $*String))
 (defvar $@getByName/1 (jmethod $*InetAddress "getByName" $*String))
 (defvar $@getChannel/DatagramSocket/0 (jmethod $*DatagramSocket "getChannel"))
@@ -170,9 +170,13 @@
       (labels ((jbyte (n)
 		 (let ((byte (jarray-ref array n)))
 		   (if (minusp byte) (+ 256 byte) byte))))
-	(if (= 4 length)
-	    (vector (jbyte 0) (jbyte 1) (jbyte 2) (jbyte 3))
-	    nil))))) ; not a IPv4 address?!
+	(cond  
+          ((= 4 length)
+           (vector (jbyte 0) (jbyte 1) (jbyte 2) (jbyte 3)))
+          ((= 16 length)
+           (vector (jbyte 0) (jbyte 1) (jbyte 2) (jbyte 3) 
+                   (jbyte 4) (jbyte 5) (jbyte 6) (jbyte 7)))
+          (t nil)))))) ; neither a IPv4 nor IPv6 address?!
 
 (defun get-hosts-by-name (name)
   (with-mapped-conditions ()
@@ -249,9 +253,13 @@
 
 ;;; SOCKET-ACCEPT
 
-(defmethod socket-accept ((usocket stream-server-usocket) &key (element-type 'character))
+(defmethod socket-accept ((usocket stream-server-usocket) 
+                          &key (element-type 'character element-type-p))
   (with-mapped-conditions (usocket)
     (let* ((client-socket (jcall $@accept/0 (socket usocket)))
+           (element-type (if element-type-p 
+                             element-type
+                             (element-type usocket)))
 	   (stream (ext:get-socket-stream client-socket :element-type element-type)))
       (make-stream-socket :stream stream :socket client-socket))))
 

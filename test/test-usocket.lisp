@@ -157,41 +157,5 @@
         (usocket:socket-close sock))))
   t)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defparameter *wait-for-input-timeout* 2))
-
-(deftest wait-for-input.1
-  (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect *common-lisp-net* 80))
-          (time (get-universal-time)))
-      (unwind-protect
-          (progn (usocket:wait-for-input sock :timeout *wait-for-input-timeout*)
-            (- (get-universal-time) time))
-        (usocket:socket-close sock))))
-  #.*wait-for-input-timeout*)
-
-(deftest wait-for-input.2
-  (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect *common-lisp-net* 80))
-          (time (get-universal-time)))
-      (unwind-protect
-          (progn (usocket:wait-for-input sock :timeout *wait-for-input-timeout* :ready-only t)
-            (- (get-universal-time) time))
-        (usocket:socket-close sock))))
-  #.*wait-for-input-timeout*)
-
-(deftest wait-for-input.3
-  (with-caught-conditions (nil nil)
-    (let ((sock (usocket:socket-connect *common-lisp-net* 80)))
-      (unwind-protect
-          (progn
-            (format (usocket:socket-stream sock)
-                    "GET / HTTP/1.0~2%")
-            (force-output (usocket:socket-stream sock))
-            (usocket:wait-for-input sock :timeout *wait-for-input-timeout*)
-            (subseq (read-line (usocket:socket-stream sock)) 0 15))
-        (usocket:socket-close sock))))
-  "HTTP/1.1 200 OK")
-
 (defun run-usocket-tests ()
   (do-tests))
