@@ -105,3 +105,37 @@
 	  (socket-close *socket-server-listen*)
 	  (setf *socket-server-listen* nil))))
   t)
+
+#|
+
+Issue elliott-slaughter.2 (WAIT-FOR-INPUT/win32 on TCP socket)
+
+W-F-I correctly found the inputs, but :READY-ONLY didn't work.
+
+|#
+(defun receive-each (connections)
+  (let ((ready (usocket:wait-for-input connections :timeout 0 :ready-only t)))
+    (loop for connection in ready
+       collect (read-line (usocket:socket-stream connection)))))
+
+(defun receive-all (connections)
+  (loop for messages = (receive-each connections)
+     then (receive-each connections)
+     while messages append messages))
+
+(defun send (connection message)
+  (format (usocket:socket-stream connection) "~a~%" message)
+  (force-output (usocket:socket-stream connection)))
+
+(defun server ()
+  (let* ((listen (usocket:socket-listen usocket:*wildcard-host* 12345))
+         (connection (usocket:socket-accept listen)))
+    (loop for messages = (receive-all connection) then (receive-all connection)
+       do (format t "Got messages:~%~s~%" messages)
+       do (sleep 1/50))))
+
+(defun client ()
+  (let ((connection (usocket:socket-connect "localhost" 12345)))
+    (loop for i from 0
+       do (send connection (format nil "This is message ~a." i))
+       do (sleep 1/100))))
