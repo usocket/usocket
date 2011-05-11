@@ -585,7 +585,9 @@ happen. Use with care."
     (sb-alien:with-alien ((int-ptr sb-alien:unsigned-long))
       (maybe-wsa-error (wsa-ioctlsocket (os-socket-handle socket) fionread (sb-alien:addr int-ptr))
                        socket)
-      int-ptr))
+      (prog1 int-ptr
+        (when (plusp int-ptr)
+          (setf (state socket) :read)))))
 
   (defun wait-for-input-internal (wait-list &key timeout)
     (when (waiting-required (wait-list-waiters wait-list))
@@ -609,20 +611,22 @@ happen. Use with care."
 
   (defun update-ready-and-state-slots (sockets)
     (dolist (socket sockets)
-      (if (or (and (stream-usocket-p socket)
-                   (listen (socket-stream socket)))
-              (%ready-p socket))
-          (setf (state socket) :READ)
+      (if (%ready-p socket)
+          (progn
+            (setf (state socket) :READ))
         (sb-alien:with-alien ((network-events (sb-alien:struct wsa-network-events)))
           (let ((rv (wsa-enum-network-events (os-socket-handle socket) 0
                                              (sb-alien:addr network-events))))
             (if (zerop rv)
-                (map-network-events #'(lambda (err-code)
-                                        (if (zerop err-code)
-                                            (setf (%ready-p socket) t
-                                                  (state socket) :READ)
-                                          (raise-usock-err err-code socket)))
-                                    network-events)
+                (map-network-events
+                 #'(lambda (err-code)
+                     (if (zerop err-code)
+                         (progn
+                           (setf (state socket) :READ)
+                           (when (stream-server-usocket-p socket)
+                             (setf (%ready-p socket) t)))
+                       (raise-usock-err err-code socket)))
+                 network-events)
               (maybe-wsa-error rv socket)))))))
 
   (defun os-wait-list-%wait (wait-list)
@@ -745,7 +749,7 @@ happen. Use with care."
   (defun update-ready-and-state-slots (sockets)
     (dolist (socket sockets)
       (if (or (and (stream-usocket-p socket)
-                   (listen (socket-stream socket)))
+                   (listen (socket-stream socket))) ; TODO: LISTEN cannot be used
               (%ready-p socket))
           (setf (state socket) :READ)
         (let ((events (etypecase socket
