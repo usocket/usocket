@@ -738,7 +738,8 @@ happen. Use with care."
      '%remove-waiter))
 
   ;; TODO: how to handle error (result) in this call?
-  (defun bytes-available-for-read (socket)
+  (declaim (inline %bytes-available-for-read))
+  (defun %bytes-available-for-read (socket)
     (ffi:c-inline ((socket-handle socket)) (:fixnum) :fixnum
      "u_long nbytes;
       int result;
@@ -746,11 +747,15 @@ happen. Use with care."
       result = ioctlsocket((SOCKET)#0, FIONREAD, &nbytes);
       @(return) = nbytes;"))
 
+  (defun bytes-available-for-read (socket)
+    (let ((nbytes (%bytes-available-for-read socket)))
+      (when (plusp nbytes)
+	(setf (state socket) :read))
+      nbytes))
+
   (defun update-ready-and-state-slots (sockets)
     (dolist (socket sockets)
-      (if (or (and (stream-usocket-p socket)
-                   (listen (socket-stream socket))) ; TODO: LISTEN cannot be used
-              (%ready-p socket))
+      (if (%ready-p socket)
           (setf (state socket) :READ)
         (let ((events (etypecase socket
                         (stream-server-usocket (logior fd-connect fd-accept fd-close))
@@ -765,8 +770,10 @@ happen. Use with care."
                   @(return) = (#1 & network_events.lNetworkEvents)? Ct : Cnil;
                 } else
                   @(return) = Cnil;")
-              (setf (%ready-p socket) t
-                    (state socket) :READ)
+              (progn
+		(setf (state socket) :READ)
+		(when (stream-server-usocket-p socket)
+		  (setf (%ready-p socket) t)))
             (sb-bsd-sockets::socket-error 'update-ready-and-state-slots))))))
 
   (defun wait-for-input-internal (wait-list &key timeout)

@@ -4,7 +4,7 @@
 * Bugfix: [CLISP] WAIT-FOR-INPUT now functions right (with/without READY-ONLY), this made Hunchentoot working on CLISP. (Thanks to Anton Vodonosov <avodonosov@yandex.ru>)
 * Bugfix: [ABCL] Fix SOCKET-ACCEPT to follow the documented API so that when called without an :ELEMENT-TYPE argument. (Thanks to Mark Evenson, the ABCL developer)
 * Bugfix: [LispWorks] Fixed SOCKET-ACCEPT (Windows only) on WAIT-FOR-INPUTed sockets.
-* Bugfix: [SBCL] Fixed missing STATE clean for WAIT-FOR-INPUT on SBCL/Windows (report by Elliott Slaughter)
+* Bugfix: [SBCL, ECL] Fixed wrongly STATE set/unset for WAIT-FOR-INPUT on Windows (report by Elliott Slaughter)
 * Enhancement: Additional NAME keyword argument for SOCKET-SERVER for setting the server thread name.
 * Enhancement: [ABCL] GET-ADDRESS now works with underlying IP6 addresses.
 * Enhancement: [CLISP] missing GET-LOCAL-* methods for STREAM-SERVER-USOCKET was now added.
