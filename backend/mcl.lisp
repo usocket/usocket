@@ -98,7 +98,7 @@
 	 (socket (with-mapped-conditions ()
 		   (make-instance 'passive-socket 
 				  :local-port port
-				  :local-host host
+				  :local-host (host-to-hbo host)
 				  :reuse-address reuseaddress
 				  :backlog backlog))))
     (make-stream-server-socket socket :element-type element-type)))
