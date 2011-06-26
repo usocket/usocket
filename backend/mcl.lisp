@@ -230,7 +230,7 @@
     (declare (special ccl::*passive-interface-address*))
     new))
 
-(defun input-available-p (stream)
+(defmethod input-available-p ((stream ccl::opentransport-stream))
   (macrolet ((when-io-buffer-lock-grabbed ((lock &optional multiple-value-p) &body body)
 	       "Evaluates the body if and only if the lock is successfully grabbed"
 	       ;; like with-io-buffer-lock-grabbed but returns immediately instead of polling the lock
@@ -257,19 +257,21 @@
 	      (when-io-buffer-lock-grabbed ((ccl::io-buffer-lock io-buffer))
        	        (funcall (ccl::io-buffer-listen-function io-buffer) stream io-buffer))))))))
 
-(defparameter *passive-polling-delay* 1/60)
+(defmethod connection-established-p ((stream ccl::opentransport-stream))
+  (ccl::with-io-buffer-locked ((ccl::stream-io-buffer stream nil))
+    (let ((state (ccl::opentransport-stream-connection-state stream)))
+      (not (eq :unbnd state)))))
 
 (defun wait-for-input-internal (wait-list &key timeout &aux result)
   (labels ((ready-sockets (sockets)
-	     (or (dolist (sock sockets result)
-		   (when (cond ((stream-usocket-p sock)
-				(input-available-p (socket-stream sock)))
-			       ((stream-server-usocket-p sock)
-				(input-available-p (car (socket-streams (socket sock))))))
-		     (push sock result)))
-		 (unless (and timeout (zerop timeout))
-		   (sleep *passive-polling-delay*)
-		   NIL))))
+	     (dolist (sock sockets result)
+	       (when (cond ((stream-usocket-p sock)
+			    (input-available-p (socket-stream sock)))
+			   ((stream-server-usocket-p sock)
+			    (let ((ot-stream (first (socket-streams (socket sock)))))
+			      (or (input-available-p ot-stream)
+				  (connection-established-p ot-stream)))))
+		 (push sock result)))))
     (with-mapped-conditions ()
       (ccl:process-wait-with-timeout
        "socket input"
