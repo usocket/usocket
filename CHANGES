@@ -1,7 +1,8 @@
 0.5.3:
 
-* [MCL] Fixed SOCKET-LISTEN on vector addresses like #(0 0 0 0)
-* [MCL] Fixed WAIT-FOR-INPUT on passive sockets (stream-server-usocket)
+* Bugfix: [MCL] Fixed SOCKET-LISTEN on vector addresses like #(0 0 0 0)
+* Bugfix: [MCL] Fixed WAIT-FOR-INPUT on passive sockets (stream-server-usocket)
+* Bugfix: [LispWorks] Fixed using OPEN-UDP-SOCKET in delivered applications (thanks to Camille Troillard and Martin Simmons, this fix is from LispWorks-UDP project).
 
 0.5.2:
 
