@@ -298,10 +298,24 @@ happen. Use with care."
                 ;; Now that we're connected make the stream.
                 (setf (socket-stream usocket)
                       (sb-bsd-sockets:socket-make-stream socket
-                                                         :input t
-                                                         :output t
-                                                         :buffering :full
-                                                         :element-type element-type))))
+                        :input t :output t :buffering :full
+			:element-type element-type
+			;; Robert Brown <robert.brown@gmail.com> said on Aug 4, 2011:
+			;; ... This means that SBCL streams created by usocket have a true
+			;; serve-events property.  When writing large amounts of data to several
+			;; streams, the kernel will eventually stop accepting data from SBCL.
+			;; When this happens, SBCL either waits for I/O to be possible on
+			;; the file descriptor it's writing to or queues the data to be flushed later.
+			;; Because usocket streams specify serve-events as true, SBCL
+			;; always queues.  Instead, it should wait for I/O to be available and
+			;; write the remaining data to the socket.  That's what serve-events
+			;; equal to NIL gets you.
+			;;
+			;; Nikodemus Siivola <nikodemus@random-state.net> said on Aug 8, 2011:
+			;; It's set to T for purely historical reasons, and will soon change to
+			;; NIL in SBCL. (The docstring has warned of T being a temporary default
+			;; for as long as the :SERVE-EVENTS keyword argument has existed.)
+			:serve-events nil))))
              (:datagram
               (when (or local-host local-port)
                 (sb-bsd-sockets:socket-bind socket

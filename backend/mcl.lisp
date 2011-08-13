@@ -98,7 +98,7 @@
 	 (socket (with-mapped-conditions ()
 		   (make-instance 'passive-socket 
 				  :local-port port
-				  :local-host host
+				  :local-host (host-to-hbo host)
 				  :reuse-address reuseaddress
 				  :backlog backlog))))
     (make-stream-server-socket socket :element-type element-type)))
@@ -230,8 +230,7 @@
     (declare (special ccl::*passive-interface-address*))
     new))
 
-
-(defun wait-for-input-internal (wait-list &key timeout &aux result)
+(defmethod input-available-p ((stream ccl::opentransport-stream))
   (macrolet ((when-io-buffer-lock-grabbed ((lock &optional multiple-value-p) &body body)
 	       "Evaluates the body if and only if the lock is successfully grabbed"
 	       ;; like with-io-buffer-lock-grabbed but returns immediately instead of polling the lock
@@ -249,23 +248,34 @@
 	       (declare (type ccl::lock lock))
 	       ;; crucial - clears bogus lock.value as in grab-io-buffer-lock-out-of-line:
 	       (ccl::%io-buffer-lock-really-grabbed-p lock)
-	       (ccl:store-conditional lock nil ccl:*current-process*))
-	     (input-available (stream)
-	       "similar to stream-listen on buffered-input-stream-mixin but without waiting for lock"
-	       (let ((io-buffer (ccl::stream-io-buffer stream)))
-		 (or (not (eql 0 (ccl::io-buffer-incount io-buffer)))
-		     (ccl::io-buffer-untyi-char io-buffer)
-		     (locally (declare (optimize (speed 3) (safety 0)))
-		       (when-io-buffer-lock-grabbed ((ccl::io-buffer-lock io-buffer))
-		         (funcall (ccl::io-buffer-listen-function io-buffer) stream io-buffer))))))
-	     (ready-sockets (sockets)
-	       (dolist (sock sockets result)
-		 (when (input-available (socket-stream sock))
-		   (push sock result)))))
-      (with-mapped-conditions ()
-	(ccl:process-wait-with-timeout
-	 "socket input"
-	 (when timeout (truncate (* timeout 60)))
-	 #'ready-sockets
-	 (wait-list-waiters wait-list)))
-      (nreverse result))))
+	       (ccl:store-conditional lock nil ccl:*current-process*)))
+      "similar to stream-listen on buffered-input-stream-mixin but without waiting for lock"
+      (let ((io-buffer (ccl::stream-io-buffer stream)))
+	(or (not (eql 0 (ccl::io-buffer-incount io-buffer)))
+	    (ccl::io-buffer-untyi-char io-buffer)
+	    (locally (declare (optimize (speed 3) (safety 0)))
+	      (when-io-buffer-lock-grabbed ((ccl::io-buffer-lock io-buffer))
+       	        (funcall (ccl::io-buffer-listen-function io-buffer) stream io-buffer))))))))
+
+(defmethod connection-established-p ((stream ccl::opentransport-stream))
+  (ccl::with-io-buffer-locked ((ccl::stream-io-buffer stream nil))
+    (let ((state (ccl::opentransport-stream-connection-state stream)))
+      (not (eq :unbnd state)))))
+
+(defun wait-for-input-internal (wait-list &key timeout &aux result)
+  (labels ((ready-sockets (sockets)
+	     (dolist (sock sockets result)
+	       (when (cond ((stream-usocket-p sock)
+			    (input-available-p (socket-stream sock)))
+			   ((stream-server-usocket-p sock)
+			    (let ((ot-stream (first (socket-streams (socket sock)))))
+			      (or (input-available-p ot-stream)
+				  (connection-established-p ot-stream)))))
+		 (push sock result)))))
+    (with-mapped-conditions ()
+      (ccl:process-wait-with-timeout
+       "socket input"
+       (when timeout (truncate (* timeout 60)))
+       #'ready-sockets
+       (wait-list-waiters wait-list)))
+    (nreverse result)))

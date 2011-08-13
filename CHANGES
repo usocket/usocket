@@ -1,3 +1,10 @@
+0.5.3:
+
+* Bugfix: [MCL] Fixed SOCKET-LISTEN on vector addresses like #(0 0 0 0)
+* Bugfix: [MCL] Fixed WAIT-FOR-INPUT on passive sockets (stream-server-usocket)
+* Bugfix: [LispWorks] Fixed using OPEN-UDP-SOCKET in delivered applications (thanks to Camille Troillard and Martin Simmons, this fix is from LispWorks-UDP project).
+* Bugfix: [SBCL] Fixed for "SBCL data flush problem", reported by Robert Brown and confirmed by Nikodemus Siivola.
+
 0.5.2:
 
 * General: [SBCL] SOCKET-CONNECT's TIMEOUT argument was limited on non-Windows platforms.
