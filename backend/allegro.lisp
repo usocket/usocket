@@ -199,5 +199,5 @@
       ;; [Same code is also used in openmcl.lisp]
       (dolist (x active-internal-sockets)
         (setf (state (gethash x (wait-list-map wait-list)))
-              :READ))
+              :read))
       wait-list)))
