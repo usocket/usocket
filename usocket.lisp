@@ -325,11 +325,12 @@ the values documented in usocket.lisp in the usocket class."
          (sockets-ready 0))
     (dolist (x (wait-list-waiters socket-or-sockets))
       (when (setf (state x)
-                  #+(and win32 (or sbcl ecl)) NIL ; they cannot relay on LISTEN
+                  #+(and win32 (or sbcl ecl)) nil ; they cannot rely on LISTEN
                   #-(and win32 (or sbcl ecl))
                   (if (and (stream-usocket-p x)
                            (listen (socket-stream x)))
-                      :READ NIL))
+                      :read
+                      nil))
         (incf sockets-ready)))
     ;; the internal routine is responsibe for
     ;; making sure the wait doesn't block on socket-streams of

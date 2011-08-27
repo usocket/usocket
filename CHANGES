@@ -1,6 +1,7 @@
 0.5.4:
 
 * Bugfix: [ECL] Fixed for ECL's MAKE-BUILD by removing some unecessary code (reported by Juan Jose Garcia-Ripoll, the ECL maintainer)
+* Bugfix: [ACL] Fixed for Allegro CL modern mode.
 
 0.5.3:
 
