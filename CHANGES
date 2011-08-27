@@ -1,3 +1,7 @@
+0.5.4:
+
+* Bugfix: [ECL] Fixed for ECL's MAKE-BUILD by removing some unecessary code (reported by Juan Jose Garcia-Ripoll, the ECL maintainer)
+
 0.5.3:
 
 * Bugfix: [MCL] Fixed SOCKET-LISTEN on vector addresses like #(0 0 0 0)

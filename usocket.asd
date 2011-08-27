@@ -4,13 +4,6 @@
 
 ;;;; See the LICENSE file for licensing information.
 
-(in-package :cl-user)
-
-(defpackage usocket-system
-    (:use :cl :asdf))
-
-(in-package :usocket-system)
-
 (defsystem usocket
     :name "usocket"
     :author "Erik Enge & Erik Huelsmann"
