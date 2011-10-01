@@ -1,3 +1,9 @@
+0.5.4:
+
+* Bugfix: [ECL] Fixed for ECL's MAKE-BUILD by removing some unecessary code (reported by Juan Jose Garcia-Ripoll, the ECL maintainer)
+* Bugfix: [ACL] Fixed for Allegro CL modern mode.
+* Bugfix: [SBCL] SOCKET-CONNECT on TCP won't call bind() when keyword arguments LOCAL-HOST or LOCAL-PORT is not set. (reported by Robert Brown)
+
 0.5.3:
 
 * Bugfix: [MCL] Fixed SOCKET-LISTEN on vector addresses like #(0 0 0 0)

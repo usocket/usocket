@@ -4,14 +4,6 @@
 
 ;;;; See the LICENSE file for licensing information.
 
-(in-package :cl-user)
-
-(unless (find-package ':usocket-system)
-  (make-package ':usocket-system
-		:use '(:cl :asdf)))
-
-(in-package :usocket-system)
-
 (defsystem usocket-test
     :name "usocket test"
     :author "Erik Enge"
