@@ -269,8 +269,6 @@ happen. Use with care."
                                :protocol (case protocol
                                            (:stream :tcp)
                                            (:datagram :udp))))
-        (local-host (host-to-vector-quad (or local-host *wildcard-host*)))
-        (local-port (or local-port *auto-port*))
         usocket ok)
     (unwind-protect
          (progn
@@ -285,7 +283,10 @@ happen. Use with care."
               (when (and nodelay-specified sockopt-tcp-nodelay-p)
                 (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) nodelay))
               (when (or local-host local-port)
-                (sb-bsd-sockets:socket-bind socket local-host local-port))
+                (sb-bsd-sockets:socket-bind socket
+					    (host-to-vector-quad
+					     (or local-host *wildcard-host*))
+                                            (or local-port *auto-port*)))
               (with-mapped-conditions (usocket)
 		#+(and sbcl (not win32))
 		(labels ((connect ()
