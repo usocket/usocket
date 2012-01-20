@@ -85,6 +85,8 @@
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
 		       timeout deadline nodelay
                        local-host local-port)
+  (when (eq nodelay :if-supported)
+    (setf nodelay t))
   (with-mapped-conditions ()
     (ecase protocol
       (:stream

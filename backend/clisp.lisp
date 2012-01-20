@@ -116,10 +116,11 @@
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port)
-  (declare (ignore nodelay)
-	   (ignorable timeout local-host local-port))
+  (declare (ignorable timeout local-host local-port))
   (when deadline (unsupported 'deadline 'socket-connect))
-  (when nodelay-specified (unsupported 'nodelay 'socket-connect))
+  (when (and nodelay-specified 
+             (not (eq nodelay :if-supported)))
+    (unsupported 'nodelay 'socket-connect))
   (case protocol
     (:stream
      (let ((socket)

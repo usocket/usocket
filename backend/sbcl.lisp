@@ -261,8 +261,11 @@ happen. Use with care."
              ;; package today. There's no guarantee the functions
              ;; we need are available, but we can make sure not to
              ;; call them if they aren't
+             (not (eq nodelay :if-supported))
              (not sockopt-tcp-nodelay-p))
     (unsupported 'nodelay 'socket-connect))
+  (when (eq nodelay :if-supported)
+    (setf nodelay t))
 
   (let ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                :type protocol

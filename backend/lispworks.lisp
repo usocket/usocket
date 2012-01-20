@@ -253,7 +253,6 @@
 (defun socket-connect (host port &key (protocol :stream) (element-type 'base-char)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host (local-port #+win32 *auto-port* #-win32 nil))
-  (declare (ignorable nodelay))
 
   ;; What's the meaning of this keyword?
   (when deadline
@@ -264,7 +263,8 @@
     (unsupported 'timeout 'socket-connect :minimum "LispWorks 4.4.5"))
 
   #+(or lispworks4 lispworks5.0) ; < 5.1
-  (when nodelay-specified
+  (when (and nodelay-specified 
+             (not (eq nodelay :if-supported)))
     (unsupported 'nodelay 'socket-connect :minimum "LispWorks 5.1"))
 
   #+lispworks4 #+lispworks4

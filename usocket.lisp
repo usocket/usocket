@@ -529,7 +529,7 @@ Optionally, a different fractional part can be specified."
 
 ;; Documentation for the function
 ;;
-;; (defun SOCKET-CONNECT (host port &key element-type) ..)
+;; (defun SOCKET-CONNECT (host port &key element-type nodelay some-other-keys...) ..)
 ;;
 (setf (documentation 'socket-connect 'function)
       "Connect to `host' on `port'.  `host' is assumed to be a string or
@@ -538,6 +538,20 @@ an IP address represented in vector notation, such as #(192 168 1 1).
 
 `element-type' specifies the element type to use when constructing the
 stream associated with the socket.  The default is 'character.
+
+`nodelay' Allows to disable/enable Nagle's algorithm (http://en.wikipedia.org/wiki/Nagle%27s_algorithm).
+If this parameter is omitted, the behaviour is inherited form the 
+CL implementation (in most cases the Nagle's algorithm is 
+enabled by default, but for example in ACL it is disabled).
+If the parmeter is specified, one of these three values is possible: 
+  T - Disable the Nagle's algorithm; signals an UNSUPPORTED
+      condition if the implementation does not support explicit 
+      manipulation with that option.
+  NIL - Leave the Nagle's algorithm enabled on the socket;
+      signals an UNSUPPORTED condition if the implementation does 
+      not support explicit manipulation with that option.
+  :IF-SUPPORTED - Disables the Nagle's algorithm if the implementation
+      allows this, otherwises just ignore this option.
 
 Returns a usocket object.")
 

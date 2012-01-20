@@ -34,8 +34,9 @@
 		       (local-port nil local-port-p)
 		       &aux
 		       (patch-udp-p (fboundp 'ext::inet-socket-send-to)))
-  (declare (ignore nodelay))
-  (when nodelay-specified (unsupported 'nodelay 'socket-connect))
+  (when (and nodelay-specified 
+             (not (eq nodelay :if-supported)))
+    (unsupported 'nodelay 'socket-connect))
   (when deadline (unsupported 'deadline 'socket-connect))
   (when timeout (unsupported 'timeout 'socket-connect))
   (when (and local-host-p (not patch-udp-p))

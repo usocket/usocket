@@ -73,6 +73,8 @@
 
 (defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay 
                             local-host local-port (protocol :stream))
+  (when (eq nodelay :if-supported)
+    (setf nodelay t))
   (when (eq protocol :datagram)
     (unsupported '(protocol :datagram) 'socket-connect))
   (with-mapped-conditions ()
