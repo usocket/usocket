@@ -540,17 +540,17 @@ an IP address represented in vector notation, such as #(192 168 1 1).
 stream associated with the socket.  The default is 'character.
 
 `nodelay' Allows to disable/enable Nagle's algorithm (http://en.wikipedia.org/wiki/Nagle%27s_algorithm).
-If this parameter is omitted, the behaviour is inherited form the 
-CL implementation (in most cases the Nagle's algorithm is 
+If this parameter is omitted, the behaviour is inherited from the 
+CL implementation (in most cases, Nagle's algorithm is 
 enabled by default, but for example in ACL it is disabled).
 If the parmeter is specified, one of these three values is possible: 
-  T - Disable the Nagle's algorithm; signals an UNSUPPORTED
+  T - Disable Nagle's algorithm; signals an UNSUPPORTED
       condition if the implementation does not support explicit 
       manipulation with that option.
-  NIL - Leave the Nagle's algorithm enabled on the socket;
+  NIL - Leave Nagle's algorithm enabled on the socket;
       signals an UNSUPPORTED condition if the implementation does 
       not support explicit manipulation with that option.
-  :IF-SUPPORTED - Disables the Nagle's algorithm if the implementation
+  :IF-SUPPORTED - Disables Nagle's algorithm if the implementation
       allows this, otherwises just ignore this option.
 
 Returns a usocket object.")
