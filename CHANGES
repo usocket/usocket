@@ -1,3 +1,10 @@
+0.6.0:
+
+* New feature: SOCKET-OPTION for seting and geting various socket options.
+* Enhancement: SOCKET-CONNECT argument :nodelay can now set to :if-supported (patch from Anton Vodonosov).
+* Bugfix: [LispWorks] Fixed UDP support for LispWorks 6.1 (patch from Camille Troillard).
+* Bugfix: [LispWorks] Stop using hcl:add-special-free-action for reclaiming unused UDP socket fds to improve multi-threading stablity (suggested by Camille Troillard).
+
 0.5.4:
 
 * Bugfix: [ECL] Fixed for ECL's MAKE-BUILD by removing some unecessary code (reported by Juan Jose Garcia-Ripoll, the ECL maintainer)
@@ -50,10 +57,6 @@
 
 * New feature: CLISP support some advanced TCP features which CLISP's SOCKET interface not provide
 * New feature: Macintosh Common Lisp (MCL) support Datagram sockets (UDP)
-
-0.6.0:
-
-* New feature: SOCKET-OPTION for seting and geting various socket options.
 
 [TODO for 0.6.x]
 

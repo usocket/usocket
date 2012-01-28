@@ -183,7 +183,47 @@
                 len)
     (float (/ (fli:dereference timeout) 1000))))
 
-(defun open-udp-socket (&key local-address local-port read-timeout)
+(defun initialize-dynamic-sockaddr (hostname service protocol &aux (original-hostname hostname))
+  (declare (ignorable original-hostname))
+  #+(or lispworks4 lispworks5 lispworks6.0)
+  (let ((server-addr (fli:allocate-dynamic-foreign-object
+                      :type '(:struct comm::sockaddr_in))))
+    (values (comm::initialize-sockaddr_in 
+             server-addr 
+             comm::*socket_af_inet*
+             hostname
+             service protocol)
+            comm::*socket_af_inet*
+            server-addr
+            (fli:pointer-element-size server-addr)))
+  #-(or lispworks4 lispworks5 lispworks6.0)
+  (progn
+    (when (stringp hostname)
+      (setq hostname (comm:string-ip-address hostname))
+      (unless hostname
+        (let ((resolved-hostname (comm:get-host-entry original-hostname :fields '(:address))))
+          (unless resolved-hostname
+            (return-from initialize-dynamic-sockaddr :unknown-host))
+          (setq hostname resolved-hostname))))
+    (if (or (null hostname)
+            (integerp hostname)
+            (comm:ipv6-address-p hostname))
+        (let ((server-addr (fli:allocate-dynamic-foreign-object
+                            :type '(:struct comm::lw-sockaddr))))
+          (multiple-value-bind (error family)
+              (comm::initialize-sockaddr_in 
+               server-addr 
+               hostname
+               service protocol)
+            (values error family
+                    server-addr
+                    (if (eql family comm::*socket_af_inet*)
+                        (fli:size-of '(:struct comm::sockaddr_in))
+                      (fli:size-of '(:struct comm::sockaddr_in6))))))
+      :bad-host)))
+
+(defun open-udp-socket (&key local-address local-port read-timeout
+                             (address-family comm::*socket_af_inet*))
   "Open a unconnected UDP socket.
    For binding on address ANY(*), just not set LOCAL-ADDRESS (NIL),
    for binding on random free unused port, set LOCAL-PORT to 0."
@@ -201,54 +241,51 @@
   ;; safe and it will be very fast after the first time.
   #+win32 (comm::ensure-sockets)
 
-  (let ((socket-fd (comm::socket comm::*socket_af_inet* *socket_sock_dgram* *socket_ip_proto_udp*)))
+  (let ((socket-fd (comm::socket address-family *socket_sock_dgram* *socket_ip_proto_udp*)))
     (if socket-fd
-      (progn
-        (when read-timeout (set-socket-receive-timeout socket-fd read-timeout))
-        (if local-port
-            (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in)))
-              (comm::initialize-sockaddr_in client-addr comm::*socket_af_inet*
-                                      local-address local-port "udp")
-              (if (comm::bind socket-fd
-                        (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
-                        (fli:pointer-element-size client-addr))
-		  ;; success, return socket fd
-		  socket-fd
-		  (progn
-		    (comm::close-socket socket-fd)
-		    (error "cannot bind"))))
+        (progn
+          (when read-timeout (set-socket-receive-timeout socket-fd read-timeout))
+          (if local-port
+              (fli:with-dynamic-foreign-objects ()
+                (multiple-value-bind (error local-address-family
+                                            client-addr client-addr-length)
+                    (initialize-dynamic-sockaddr local-address local-port "udp")
+                  (if (or error (not (eql address-family local-address-family)))
+                      (progn
+                        (comm::close-socket socket-fd)
+                        (error "cannot resolve hostname ~S, service ~S: ~A"
+                               local-address local-port (or error "address family mismatch")))
+                    (if (comm::bind socket-fd client-addr client-addr-length)
+                        ;; success, return socket fd
+                        socket-fd
+                      (progn
+                        (comm::close-socket socket-fd)
+                        (error "cannot bind"))))))
 	    socket-fd))
       (error "cannot create socket"))))
 
 (defun connect-to-udp-server (hostname service
-			      &key local-address local-port read-timeout)
+                                       &key local-address local-port read-timeout)
   "Something like CONNECT-TO-TCP-SERVER"
-  (let ((socket-fd (open-udp-socket :local-address local-address
-				    :local-port local-port
-				    :read-timeout read-timeout)))
-    (if socket-fd
-        (fli:with-dynamic-foreign-objects ((server-addr (:struct comm::sockaddr_in)))
-          ;; connect to remote address/port
-          (comm::initialize-sockaddr_in server-addr comm::*socket_af_inet* hostname service "udp")
-          (if (comm::connect socket-fd
-			     (fli:copy-pointer server-addr :type '(:struct comm::sockaddr))
-			     (fli:pointer-element-size server-addr))
-            ;; success, return socket fd
-            socket-fd
-            ;; fail, close socket and return nil
-            (progn
-              (comm::close-socket socket-fd)
-	      (error "cannot connect"))))
-	(error "cannot create socket"))))
-
-;; Register a special free action for closing datagram usocket when being GCed
-(defun usocket-special-free-action (object)
-  (when (and (typep object 'datagram-usocket)
-             (%open-p object))
-    (socket-close object)))
-
-(eval-when (:load-toplevel :execute)
-  (hcl:add-special-free-action 'usocket-special-free-action))
+  (fli:with-dynamic-foreign-objects ()
+    (multiple-value-bind (error address-family server-addr server-addr-length)
+        (initialize-dynamic-sockaddr hostname service "udp")
+      (when error
+        (error "cannot resolve hostname ~S, service ~S: ~A"
+               hostname service error))
+      (let ((socket-fd (open-udp-socket :local-address local-address
+                                        :local-port local-port
+                                        :read-timeout read-timeout
+                                        :address-family address-family)))
+        (if socket-fd
+            (if (comm::connect socket-fd server-addr server-addr-length)
+                ;; success, return socket fd
+                socket-fd
+              ;; fail, close socket and return nil
+              (progn
+                (comm::close-socket socket-fd)
+                (error "cannot connect")))
+          (error "cannot create socket"))))))
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'base-char)
                        timeout deadline (nodelay t nodelay-specified)
@@ -390,16 +427,19 @@
   "Send message to a socket, using sendto()/send()"
   (declare (type integer socket-fd)
            (type sequence buffer))
-  (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in)))
-    (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
-      (replace message buffer :end2 length)
-      (if (and host service)
-          (progn
-            (comm::initialize-sockaddr_in client-addr comm::*socket_af_inet* host service "udp")
+  (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
+    (replace message buffer :end2 length)
+    (if (and host service)
+        (fli:with-dynamic-foreign-objects ()
+          (multiple-value-bind (error family client-addr client-addr-length)
+              (initialize-dynamic-sockaddr host service "udp")
+            (when error
+              (error "cannot resolve hostname ~S, service ~S: ~A"
+                     host service error))
             (%sendto socket-fd ptr (min length +max-datagram-packet-size+) 0
                      (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
-                     *length-of-sockaddr_in*))
-          (comm::%send socket-fd ptr (min length +max-datagram-packet-size+) 0)))))
+                     client-addr-length)))
+      (comm::%send socket-fd ptr (min length +max-datagram-packet-size+) 0))))
 
 (defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
   (send-message (socket socket)
