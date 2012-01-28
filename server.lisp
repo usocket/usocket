@@ -80,7 +80,8 @@
                        &key element-type multi-threading)
   (let ((real-function #'(lambda (client-socket &rest arguments)
                            (unwind-protect
-                               (apply function (socket-stream client-socket) arguments)
+                               (multiple-value-bind (*remote-host* *remote-port*) (get-peer-name client-socket)
+                                 (apply function (socket-stream client-socket) arguments))
                              (close (socket-stream client-socket))
                              (socket-close client-socket)
                              nil))))

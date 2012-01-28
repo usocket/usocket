@@ -1,7 +1,8 @@
 0.6.0:
 
 * New feature: SOCKET-OPTION for seting and geting various socket options.
-* Enhancement: SOCKET-CONNECT argument :nodelay can now set to :if-supported (patch from Anton Vodonosov).
+* Enhancement: SOCKET-CONNECT argument :nodelay now support :if-supported as value (patch from Anton Vodonosov).
+* Enhancement: Add *remote-host* *remote-port* to SOCKET-SERVER stream handler (suggested by Matthew Curry).
 * Bugfix: [LispWorks] Fixed UDP support for LispWorks 6.1 (patch from Camille Troillard).
 * Bugfix: [LispWorks] Stop using hcl:add-special-free-action for reclaiming unused UDP socket fds to improve multi-threading stablity (suggested by Camille Troillard).
 
