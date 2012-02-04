@@ -3,8 +3,9 @@
 * New feature: SOCKET-OPTION for seting and geting various socket options.
 * Enhancement: SOCKET-CONNECT argument :nodelay now support :if-supported as value (patch from Anton Vodonosov).
 * Enhancement: Add *remote-host* *remote-port* to SOCKET-SERVER stream handler (suggested by Matthew Curry).
-* Bugfix: [LispWorks] Fixed UDP support for LispWorks 6.1 (patch from Camille Troillard).
+* Bugfix: [LispWorks] Fixed UDP support for LispWorks 6.1 (patch from Camille Troillard by Martin Simmons).
 * Bugfix: [LispWorks] Stop using hcl:add-special-free-action for reclaiming unused UDP socket fds to improve multi-threading stablity (suggested by Camille Troillard).
+* Bugfix: [LispWorks] Fixed SOCKET-CONNECT on Windows, now LOCAL-PORT never have *auto-port* (0) as default value.
 
 0.5.4:
 
@@ -62,3 +63,4 @@
 [TODO for 0.6.x]
 
 * New feature: SOCKET-SHUTDOWN for TCP and UDP sockets
+* Fix UDP in CCL 1.7 Windows |send| symbol is gone.

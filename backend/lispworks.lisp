@@ -289,7 +289,7 @@
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'base-char)
                        timeout deadline (nodelay t nodelay-specified)
-                       local-host (local-port #+win32 *auto-port* #-win32 nil))
+                       local-host local-port)
 
   ;; What's the meaning of this keyword?
   (when deadline
