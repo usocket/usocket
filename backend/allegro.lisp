@@ -151,9 +151,9 @@
   (values (get-peer-address usocket)
           (get-peer-port usocket)))
 
-(defmethod socket-send ((socket datagram-usocket) buffer size &key host port (offset 0))
-  (with-mapped-conditions (socket)
-    (let ((s (socket socket)))
+(defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
+  (with-mapped-conditions (usocket)
+    (let ((s (socket usocket)))
       (socket:send-to s
 		      (if (zerop offset)
 			  buffer

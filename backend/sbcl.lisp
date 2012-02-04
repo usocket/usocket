@@ -399,7 +399,7 @@ happen. Use with care."
     (close (socket-stream usocket))))
 
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
-  (with-mapped-conditions (socket)
+  (with-mapped-conditions (usocket)
     (let* ((s (socket usocket))
 	   (dest (if (and host port) (list (host-to-vector-quad host) port) nil))
 	   (real-buffer (if (zerop offset)
