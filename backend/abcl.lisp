@@ -335,19 +335,17 @@
 	(code-char ub8)
 	ub8)))
 
-(defmethod socket-send ((usocket datagram-usocket) buffer length &key host port)
+(defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
   (let* ((socket (socket usocket))
-	 (real-length (or length (length buffer)))
-	 (byte-array (jnew-array $*byte real-length))
+	 (byte-array (jnew-array $*byte size))
 	 (packet (if (and host port)
-		     (jnew $%DatagramPacket/5 byte-array 0 real-length (host-to-inet4 host) port)
-		     (jnew $%DatagramPacket/3 byte-array 0 real-length))))
+		     (jnew $%DatagramPacket/5 byte-array 0 size (host-to-inet4 host) port)
+		     (jnew $%DatagramPacket/3 byte-array 0 size))))
     ;; prepare sending data
-    (loop for i from 0 below real-length
+    (loop for i from offset below (+ size offset)
        do (setf (jarray-ref byte-array i) (*->byte (aref buffer i))))
     (with-mapped-conditions (usocket)
-      (jcall $@send/1 socket packet))
-    real-length))
+      (jcall $@send/1 socket packet))))
 
 ;;; TODO: return-host and return-port cannot be get ...
 (defmethod socket-receive ((usocket datagram-usocket) buffer length

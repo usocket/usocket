@@ -93,10 +93,12 @@
   "Dispatch correct usocket condition."
   (let (error-keyword error-string)
     (typecase condition
+      #+ffi ; because OS:ERRNO and OS:STRERROR is only present if FFI is present.
       (system::simple-os-error
        (let ((errno (car (simple-condition-format-arguments condition))))
 	 (setq error-keyword (os:errno errno)
 	       error-string (os:strerror errno))))
+      #+ffi ; because OS:ERRNO and OS:STRERROR is only present if FFI is present.
       (simple-error
        (let ((keyword
 	      (car (simple-condition-format-arguments condition))))
@@ -302,7 +304,7 @@ and the address of the sender as values."
                 host
                 port))))
 
-  (defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
+  (defmethod socket-send ((socket datagram-usocket) buffer size &key host port (offset 0))
     "Returns the number of octets sent."
     (let* ((sock (socket socket))
            (sockaddr (when (and host port)
@@ -311,19 +313,19 @@ and the address of the sender as values."
                                                (make-sockaddr_in)
                                                (host-byte-order host)
                                                port))))
-           (real-length (or length (length buffer)))
+           (real-size (min size +max-datagram-packet-size+))
            (real-buffer (if (typep buffer '(simple-array (unsigned-byte 8) (*)))
                             buffer
-                          (make-array real-length
+                          (make-array real-size
                                       :element-type '(unsigned-byte 8)
-                                      :initial-contents (subseq buffer 0 real-length))))
+                                      :initial-contents (subseq buffer 0 real-size))))
            (rv (if (and host port)
                    (rawsock:sendto sock real-buffer sockaddr
-                                   :start 0
-                                   :end real-length)
+                                   :start offset
+                                   :end (+ offset real-size))
                    (rawsock:send sock real-buffer
-                                 :start 0
-                                 :end real-length))))
+                                 :start offset
+                                 :end (+ offset real-size)))))
       rv))
 
   (defmethod socket-close ((usocket datagram-usocket))
@@ -631,30 +633,31 @@ and the address of the sender as values."
   ;; in LispWorks. So, we allocate new foreign buffer for holding data (unknown sequence subtype) every time.
   ;; 
   ;; I don't know if anyone is watching my coding work, but I think this design is reasonable for CLISP.
-  (defmethod socket-send ((usocket datagram-usocket) buffer length &key host port)
+  (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
     (declare (type sequence buffer)
-	     (type integer length))
-    (let ((remote-address (when (and host port)
-			    (fill-sockaddr_in (ffi:allocate-shallow 'sockaddr_in) host port)))
-	  (send-buffer (let ((buffer-length (length buffer)))
-			 (if (> buffer-length (* length 2))
-			     ;; if buffer is too big, then we copy out a subseq and only allocate as need
-			     (ffi:allocate-deep 'ffi:uint8 (subseq buffer 0 length) :count length :read-only t)
-			     ;; then we allocate the whole buffer directly, that should be faster.
-			     (ffi:allocate-deep 'ffi:uint8 buffer :count (length buffer) :read-only t))))
-	  (real-length (min length +max-datagram-packet-size+))
+	     (type (integer 0 *) size offset))
+    (let ((remote-address
+	   (when (and host port)
+	     (fill-sockaddr_in (ffi:allocate-shallow 'sockaddr_in) host port)))
+	  (send-buffer
+	   (ffi:allocate-deep 'ffi:uint8
+			      (if (zerop offset)
+				  buffer
+				  (subseq buffer offset (+ offset size)))
+			      :count size :read-only t))
+	  (real-size (min size +max-datagram-packet-size+))
 	  (nbytes 0))
       (unwind-protect
 	   (let ((n (if remote-address
 			(%sendto (socket usocket)
 				 (ffi:foreign-address send-buffer)
-				 real-length
+				 real-size
 				 0 ; flags
 				 (ffi:cast (ffi:foreign-value remote-address) 'sockaddr)
 				 *length-of-sockaddr_in*)
 			(%send (socket usocket)
 			       (ffi:foreign-address send-buffer)
-			       real-length
+			       real-size
 			       0))))
 	     (cond ((plusp n)
 		    (setq nbytes n))

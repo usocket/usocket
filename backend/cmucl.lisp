@@ -174,14 +174,17 @@
    length
    flags))
 
-(defmethod socket-send ((usocket datagram-usocket) buffer length &key host port)
+(defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0)
+			&aux (real-buffer (if (zerop offset)
+					      buffer
+					      (subseq buffer offset (+ offset size)))))
   (with-mapped-conditions (usocket)
     (if (and host port)
-        (ext:inet-sendto (socket usocket) buffer length (host-to-hbo host) port)
+	(ext:inet-sendto (socket usocket) real-buffer size (host-to-hbo host) port)
 	#-unicode
-	(unix:unix-send (socket usocket) buffer length 0)
+	(unix:unix-send (socket usocket) real-buffer size 0)
 	#+unicode
-	(%unix-send (socket usocket) buffer length 0))))
+	(%unix-send (socket usocket) real-buffer size 0))))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
   (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer

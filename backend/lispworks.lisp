@@ -423,28 +423,27 @@
 (defvar *length-of-sockaddr_in*
   (fli:size-of '(:struct comm::sockaddr_in)))
 
-(defun send-message (socket-fd message buffer &optional (length (length buffer)) host service)
+(defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0)
+                        &aux (socket-fd (socket usocket))
+                             (message (slot-value usocket 'send-buffer)))
   "Send message to a socket, using sendto()/send()"
   (declare (type integer socket-fd)
            (type sequence buffer))
+  (when host (setq host (host-to-hbo host)))
   (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
-    (replace message buffer :end2 length)
-    (if (and host service)
+    (replace message buffer :start2 offset :end2 (+ offset size))
+    (if (and host port)
         (fli:with-dynamic-foreign-objects ()
           (multiple-value-bind (error family client-addr client-addr-length)
-              (initialize-dynamic-sockaddr host service "udp")
+              (initialize-dynamic-sockaddr host port "udp")
+            (declare (ignore family))
             (when error
-              (error "cannot resolve hostname ~S, service ~S: ~A"
-                     host service error))
-            (%sendto socket-fd ptr (min length +max-datagram-packet-size+) 0
+              (error "cannot resolve hostname ~S, port ~S: ~A"
+                     host port error))
+            (%sendto socket-fd ptr (min size +max-datagram-packet-size+) 0
                      (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
                      client-addr-length)))
-      (comm::%send socket-fd ptr (min length +max-datagram-packet-size+) 0))))
-
-(defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
-  (send-message (socket socket)
-                (slot-value socket 'send-buffer)
-                buffer length (and host (host-to-hbo host)) port))
+      (comm::%send socket-fd ptr (min size +max-datagram-packet-size+) 0))))
 
 (defun receive-message (socket-fd message &optional buffer (length (length buffer))
 			&key read-timeout (max-buffer-size +max-datagram-packet-size+))

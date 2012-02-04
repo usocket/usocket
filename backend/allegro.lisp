@@ -151,10 +151,16 @@
   (values (get-peer-address usocket)
           (get-peer-port usocket)))
 
-(defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
+(defmethod socket-send ((socket datagram-usocket) buffer size &key host port (offset 0))
   (with-mapped-conditions (socket)
     (let ((s (socket socket)))
-      (socket:send-to s buffer length :remote-host host :remote-port port))))
+      (socket:send-to s
+		      (if (zerop offset)
+			  buffer
+			  (subseq buffer offset (+ offset size)))
+		      size
+		      :remote-host host
+		      :remote-port port))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length &key)
   (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer

@@ -149,24 +149,25 @@
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
-(defmethod socket-send ((usocket datagram-usocket) buffer length &key host port offset)
+(defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
   (with-mapped-conditions (usocket)
     (if (and host port)
-	(openmcl-socket:send-to (socket usocket) buffer length
+	(openmcl-socket:send-to (socket usocket) buffer size
 				:remote-host (host-to-hbo host)
-				:remote-port port)
+				:remote-port port
+				:offset offset)
 	;; Clozure CL's socket function SEND-TO doesn't support operations on connected UDP sockets,
 	;; so we have to define our own.
 	(let* ((socket (socket usocket))
 	       (fd (ccl::socket-device socket)))
 	  (multiple-value-setq (buffer offset)
-	    (ccl::verify-socket-buffer buffer offset length))
-	  (ccl::%stack-block ((bufptr length))
-	    (ccl::%copy-ivector-to-ptr buffer offset bufptr 0 length)
+	    (ccl::verify-socket-buffer buffer offset size))
+	  (ccl::%stack-block ((bufptr size))
+	    (ccl::%copy-ivector-to-ptr buffer offset bufptr 0 size)
 	    (ccl::socket-call socket "send"
 	      (ccl::with-eagain fd :output
 		(ccl::ignoring-eintr
-		  (ccl::check-socket-error (#_send fd bufptr length 0))))))))))
+		  (ccl::check-socket-error (#_send fd bufptr size 0))))))))))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
   (with-mapped-conditions (usocket)

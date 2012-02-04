@@ -398,11 +398,14 @@ happen. Use with care."
   (with-mapped-conditions (usocket)
     (close (socket-stream usocket))))
 
-(defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
+(defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
   (with-mapped-conditions (socket)
-    (let* ((s (socket socket))
-           (dest (if (and host port) (list (host-to-vector-quad host) port) nil)))
-      (sb-bsd-sockets:socket-send s buffer length :address dest))))
+    (let* ((s (socket usocket))
+	   (dest (if (and host port) (list (host-to-vector-quad host) port) nil))
+	   (real-buffer (if (zerop offset)
+			    buffer
+			    (subseq buffer offset (+ offset size)))))
+      (sb-bsd-sockets:socket-send s real-buffer size :address dest))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length
 			   &key (element-type '(unsigned-byte 8)))

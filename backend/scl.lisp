@@ -136,14 +136,17 @@
 (defmethod socket-close :after ((socket datagram-usocket))
   (setf (%open-p socket) nil))
 
-(defmethod socket-send ((socket datagram-usocket) buffer length &key host port)
-  (let ((s (socket socket))
-	(host (if host (host-to-hbo host))))
+(defmethod socket-send ((usocket datagram-usocket) buffer size &key host port)
+  (let ((s (socket usocket))
+	(host (if host (host-to-hbo host)))
+	(real-buffer (if (zerop offset)
+			 buffer
+			 (subseq buffer offset (+ offset size)))))
     (multiple-value-bind (result errno)
-	(ext:inet-socket-send-to s buffer length
+	(ext:inet-socket-send-to s real-buffer size
 				 :remote-host host :remote-port port)
       (or result
-	  (scl-map-socket-error errno :socket socket)))))
+	  (scl-map-socket-error errno :socket usocket)))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length &key)
   (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
