@@ -1,6 +1,7 @@
 0.6.0:
 
-* New feature: SOCKET-OPTION for seting and geting various socket options.
+* New feature: SOCKET-OPTION and (setf SOCKET-OPTION) for seting and geting various socket options.
+* (on the way) New feature: SOCKET-SHUTDOWN for TCP and UDP sockets.
 * Enhancement: SOCKET-CONNECT argument :nodelay now support :if-supported as value (patch from Anton Vodonosov).
 * Enhancement: Add *remote-host* *remote-port* to SOCKET-SERVER stream handler (suggested by Matthew Curry).
 * Bugfix: [LispWorks] Fixed UDP support for LispWorks 6.1 (patch from Camille Troillard by Martin Simmons).
@@ -59,8 +60,3 @@
 
 * New feature: CLISP support some advanced TCP features which CLISP's SOCKET interface not provide
 * New feature: Macintosh Common Lisp (MCL) support Datagram sockets (UDP)
-
-[TODO for 0.6.x]
-
-* New feature: SOCKET-SHUTDOWN for TCP and UDP sockets
-* Fix UDP in CCL 1.7 Windows |send| symbol is gone.

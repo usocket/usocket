@@ -16,7 +16,6 @@
 		 (:module "vendor" :depends-on ("package")
 		  :components ((:file "split-sequence")
 			       #+mcl (:file "kqueue")
-			       #+openmcl (:file "ccl-send")
                                (:file "spawn-thread")))
                  (:file "usocket" :depends-on ("vendor"))
                  (:file "condition" :depends-on ("usocket"))
