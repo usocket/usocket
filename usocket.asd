@@ -8,7 +8,7 @@
     :name "usocket"
     :author "Erik Enge & Erik Huelsmann"
     :maintainer "Chun Tian (binghe)"
-    :version "0.5.1"
+    :version "0.5.5"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (#+sbcl :sb-bsd-sockets)
