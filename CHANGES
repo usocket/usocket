@@ -1,3 +1,11 @@
+0.5.5:
+
+* Enhancement: SOCKET-CONNECT argument :nodelay can now set to :if-supported (patch from Anton Vodonosov).
+* Enhancement: [server] adding *remote-host* *remote-port* to socket-server stream handler functions (suggested by Matthew Curry)
+* Bugfix: [LispWorks] Fixed UDP support for LispWorks 6.1 (patch from Camille Troillard by Martin Simmons).
+* Bugfix: [LispWorks] Stop using hcl:add-special-free-action for reclaiming unused UDP socket fds to improve multi-threading stablity (suggested by Camille Troillard).
+* Bugfix: [LispWorks] Fixed SOCKET-CONNECT on Windows, now LOCAL-PORT never have *auto-port* (0) as default value.
+
 0.5.4:
 
 * Bugfix: [ECL] Fixed for ECL's MAKE-BUILD by removing some unecessary code (reported by Juan Jose Garcia-Ripoll, the ECL maintainer)

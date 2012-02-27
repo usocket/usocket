@@ -55,6 +55,8 @@
                        local-host local-port)
   (when timeout (unsupported 'timeout 'socket-connect))
   (when deadline (unsupported 'deadline 'socket-connect))
+  (when (eq nodelay :if-supported)
+    (setf nodelay t))
 
   (let ((socket))
     (setf socket

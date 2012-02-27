@@ -212,7 +212,8 @@
 	 (setq stream (ext:get-socket-stream socket :element-type element-type)
 	       usocket (make-stream-socket :stream stream :socket socket))
 	 (when nodelay-supplied-p
-	   (jcall $@setTcpNoDelay/1 socket (if nodelay +java-true+ +java-false+)))
+	   (jcall $@setTcpNoDelay/1 socket (if nodelay ;; both t and :if-supported mean +java-true+
+                                           +java-true+ +java-false+)))
 	 (when timeout
 	   (jcall $@setSoTimeout/Socket/1 socket (truncate (* 1000 timeout))))))
       (:datagram ; UDP
