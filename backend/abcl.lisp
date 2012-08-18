@@ -116,8 +116,6 @@
 (defvar $+op-read (jfield $*SelectionKey "OP_READ"))
 (defvar $+op-write (jfield $*SelectionKey "OP_WRITE"))
 
-(defconstant +java-true+ (make-immediate-object t :boolean))
-(defconstant +java-false+ (make-immediate-object nil :boolean))
 
 ;;; Wrapper functions (return-type: java-object)
 (defun %get-address (address)
@@ -212,8 +210,8 @@
 	 (setq stream (ext:get-socket-stream socket :element-type element-type)
 	       usocket (make-stream-socket :stream stream :socket socket))
 	 (when nodelay-supplied-p
-	   (jcall $@setTcpNoDelay/1 socket (if nodelay ;; both t and :if-supported mean +java-true+
-                                           +java-true+ +java-false+)))
+	   (jcall $@setTcpNoDelay/1 socket (if nodelay ;; both t and :if-supported mean java:+true+
+                                           java:+true+ java:+false+)))
 	 (when timeout
 	   (jcall $@setSoTimeout/Socket/1 socket (truncate (* 1000 timeout))))))
       (:datagram ; UDP
@@ -245,7 +243,7 @@
 	 (channel (jstatic $@open/ServerSocketChannel/0 $*ServerSocketChannel))
 	 (socket (jcall $@socket/ServerSocketChannel/0 channel))
 	 (endpoint (jnew $%InetSocketAddress/2 (host-to-inet4 host) (or port 0))))
-    (jcall $@setReuseAddress/1 socket (if reuseaddress +java-true+ +java-false+))
+    (jcall $@setReuseAddress/1 socket (if reuseaddress java:+true+ java:+false+))
     (with-mapped-conditions (socket)
       (if backlog-supplied-p
 	  (jcall $@bind/ServerSocket/2 socket endpoint backlog)
@@ -397,7 +395,7 @@
     (unwind-protect
 	 (with-mapped-conditions ()
 	   (dolist (channel channels)
-	     (jcall $@configureBlocking/1 channel +java-false+)
+	     (jcall $@configureBlocking/1 channel java:+false+)
 	     (jcall $@register/2 channel selector (logand ops (jcall $@validOps/0 channel))))
 	   (let ((ready-count (if timeout
 				  (jcall $@select/1 selector (truncate (* timeout 1000)))
@@ -412,7 +410,7 @@
 			    (setf (state (gethash channel %wait)) :read)))))))
       (jcall $@close/Selector/0 selector)
       (dolist (channel channels)
-	(jcall $@configureBlocking/1 channel +java-true+)))))
+	(jcall $@configureBlocking/1 channel java:+true+)))))
 
 ;;; WAIT-LIST
 
