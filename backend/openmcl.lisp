@@ -222,3 +222,20 @@
       (input-available-p (wait-list-waiters wait-list)
 			 (when timeout ticks-timeout))
       wait-list)))
+
+;;; Helper functions for option.lisp
+(defun get-socket-option-reuseaddr (socket)
+  (ccl::int-getsockopt (ccl::socket-device socket)
+                       #$SOL_SOCKET #$SO_REUSEADDR))
+
+(defun set-socket-option-reuseaddr (socket value)
+  (ccl::int-setsockopt (ccl::socket-device socket)
+			 #$SOL_SOCKET #$SO_REUSEADDR value))
+
+(defun get-socket-option-broadcast (socket)
+  (ccl::int-getsockopt (ccl::socket-device socket)
+                       #$SOL_SOCKET #$SO_BROADCAST))
+
+(defun set-socket-option-broadcast (socket value)
+  (ccl::int-setsockopt (ccl::socket-device socket)
+                       #$SOL_SOCKET #$SO_BROADCAST value))

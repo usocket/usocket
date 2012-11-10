@@ -36,12 +36,11 @@
   (declare (ignore new-value))
   (socket-option socket option))
 
-;;; Option: RECEIVE-TIMEOUT (RCVTIMEO)
-;;;  Scope: TCP & UDP
+;;; Socket option: RECEIVE-TIMEOUT (SO_RCVTIMEO)
 
 (defmethod socket-option ((usocket stream-usocket)
                           (option (eql :receive-timeout)) &key)
-  (declare (ignore option))
+  (declare (ignorable option))
   (let ((socket (socket usocket)))
     (declare (ignorable socket))
     #+abcl
@@ -67,8 +66,7 @@
 
 (defmethod (setf socket-option) (new-value (usocket stream-usocket)
                                            (option (eql :receive-timeout)) &key)
-  (declare (type number new-value)
-	   (ignore option))
+  (declare (type number new-value) (ignorable new-value option))
   (let ((socket (socket usocket))
         (timeout new-value))
     (declare (ignorable socket timeout))
@@ -92,6 +90,120 @@
     #+sbcl
     (setf (sb-impl::fd-stream-timeout (socket-stream usocket))
           (coerce timeout 'single-float))
+    #+scl
+    ()
+    new-value))
+
+(declaim (inline lisp->c) (inline lisp<-c))
+(defun lisp->c (bool) (if bool 1 0))
+(defun lisp<-c (int) (= 1 int))
+
+;;; Socket option: REUSE-ADDRESS (SO_REUSEADDR), for TCP server
+
+(defmethod socket-option ((usocket stream-server-usocket)
+                          (option (eql :reuse-address)) &key)
+  (declare (ignorable option))
+  (let ((socket (socket usocket)))
+    (declare (ignorable socket))
+    #+abcl
+    ()
+    #+allegro
+    ()
+    #+clisp
+    (lisp<-c (socket:socket-options socket :so-reuseaddr))
+    #+clozure
+    (lisp<-c (get-socket-option-reuseaddr socket))
+    #+cmu
+    ()
+    #+ecl
+    ()
+    #+lispworks
+    ()
+    #+mcl
+    ()
+    #+sbcl
+    (sb-bsd-sockets:sockopt-reuse-address socket)
+    #+scl
+    ()))
+
+(defmethod (setf socket-option) (new-value (usocket stream-server-usocket)
+                                           (option (eql :reuse-address)) &key)
+  (declare (type boolean new-value) (ignorable new-value option))
+  (let ((socket (socket usocket)))
+    (declare (ignorable socket))
+    #+abcl
+    ()
+    #+alloero
+    ()
+    #+clisp
+    (socket:socket-options socket :so-reuseaddr (lisp->c new-value))
+    #+clozure
+    (set-socket-option-reuseaddr socket (lisp->c new-value))
+    #+cmu
+    ()
+    #+ecl
+    ()
+    #+lispworks
+    ()
+    #+mcl
+    ()
+    #+sbcl
+    (setf (sb-bsd-sockets:sockopt-reuse-address socket) new-value)
+    #+scl
+    ()
+    new-value))
+
+;;; Socket option: BROADCAST (SO_BROADCAST), for UDP client
+
+(defmethod socket-option ((usocket datagram-usocket)
+                          (option (eql :broadcast)) &key)
+  (declare (ignorable option))
+  (let ((socket (socket usocket)))
+    (declare (ignorable socket))
+    #+abcl
+    ()
+    #+alloero
+    ()
+    #+clisp
+    (lisp<-c (socket:socket-options socket :so-broadcast))
+    #+clozure
+    (lisp<-c (get-socket-option-broadcast socket))
+    #+cmu
+    ()
+    #+ecl
+    ()
+    #+lispworks
+    ()
+    #+mcl
+    ()
+    #+sbcl
+    (sb-bsd-sockets:sockopt-broadcast socket)
+    #+scl
+    ()))
+
+(defmethod (setf socket-option) (new-value (usocket datagram-usocket)
+                                           (option (eql :broadcast)) &key)
+  (declare (type boolean new-value) (ignorable new-value option))
+  (let ((socket (socket usocket)))
+    (declare (ignorable socket))
+    #+abcl
+    ()
+    #+alloero
+    ()
+    #+clisp
+    (socket:socket-options socket :so-broadcast (lisp->c new-value))
+    #+clozure
+    (set-socket-option-broadcast socket (lisp->c new-value))
+    #+cmu
+    ()
+    #+ecl
+    ()
+    #+lispworks
+    ()
+    #+mcl
+    ()
+    #+sbcl
+    (setf (sb-bsd-sockets:sockopt-broadcast socket) new-value)
     #+scl
     ()
     new-value))
