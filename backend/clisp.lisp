@@ -93,17 +93,17 @@
   "Dispatch correct usocket condition."
   (let (error-keyword error-string)
     (typecase condition
-      #+ffi ; because OS:ERRNO and OS:STRERROR is only present if FFI is present.
-      (system::simple-os-error
+      (ext:os-error
        (let ((errno (car (simple-condition-format-arguments condition))))
+	 #+ffi
 	 (setq error-keyword (os:errno errno)
 	       error-string (os:strerror errno))))
-      #+ffi ; because OS:ERRNO and OS:STRERROR is only present if FFI is present.
       (simple-error
        (let ((keyword
 	      (car (simple-condition-format-arguments condition))))
-	 (setq error-keyword keyword
-	       error-string (os:strerror keyword))))
+	 (setq error-keyword keyword)
+	 #+ffi
+	 (setq error-string (os:strerror keyword))))
       (error (error 'unknown-error :real-error condition))
       (condition (signal 'unknown-condition :real-condition condition)))
     (when error-keyword
