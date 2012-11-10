@@ -313,29 +313,29 @@
   (ecase protocol
     (:stream
      (let ((hostname (host-to-hostname host))
-	   (stream))
+           (stream))
        (setf stream
-	     (with-mapped-conditions ()
-	       (comm:open-tcp-stream hostname port
-				     :element-type element-type
-				     #-(and lispworks4 (not lispworks4.4)) ; >= 4.4.5
-				     #-(and lispworks4 (not lispworks4.4))
-				     :timeout timeout
-				     #-lispworks4 #-lispworks4
-				     #-lispworks4 #-lispworks4
-				     :local-address (when local-host (host-to-hostname local-host))
-				     :local-port local-port
-				     #-(or lispworks4 lispworks5.0) ; >= 5.1
-				     #-(or lispworks4 lispworks5.0)
-				     :nodelay nodelay)))
+             (with-mapped-conditions ()
+               (comm:open-tcp-stream hostname port
+                                     :element-type element-type
+                                     #-(and lispworks4 (not lispworks4.4)) ; >= 4.4.5
+                                     #-(and lispworks4 (not lispworks4.4))
+                                     :timeout timeout
+                                     #-lispworks4 #-lispworks4
+                                     #-lispworks4 #-lispworks4
+                                     :local-address (when local-host (host-to-hostname local-host))
+                                     :local-port local-port
+                                     #-(or lispworks4 lispworks5.0) ; >= 5.1
+                                     #-(or lispworks4 lispworks5.0)
+                                     :nodelay nodelay)))
        (if stream
-	   (make-stream-socket :socket (comm:socket-stream-socket stream)
-			       :stream stream)
+           (make-stream-socket :socket (comm:socket-stream-socket stream)
+                               :stream stream)
          ;; if no other error catched by above with-mapped-conditions and still fails, then it's a timeout
          (error 'timeout-error))))
     (:datagram
      (let ((usocket (make-datagram-socket
-		     (if (and host port)
+                     (if (and host port)
                          (with-mapped-conditions ()
                            (connect-to-udp-server (host-to-hostname host) port
                                                   :local-address (and local-host (host-to-hostname local-host))
@@ -345,8 +345,7 @@
                            (open-udp-socket       :local-address (and local-host (host-to-hostname local-host))
                                                   :local-port local-port
                                                   :read-timeout timeout)))
-		     :connected-p (and host port t))))
-       (hcl:flag-special-free-action usocket)
+                     :connected-p (and host port t))))
        usocket))))
 
 (defun socket-listen (host port
