@@ -3,6 +3,7 @@
 * New feature: SOCKET-OPTION and (setf SOCKET-OPTION) for seting and geting various socket options.
 * New feature: [UDP] SOCKET-SEND now support an CCL-like OFFSET keyword for sending only parts of the whole buffer.
 * New feature: SOCKET-SHUTDOWN for TCP and UDP sockets.
+* Enhancement: [ECL] ECL now list sb-bsd-sockets as a dependency, but rather relies on REQUIRE. Patched from Juanjo.
 
 0.5.5:
 

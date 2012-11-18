@@ -11,7 +11,7 @@
     :version "0.6.0"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
-    :depends-on (#+sbcl :sb-bsd-sockets)
+    :depends-on (#+(or sbcl ecl) :sb-bsd-sockets)
     :components ((:file "package")
 		 (:module "vendor" :depends-on ("package")
 		  :components ((:file "split-sequence")
