@@ -1,3 +1,4 @@
+;;;; -*- Mode: Lisp -*-
 ;;;; $Id$
 ;;;; $URL$
 
@@ -26,7 +27,7 @@
          (when (= result 0)
            (sb-alien:cast buf sb-alien:c-string))))))
 
-#+ecl
+#+(and ecl (not ecl-bytecmp))
 (progn
   #-:wsock
   (ffi:clines
@@ -548,10 +549,6 @@ happen. Use with care."
   (sb-alien:define-alien-routine ("WSACreateEvent" wsa-event-create)
       ws-event) ; return type only
 
-  (sb-alien:define-alien-routine ("WSAResetEvent" wsa-event-reset)
-      (boolean #.sb-vm::n-machine-word-bits)
-    (event-object ws-event))
-
   (sb-alien:define-alien-routine ("WSACloseEvent" wsa-event-close)
       (boolean #.sb-vm::n-machine-word-bits)
     (event-object ws-event))
@@ -716,7 +713,7 @@ happen. Use with care."
     (declare (ignore wl w)))
 ) ; progn
 
-#+(and ecl win32)
+#+(and ecl win32 (not ecl-bytecmp))
 (progn
   (defun maybe-wsa-error (rv &optional syscall)
     (unless (zerop rv)
