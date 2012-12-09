@@ -525,6 +525,36 @@ happen. Use with care."
 
   (defun waiting-required (sockets)
     (notany #'socket-ready-p sockets))
+
+  (defun raise-usock-err (errno &optional socket)
+    (error 'unknown-error
+           :socket socket
+           :real-error errno))
+
+  (defun wait-for-input-internal (wait-list &key timeout)
+    (when (waiting-required (wait-list-waiters wait-list))
+      (let ((rv (wsa-wait-for-multiple-events 1 (wait-list-%wait wait-list)
+                                              nil (truncate (* 1000 timeout)) nil)))
+        (ecase rv
+          ((#.+wsa-wait-event-0+)
+           (update-ready-and-state-slots (wait-list-waiters wait-list)))
+          ((#.+wsa-wait-timeout+)) ; do nothing here
+          ((#.+wsa-wait-failed+)
+           (maybe-wsa-error rv))))))
+
+  (defun %add-waiter (wait-list waiter)
+    (let ((events (etypecase waiter
+                    (stream-server-usocket (logior fd-connect fd-accept fd-close))
+                    (stream-usocket (logior fd-read))
+                    (datagram-usocket (logior fd-read)))))
+      (maybe-wsa-error
+       (wsa-event-select (os-socket-handle waiter) (os-wait-list-%wait wait-list) events)
+       waiter)))
+
+  (defun %remove-waiter (wait-list waiter)
+    (maybe-wsa-error
+     (wsa-event-select (os-socket-handle waiter) (os-wait-list-%wait wait-list) 0)
+     waiter))
 ) ; progn
 
 #+(and sbcl win32)
@@ -579,11 +609,6 @@ happen. Use with care."
     (cmd sb-alien:long)
     (argp (* sb-alien:unsigned-long)))
 
-  (defun raise-usock-err (errno socket)
-    (error 'unknown-error
-           :socket socket
-           :real-error errno))
-
   (defun maybe-wsa-error (rv &optional socket)
     (unless (zerop rv)
       (raise-usock-err (sockint::wsa-get-last-error) socket)))
@@ -598,19 +623,6 @@ happen. Use with care."
       (prog1 int-ptr
         (when (plusp int-ptr)
           (setf (state socket) :read)))))
-
-  (defun wait-for-input-internal (wait-list &key timeout)
-    (when (waiting-required (wait-list-waiters wait-list))
-      (let ((rv (wsa-wait-for-multiple-events 1 (wait-list-%wait wait-list)
-                                              nil (truncate (* 1000 timeout)) nil)))
-        (ecase rv
-          ((#.+wsa-wait-event-0+)
-           (update-ready-and-state-slots (wait-list-waiters wait-list)))
-          ((#.+wsa-wait-timeout+)) ; do nothing here
-          ((#.+wsa-wait-failed+)
-           (raise-usock-err
-            (sb-win32::get-last-error-message (sb-win32::get-last-error))
-            wait-list))))))
 
   (defun map-network-events (func network-events)
     (let ((event-map (sb-alien:slot network-events 'network-events))
@@ -674,19 +686,6 @@ happen. Use with care."
 			   (unless (null alien)
 			     (sb-alien:free-alien alien))))))
 
-  (defun %add-waiter (wait-list waiter)
-    (let ((events (etypecase waiter
-                    (stream-server-usocket (logior fd-connect fd-accept fd-close))
-                    (stream-usocket (logior fd-read))
-                    (datagram-usocket (logior fd-read)))))
-      (maybe-wsa-error
-       (wsa-event-select (os-socket-handle waiter) (os-wait-list-%wait wait-list) events)
-       waiter)))
-
-  (defun %remove-waiter (wait-list waiter)
-    (maybe-wsa-error
-     (wsa-event-select (os-socket-handle waiter) (os-wait-list-%wait wait-list) 0)
-     waiter))
 ) ; progn
 
 #+(and ecl (not win32))

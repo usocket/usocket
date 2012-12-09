@@ -764,7 +764,8 @@
   (defun free-wait-list (wl)
     (when (wait-list-p wl)
       (unless (null (wait-list-%wait wl))
-        (wsa-event-close (wait-list-%wait wl)))))
+        (wsa-event-close (wait-list-%wait wl))
+        (setf (wait-list-%wait wl) nil))))
   
   (eval-when (:load-toplevel :execute)
     (hcl:add-special-free-action 'free-wait-list))
