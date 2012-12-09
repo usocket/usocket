@@ -485,11 +485,13 @@ happen. Use with care."
 ;;; Based on LispWorks version written by Erik Huelsmann.
 
 #+win32 ; shared by ECL and SBCL
-(progn
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (defconstant +wsa-wait-failed+ #xffffffff)
   (defconstant +wsa-wait-event-0+ 0)
-  (defconstant +wsa-wait-timeout+ 258)
+  (defconstant +wsa-wait-timeout+ 258))
 
+#+win32 ; shared by ECL and SBCL
+(progn
   (defconstant fd-read 1)
   (defconstant fd-read-bit 0)
   (defconstant fd-write 2)
