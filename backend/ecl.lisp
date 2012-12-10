@@ -27,7 +27,7 @@
 
   (ffi:def-foreign-type ws-socket :unsigned-int)
   (ffi:def-foreign-type ws-dword :unsigned-long)
-  (ffi:def-foreign-type ws-event :pointer-void)
+  (ffi:def-foreign-type ws-event :unsigned-int)
 
   (ffi:def-struct wsa-network-events
     (network-events :long)
@@ -102,12 +102,12 @@
             (setf (state socket) :read))))))
 
   (defun map-network-events (func network-events)
-    (let ((event-map (ffi:get-slot-value network-events 'network-events))
-          (error-array (ffi:get-slot-pointer network-events 'error-code)))
+    (let ((event-map (ffi:get-slot-value network-events 'wsa-network-events 'network-events))
+          (error-array (ffi:get-slot-pointer network-events 'wsa-network-events 'error-code)))
       (unless (zerop event-map)
         (dotimes (i fd-max-events)
           (unless (zerop (ldb (byte 1 i) event-map))
-            (funcall func (ffi:deref-array error-array :int i)))))))
+            (funcall func (ffi:deref-array error-array '(:array :int 10) i)))))))
 
   (defun update-ready-and-state-slots (sockets)
     (dolist (socket sockets)
