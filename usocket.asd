@@ -16,6 +16,7 @@
 		 (:module "vendor" :depends-on ("package")
 		  :components ((:file "split-sequence")
 			       #+mcl (:file "kqueue")
+			       #+mcl (:file "OpenTransportUDP")
 			       (:file "spawn-thread")))
 		 (:file "usocket" :depends-on ("vendor"))
 		 (:file "condition" :depends-on ("usocket"))
