@@ -155,7 +155,7 @@
         seconds)))
 
 #-win32
-(defmethod get-socket-receive-timeout (socket-fd)
+(defun get-socket-receive-timeout (socket-fd)
   "Get socket option: RCVTIMEO, return value is a float number"
   (declare (type integer socket-fd))
   (fli:with-dynamic-foreign-objects ((timeout (:struct timeval))
@@ -170,7 +170,7 @@
       (float (+ tv-sec (/ tv-usec 1000000))))))
 
 #+win32
-(defmethod get-socket-receive-timeout (socket-fd)
+(defun get-socket-receive-timeout (socket-fd)
   "Get socket option: RCVTIMEO, return value is a float number"
   (declare (type integer socket-fd))
   (fli:with-dynamic-foreign-objects ((timeout :int)
@@ -789,3 +789,27 @@
      waiter))
   
 ) ; end of WIN32-block
+
+(defun set-socket-reuse-address (socket-fd reuse-address-p)
+  (declare (type integer socket-fd)
+           (type boolean reuse-address-p))
+  (fli:with-dynamic-foreign-objects ((value :int))
+    (setf (fli:dereference value) (if reuse-address-p 1 0))
+    (if (zerop (comm::setsockopt socket-fd
+                                 comm::*sockopt_sol_socket*
+                                 comm::*sockopt_so_reuseaddr*
+                                 (fli:copy-pointer value
+                                                   :type '(:pointer :void))
+                                 (fli:size-of :int)))
+        reuse-address-p)))
+
+(defun get-socket-reuse-address (socket-fd)
+  (declare (type integer socket-fd))
+  (fli:with-dynamic-foreign-objects ((value :int) (len :int))
+    (if (zerop (comm::getsockopt socket-fd
+                                 comm::*sockopt_sol_socket*
+                                 comm::*sockopt_so_reuseaddr*
+                                 (fli:copy-pointer value
+                                                   :type '(:pointer :void))
+                                 len))
+        (= 1 (fli:dereference value)))))
