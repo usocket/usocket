@@ -166,11 +166,13 @@
     (int->bool (get-socket-option-broadcast socket))
     #+cmu
     () ; TODO
+    #+ecl
+    () ; TODO
     #+lispworks
     () ; TODO
     #+mcl
     () ; TODO
-    #+(or ecl sbcl)
+    #+sbcl
     (sb-bsd-sockets:sockopt-broadcast socket)
     #+scl
     ())) ; TODO
@@ -190,11 +192,13 @@
     (set-socket-option-broadcast socket (bool->int new-value))
     #+cmu
     () ; TODO
+    #+ecl
+    () ; TODO
     #+lispworks
     () ; TODO
     #+mcl
     () ; TODO
-    #+(or ecl sbcl)
+    #+sbcl
     (setf (sb-bsd-sockets:sockopt-broadcast socket) new-value)
     #+scl
     () ; TODO
