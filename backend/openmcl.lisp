@@ -77,12 +77,16 @@
 	   (error nameserver-error :host-or-ip nil)
 	   (raise-error-from-id condition-id socket condition))))))
 
-(defun to-format (element-type)
-  (if (subtypep element-type 'character)
-      :text
-    :binary))
+(defun to-format (element-type protocol)
+  (cond ((null element-type)
+	 (ecase protocol ; default value of different protocol
+	   (:stream :text)
+	   (:datagram :binary)))
+	((subtypep element-type 'character)
+	 :text)
+	(t :binary)))
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
+(defun socket-connect (host port &key (protocol :stream) element-type
 		       timeout deadline nodelay
                        local-host local-port)
   (when (eq nodelay :if-supported)
@@ -95,7 +99,8 @@
 					  :remote-port port
 					  :local-host (when local-host (host-to-hostname local-host))
 					  :local-port local-port
-					  :format (to-format element-type)
+					  :format (to-format element-type protocol)
+					  :external-format ccl:*default-external-format*
 					  :deadline deadline
 					  :nodelay nodelay
 					  :connect-timeout timeout)))
@@ -107,7 +112,8 @@
                                            :local-host (when local-host (host-to-hostname local-host))
                                            :local-port local-port
 					   :input-timeout timeout
-                                           :format :binary))
+					   :format (to-format element-type protocol)
+					   :external-format ccl:*default-external-format*))
               (usocket (make-datagram-socket mcl-sock)))
 	 (when (and host port)
 	   (ccl::inet-connect (ccl::socket-device mcl-sock)
@@ -224,6 +230,7 @@
       wait-list)))
 
 ;;; Helper functions for option.lisp
+
 (defun get-socket-option-reuseaddr (socket)
   (ccl::int-getsockopt (ccl::socket-device socket)
                        #$SOL_SOCKET #$SO_REUSEADDR))
@@ -239,3 +246,11 @@
 (defun set-socket-option-broadcast (socket value)
   (ccl::int-setsockopt (ccl::socket-device socket)
                        #$SOL_SOCKET #$SO_BROADCAST value))
+
+(defun get-socket-option-tcp-nodelay (socket)
+  (ccl::int-getsockopt (ccl::socket-device socket)
+                       #$IPPROTO_TCP #$TCP_NODELAY))
+
+(defun set-socket-option-tcp-nodelay (socket value)
+  (ccl::int-setsockopt (ccl::socket-device socket)
+                       #$IPPROTO_TCP #$TCP_NODELAY value))
