@@ -112,7 +112,7 @@
     #+clisp
     (int->bool (socket:socket-options socket :so-reuseaddr))
     #+clozure
-    (int->bool (get-socket-option-reuseaddr socket))
+    (int->bool (get-socket-option-tcp-nodelay socket))
     #+cmu
     () ; TODO
     #+lispworks
@@ -200,6 +200,61 @@
     () ; TODO
     #+sbcl
     (setf (sb-bsd-sockets:sockopt-broadcast socket) new-value)
+    #+scl
+    () ; TODO
+    new-value))
+
+;;; Socket option: TCP-NO-DELAY (TCP_NODELAY), for TCP client
+
+(defmethod socket-option ((usocket stream-usocket)
+                          (option (eql :tcp-no-delay)) &key)
+  (declare (ignorable option))
+  (let ((socket (socket usocket)))
+    (declare (ignorable socket))
+    #+abcl
+    () ; TODO
+    #+allegro
+    () ; TODO
+    #+clisp
+    (int->bool (socket:socket-options socket :tcp-nodelay))
+    #+clozure
+    (int->bool (get-socket-option-tcp-nodelay socket))
+    #+cmu
+    ()
+    #+ecl
+    (sb-bsd-sockets::sockopt-tcp-nodelay socket)
+    #+lispworks
+    () ; TODO
+    #+mcl
+    () ; TODO
+    #+sbcl
+    (sb-bsd-sockets::sockopt-tcp-nodelay socket)
+    #+scl
+    ())) ; TODO
+
+(defmethod (setf socket-option) (new-value (usocket stream-usocket)
+                                           (option (eql :tcp-no-delay)) &key)
+  (declare (type boolean new-value) (ignorable new-value option))
+  (let ((socket (socket usocket)))
+    (declare (ignorable socket))
+    #+abcl
+    () ; TODO
+    #+allegro
+    (socket:set-socket-options socket :no-delay new-value)
+    #+clisp
+    (socket:socket-options socket :tcp-nodelay (bool->int new-value))
+    #+clozure
+    (set-socket-option-tcp-nodelay socket (bool->int new-value))
+    #+cmu
+    ()
+    #+ecl
+    (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) new-value)
+    #+lispworks
+    (comm::set-socket-tcp-nodelay socket new-value)
+    #+mcl
+    () ; TODO
+    #+sbcl
+    (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) new-value)
     #+scl
     () ; TODO
     new-value))
