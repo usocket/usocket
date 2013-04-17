@@ -42,16 +42,17 @@
       (let ((max-fd -1))
         (dolist (sock sockets)
           (let ((fd (openmcl-socket:socket-os-fd (socket sock))))
-            (setf max-fd (max max-fd fd))
-            (ccl::fd-set fd infds)))
-        (let* ((res (#_select (1+ max-fd)
-                              infds (ccl::%null-ptr) (ccl::%null-ptr)
-                              (if ticks-to-wait tv (ccl::%null-ptr)))))
+            (when fd ;; may be NIL if closed
+              (setf max-fd (max max-fd fd))
+              (ccl::fd-set fd infds))))
+        (let ((res (#_select (1+ max-fd)
+                             infds (ccl::%null-ptr) (ccl::%null-ptr)
+                             (if ticks-to-wait tv (ccl::%null-ptr)))))
           (when (> res 0)
-            (dolist (x sockets)
-              (when (ccl::fd-is-set (openmcl-socket:socket-os-fd (socket x))
-                                    infds)
-                (setf (state x) :READ))))
+            (dolist (sock sockets)
+              (let ((fd (openmcl-socket:socket-os-fd (socket sock))))
+                (when (and fd (ccl::fd-is-set fd infds))
+                  (setf (state sock) :READ)))))
           sockets)))))
 
 (defun raise-error-from-id (condition-id socket real-condition)
@@ -74,7 +75,9 @@
 	      (nameserver-error (cdr (assoc condition-id
 					    +openmcl-nameserver-error-map+))))
 	 (if nameserver-error
-	   (error nameserver-error :host-or-ip nil)
+             (if (typep nameserver-error 'serious-condition)
+                 (error nameserver-error :host-or-ip nil)
+                 (signal nameserver-error :host-or-ip nil))
 	   (raise-error-from-id condition-id socket condition))))))
 
 (defun to-format (element-type protocol)
@@ -135,7 +138,7 @@
                                        :reuse-address reuseaddress
                                        :local-port port
                                        :backlog backlog
-                                       :format (to-format element-type))
+                                       :format (to-format element-type :stream))
                                  (when (ip/= host *wildcard-host*)
                                    (list :local-host real-host)))))))
     (make-stream-server-socket sock :element-type element-type)))
