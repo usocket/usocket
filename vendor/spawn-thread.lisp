@@ -24,6 +24,7 @@
       (and cmu (not mp)) 
       (and ecl (not threads))
       gcl
+      mocl
       (and sbcl (not sb-thread)))
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (pushnew ':threads-not-available *features*))

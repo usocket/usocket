@@ -30,6 +30,7 @@
 						 :depends-on (#+ecl "ecl"))
 			       #+lispworks	(:file "lispworks")
 			       #+mcl		(:file "mcl")
+			       #+mocl		(:file "mocl")
 			       #+openmcl	(:file "openmcl")
 			       #+allegro	(:file "allegro")))
 		 (:file "option" :depends-on ("backend"))

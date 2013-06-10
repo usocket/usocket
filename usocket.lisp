@@ -130,7 +130,7 @@ for GC on implementions operate on raw socket fd.")
 (defun make-socket (&key socket)
   "Create a usocket socket type from implementation specific socket."
   (unless socket
-    (error 'invalid-socket))
+    (error 'invalid-socket-error))
   (make-stream-socket :socket socket))
 
 (defun make-stream-socket (&key socket stream)
@@ -504,7 +504,7 @@ to a vector quad."
                         (dotted-quad-to-vector-quad host))))
               (if (and ip (= 4 (length ip)))
                   (host-byte-order ip)
-                (host-to-hbo (get-host-by-name host)))))
+                  (host-to-hbo (get-host-by-name host)))))
     ((or (vector t 4)
          (array (unsigned-byte 8) (4)))
      (host-byte-order host))
