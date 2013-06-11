@@ -30,21 +30,25 @@
                             local-host local-port (protocol :stream))
   (when (eq nodelay :if-supported)
     (setf nodelay t))
-  (when (eq protocol :datagram)
-    (unsupported '(protocol :datagram) 'socket-connect))
   (with-mapped-conditions ()
-    (let* ((socket
-            (make-instance 'active-socket
-              :remote-host (when host (host-to-hostname host)) 
-              :remote-port port
-              :local-host (when local-host (host-to-hostname local-host)) 
-              :local-port local-port
-              :deadline deadline
-              :nodelay nodelay
-              :connect-timeout (and timeout (round (* timeout 60)))
-              :element-type element-type))
-           (stream (socket-open-stream socket)))
-      (make-stream-socket :socket socket :stream stream))))
+    (ecase protocol
+      (:stream
+       (let* ((socket
+               (make-instance 'active-socket
+                 :remote-host (when host (host-to-hostname host)) 
+                 :remote-port port
+                 :local-host (when local-host (host-to-hostname local-host)) 
+                 :local-port local-port
+                 :deadline deadline
+                 :nodelay nodelay
+                 :connect-timeout (and timeout (round (* timeout 60)))
+                 :element-type element-type))
+              (stream (socket-open-stream socket)))
+         (make-stream-socket :socket socket :stream stream)))
+      (:datagram
+       (make-datagram-socket
+         (ccl::open-udp-socket :local-address (and local-host (host-to-hostname local-host))
+			       :local-port local-port))))))
 
 (defun socket-listen (host port
                            &key reuseaddress

@@ -8,7 +8,7 @@
     :name "usocket"
     :author "Erik Enge & Erik Huelsmann"
     :maintainer "Chun Tian (binghe)"
-    :version "0.6.0"
+    :version "0.6.1"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (#+(or sbcl ecl) :sb-bsd-sockets)
@@ -25,7 +25,7 @@
 			       #+clisp		(:file "clisp")
 			       #+cmu		(:file "cmucl")
 			       #+scl		(:file "scl")
-			       #+ecl	(:file "ecl")
+			       #+ecl		(:file "ecl")
 			       #+(or sbcl ecl)	(:file "sbcl"
 						 :depends-on (#+ecl "ecl"))
 			       #+lispworks	(:file "lispworks")

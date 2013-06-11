@@ -1,3 +1,8 @@
+0.6.1:
+
+* New feature: Added initial MOCL support (TCP only, no W-F-I, patch from github.com/Wukix/usocket).
+* New feature: UDP support for Macintosh Common Lisp (MCL).
+
 0.6.0:
 
 * New feature: SOCKET-OPTION and (setf SOCKET-OPTION) for seting and geting various socket options.
@@ -67,5 +72,4 @@
 [TODO]
 
 * New feature: CLISP support some advanced TCP features which CLISP's SOCKET interface not provide
-* New feature: Macintosh Common Lisp (MCL) support Datagram sockets (UDP)
 * New feature: SOCKET-SHUTDOWN for TCP and UDP sockets.

@@ -49,3 +49,16 @@
 	  result)
 	(:do-it)))
   :when :around :name 'ot-conn-tcp-passive-connect-any-address)
+
+(defun open-udp-socket (&key local-address local-port)
+  (init-opentransport)
+  (let (endpoint
+	(err #$kOTNoError)
+	(configptr (ot-cloned-configuration traps::$kUDPName)))
+    (rlet ((errP :osstatus))
+      (setq endpoint #+carbon-compat (#_OTOpenEndpointInContext configptr 0 (%null-ptr) errP *null-ptr*)
+	             #-carbon-compat (#_OTOpenEndpoint configptr 0 (%null-ptr) errP)
+	    err (pref errP :osstatus))
+      (unless (eql err #$kOTNoError)
+	(ot-error err :create))
+      endpoint)))

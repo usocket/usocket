@@ -29,6 +29,7 @@ The library currently supports:
  - ECL
  - Scieneer Common Lisp
  - Macintosh Common Lisp
+ - MOCL
 
 If your favorite common lisp misses in the list above, please contact
 usocket-devel@common-lisp.net and submit a request.  Please include

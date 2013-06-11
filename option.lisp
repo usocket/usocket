@@ -63,6 +63,8 @@
     (get-socket-receive-timeout socket)
     #+mcl
     () ; TODO
+    #+mocl
+    () ; unknown
     #+sbcl
     (sb-impl::fd-stream-timeout (socket-stream usocket))
     #+scl
@@ -91,6 +93,8 @@
     (set-socket-receive-timeout socket timeout)
     #+mcl
     () ; TODO
+    #+mocl
+    () ; unknown
     #+sbcl
     (setf (sb-impl::fd-stream-timeout (socket-stream usocket))
           (coerce timeout 'single-float))
@@ -119,6 +123,8 @@
     (get-socket-reuse-address socket)
     #+mcl
     () ; TODO
+    #+mocl
+    () ; unknown
     #+(or ecl sbcl)
     (sb-bsd-sockets:sockopt-reuse-address socket)
     #+scl
@@ -143,6 +149,8 @@
     (set-socket-reuse-address socket new-value)
     #+mcl
     () ; TODO
+    #+mocl
+    () ; unknown
     #+(or ecl sbcl)
     (setf (sb-bsd-sockets:sockopt-reuse-address socket) new-value)
     #+scl
@@ -172,6 +180,8 @@
     () ; TODO
     #+mcl
     () ; TODO
+    #+mocl
+    () ; unknown
     #+sbcl
     (sb-bsd-sockets:sockopt-broadcast socket)
     #+scl
@@ -198,6 +208,8 @@
     () ; TODO
     #+mcl
     () ; TODO
+    #+mocl
+    () ; unknown
     #+sbcl
     (setf (sb-bsd-sockets:sockopt-broadcast socket) new-value)
     #+scl
@@ -227,6 +239,8 @@
     () ; TODO
     #+mcl
     () ; TODO
+    #+mocl
+    () ; unknown
     #+sbcl
     (sb-bsd-sockets::sockopt-tcp-nodelay socket)
     #+scl
@@ -253,6 +267,8 @@
     (comm::set-socket-tcp-nodelay socket new-value)
     #+mcl
     () ; TODO
+    #+mocl
+    () ; unknown
     #+sbcl
     (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) new-value)
     #+scl
