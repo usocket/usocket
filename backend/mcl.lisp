@@ -30,12 +30,12 @@
                             local-host local-port (protocol :stream))
   (when (eq nodelay :if-supported)
     (setf nodelay t))
-  (with-mapped-conditions ()
-    (ecase protocol
-      (:stream
+  (ecase protocol
+    (:stream
+     (with-mapped-conditions ()
        (let* ((socket
                (make-instance 'active-socket
-                 :remote-host (when host (host-to-hostname host)) 
+		 :remote-host (when host (host-to-hostname host)) 
                  :remote-port port
                  :local-host (when local-host (host-to-hostname local-host)) 
                  :local-port local-port
@@ -44,10 +44,11 @@
                  :connect-timeout (and timeout (round (* timeout 60)))
                  :element-type element-type))
               (stream (socket-open-stream socket)))
-         (make-stream-socket :socket socket :stream stream)))
-      (:datagram
+         (make-stream-socket :socket socket :stream stream))))
+    (:datagram
+     (with-mapped-conditions ()
        (make-datagram-socket
-         (ccl::open-udp-socket :local-address (and local-host (host-to-hostname local-host))
+	 (ccl::open-udp-socket :local-address (and local-host (host-to-hbo local-host))
 			       :local-port local-port))))))
 
 (defun socket-listen (host port
