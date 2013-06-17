@@ -47,7 +47,7 @@
          (make-stream-socket :socket socket :stream stream))))
     (:datagram
      (with-mapped-conditions ()
-       (make-datagram-socket
+       (make-datagram-socket/mcl
 	 (ccl::open-udp-socket :local-address (and local-host (host-to-hbo local-host))
 			       :local-port local-port))))))
 
@@ -241,3 +241,42 @@
        #'ready-sockets
        (wait-list-waiters wait-list)))
     (nreverse result)))
+
+;;; datagram socket methods
+
+(defun make-datagram-socket/mcl (socket)
+  (unless socket
+    (error 'invalid-socket-error))
+  (make-instance 'mcl-datagram-usocket
+                 :socket socket))
+
+(defclass mcl-datagram-usocket (datagram-usocket)
+  (inptr  incount  insize
+   outptr outcount outsize))
+
+(defmethod initialize-instance :after ((usocket mcl-datagram-usocket) &key)
+  (with-slots ((outbuf send-buffer) (inbuf recv-buffer)
+	       inptr incount insize
+	       outptr outcount outsize) usocket
+    (setq insize +max-datagram-packet-size+
+	  outsize insize)
+    (setq inbuf (#_NewPtrClear :errchk insize)
+          inptr (ccl::%inc-ptr inbuf 0)
+          incount 0)
+    (setq outbuf (#_NewPtrClear :errchk outsize)
+          outptr (ccl::%inc-ptr outbuf 0)
+          outcount 0)))
+
+(defmethod socket-send ((usocket mcl-datagram-usocket) buffer size &key host port (offset 0))
+  (with-mapped-conditions (usocket)
+    (with-slots ((outbuf send-buffer)
+		 outptr outcount outsize) usocket
+      (if (and host port)
+	  
+	(unsupported 'host 'socket-send)))))
+
+(defmethod socket-receive ((usocket mcl-datagram-usocket) buffer length &key)
+  (with-mapped-conditions (usocket)
+    (with-slots ((inbuf recv-buffer)
+		 inptr incount insize) usocket
+      )))

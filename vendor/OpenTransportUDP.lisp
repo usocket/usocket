@@ -98,4 +98,3 @@
 		(setf (ot-conn-local-address conn) localaddress)))
 	    conn)
 	(ot-error err :create)))))
-

@@ -1,7 +1,5 @@
 - Fix condition systems (making all implementation generate same error)
 - Add INET6 support.
-- UDP support for Digitool MCL
 - IOlib backend
-- SOCKET-OPTION (at least :BROADCAST and :READ-TIMEOUT)
 
 For more TODO items, see http://trac.common-lisp.net/usocket/report.
