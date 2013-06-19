@@ -116,7 +116,7 @@
     #+clisp
     (int->bool (socket:socket-options socket :so-reuseaddr))
     #+clozure
-    (int->bool (get-socket-option-tcp-nodelay socket))
+    (int->bool (get-socket-option-reuseaddr socket))
     #+cmu
     () ; TODO
     #+lispworks

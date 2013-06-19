@@ -1,7 +1,10 @@
 0.6.1:
 
-* New feature: Added initial MOCL support (TCP only, no W-F-I, patch from github.com/Wukix/usocket).
-* New feature: UDP support for Macintosh Common Lisp (MCL).
+* New feature: [MOCL] Initial MOCL support (TCP only, no W-F-I, patch from github.com/Wukix/usocket).
+* New feature: [MCL] Initial UDP support for Macintosh Common Lisp (MCL/RMCL).
+* New feature: Added TCP-NO-DELAY (TCP_NODELAY) support in SOCKET-OPTION, for TCP client
+* Bugfix: [CCL] Added (:external-format ccl:*default-external-format*) to SOCKET-CONNECT, to prevent it fallback to ISO-8859-1 on NIL. (Patch from Vsevolod Dyomkin)
+* Bugfix: [CCL] Performance improved WAIT-FOR-INPUT and other fixes. (patch from Faré <fahree@gmail.com>)
 
 0.6.0:
 
