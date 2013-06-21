@@ -98,3 +98,49 @@
 		(setf (ot-conn-local-address conn) localaddress)))
 	    conn)
 	(ot-error err :create)))))
+
+(defun make-TUnitData (endpoint)
+  "create the send/recv buffer for UDP sockets"
+  (let ((err #$kOTNoError))
+    (rlet ((errP :osstatus))
+      (macrolet ((check-ot-error-return (error-context)
+		   `(unless (eql (setq err (pref errP :osstatus)) #$kOTNoError)
+		      (values (ot-error err ,error-context)))))
+	(let ((udata #-carbon-compat (#_OTAlloc endpoint #$T_UNITDATA #$T_ALL errP)
+		     #+carbon-compat (#_OTAllocInContext endpoint #$T_UNITDATA #$T_ALL errP *null-ptr*)))
+	  (check-ot-error-return :alloc)
+	  udata)))))
+
+(defun send-message (conn data buffer size host port &optional (offset 0))
+  ;; prepare dest address
+  (let ((addr (pref data :tunitdata.addr)))
+    (declare (dynamic-extent addr))
+    (setf (pref addr :tnetbuf.len) (record-length :inetaddress))
+    (#_OTInitInetAddress (pref addr :tnetbuf.buf) port host))
+  ;; prepare data buffer
+  (let* ((udata (pref data :tunitdata.udata))
+	 (outptr (pref udata :tnetbuf.buf)))
+    (declare (dynamic-extent udata))
+    (%copy-ivector-to-ptr buffer offset outptr 0 size)
+    (setf (pref udata :tnetbuf.len) size))
+  ;; send the packet
+  (let* ((endpoint (ot-conn-endpoint conn))
+	 (result (#_OTSndUData endpoint data)))
+    (the fixnum result)))
+
+(defun receive-message (conn data buffer length)
+  (let* ((endpoint (ot-conn-endpoint conn))
+	 (err (#_OTRcvUData endpoint data *null-ptr*)))
+    (if (eql err #$kOTNoError)
+	(let* (;(addr (pref data :tunitdata.addr))
+	       (udata (pref data :tunitdata.udata))
+	       (inptr (pref udata :tnetbuf.buf))
+	       (read-bytes (pref udata :tnetbuf.len))
+	       (buffer (or buffer (make-array read-bytes :element-type '(unsigned-byte 8))))
+	       (length (or length (length buffer)))
+	       (actual-size (min read-bytes length)))
+	  (%copy-ptr-to-ivector inptr 0 buffer 0 actual-size)
+	  (values buffer
+		  actual-size
+		  0 0)) ; TODO: retrieve address and port
+      (ot-error err :receive)))) ; TODO: use OTRcvUDErr instead

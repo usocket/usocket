@@ -47,7 +47,7 @@
          (make-stream-socket :socket socket :stream stream))))
     (:datagram
      (with-mapped-conditions ()
-       (make-datagram-socket/mcl
+       (make-datagram-socket
 	 (ccl::open-udp-socket :local-address (and local-host (host-to-hbo local-host))
 			       :local-port local-port))))))
 
@@ -244,39 +244,24 @@
 
 ;;; datagram socket methods
 
-(defun make-datagram-socket/mcl (socket)
-  (unless socket
-    (error 'invalid-socket-error))
-  (make-instance 'mcl-datagram-usocket
-                 :socket socket))
+(defmethod initialize-instance :after ((usocket datagram-usocket) &key)
+  (with-slots (socket send-buffer recv-buffer) usocket
+    (setq send-buffer
+	  (ccl::make-TUnitData (ccl::ot-conn-endpoint socket)))
+    (setq recv-buffer
+	  (ccl::make-TUnitData (ccl::ot-conn-endpoint socket)))))
 
-(defclass mcl-datagram-usocket (datagram-usocket)
-  (inptr  incount  insize
-   outptr outcount outsize))
-
-(defmethod initialize-instance :after ((usocket mcl-datagram-usocket) &key)
-  (with-slots ((outbuf send-buffer) (inbuf recv-buffer)
-	       inptr incount insize
-	       outptr outcount outsize) usocket
-    (setq insize +max-datagram-packet-size+
-	  outsize insize)
-    (setq inbuf (#_NewPtrClear :errchk insize)
-          inptr (ccl::%inc-ptr inbuf 0)
-          incount 0)
-    (setq outbuf (#_NewPtrClear :errchk outsize)
-          outptr (ccl::%inc-ptr outbuf 0)
-          outcount 0)))
-
-(defmethod socket-send ((usocket mcl-datagram-usocket) buffer size &key host port (offset 0))
+(defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
   (with-mapped-conditions (usocket)
-    (with-slots ((outbuf send-buffer)
-		 outptr outcount outsize) usocket
-      (if (and host port)
-	  
-	(unsupported 'host 'socket-send)))))
+    (with-slots (socket send-buffer) usocket
+      (unless (and host port)
+	(unsupported 'host 'socket-send))
+      (ccl::send-message socket send-buffer buffer size host port offset))))
 
-(defmethod socket-receive ((usocket mcl-datagram-usocket) buffer length &key)
+(defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
   (with-mapped-conditions (usocket)
-    (with-slots ((inbuf recv-buffer)
-		 inptr incount insize) usocket
-      )))
+    (with-slots (socket recv-buffer) usocket
+      (ccl::receive-message socket recv-buffer buffer length))))
+
+(defmethod socket-close ((socket datagram-usocket))
+  nil) ; TODO
