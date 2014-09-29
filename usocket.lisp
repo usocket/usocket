@@ -465,7 +465,7 @@ such as 3232235777."
                   (write-string ":")
                   (setf collapsing-zeros-p nil
                         zeros-collapsed-p t))
-                (format t "~@[~*:~]~X" (plusp i) word)))
+                (format t "~:[~;:~]~X" (plusp i) word)))
           finally (when collapsing-zeros-p
                     (write-string "::")))))
 
