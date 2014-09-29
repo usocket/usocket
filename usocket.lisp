@@ -381,7 +381,7 @@ the values documented in usocket.lisp in the usocket class."
   `(octet-buffer-to-integer ,buffer 4 :start ,start))
 
 ;;
-;; IP(v4) utility functions
+;; IPv4 utility functions
 ;;
 
 (defun list-of-strings-to-integers (list)
@@ -443,13 +443,98 @@ such as 3232235777."
 (defmethod host-byte-order ((int integer))
   int)
 
+;;
+;; IPv6 utility functions
+;;
+
+(defun vector-to-ipv6 (vector)
+  (with-output-to-string (*standard-output*)
+    (loop with zeros-collapsed-p
+          with collapsing-zeros-p
+          for i below 16 by 2
+          for word = (+ (ash (aref vector i) 8)
+                        (aref vector (1+ i)))
+          do (cond
+               ((and (zerop word)
+                     (not collapsing-zeros-p)
+                     (not zeros-collapsed-p))
+                (setf collapsing-zeros-p t))
+               ((or (not (zerop word))
+                    zeros-collapsed-p)
+                (when collapsing-zeros-p
+                  (write-string ":")
+                  (setf collapsing-zeros-p nil
+                        zeros-collapsed-p t))
+                (format t "~@[~*:~]~X" (plusp i) word)))
+          finally (when collapsing-zeros-p
+                    (write-string "::")))))
+
+(defun split-ipv6-address (string)
+  (let ((pos 0)
+        word
+        double-colon-seen-p
+        words-before-double-colon
+        words-after-double-colon)
+    (loop
+      (multiple-value-setq (word pos) (parse-integer string :radix 16 :junk-allowed t :start pos))
+      (labels ((at-end-p ()
+                 (= pos (length string)))
+               (looking-at-colon-p ()
+                 (char= (char string pos) #\:))
+               (ensure-colon ()
+                 (unless (looking-at-colon-p)
+                   (error "unsyntactic IPv6 address string ~S, expected a colon at position ~D"
+                          string pos))
+                 (incf pos)))
+        (cond
+          ((null word)
+           (when double-colon-seen-p
+             (error "unsyntactic IPv6 address string ~S, can only have one double-colon filler mark"
+                    string))
+           (setf double-colon-seen-p t))
+          (double-colon-seen-p
+           (push word words-after-double-colon))
+          (t
+           (push word words-before-double-colon)))
+        (if (at-end-p)
+            (return (list (nreverse words-before-double-colon) (nreverse words-after-double-colon)))
+            (ensure-colon))))))
+
+(defun ipv6-to-vector (string)
+  (assert (> (length string) 2) ()
+          "Unsyntactic IPv6 address literal ~S, expected at least three characters" string)
+  (destructuring-bind (words-before-double-colon words-after-double-colon)
+      (split-ipv6-address (concatenate 'string
+                                       (when (eql (char string 0) #\:)
+                                         "0")
+                                       string
+                                       (when (eql (char string (1- (length string))) #\:)
+                                         "0")))
+    (let ((number-of-words-specified (+ (length words-before-double-colon) (length words-after-double-colon))))
+      (assert (<= number-of-words-specified 8) ()
+              "Unsyntactic IPv6 address literal ~S, too many colon separated address components" string)
+      (assert (or (= number-of-words-specified 8) words-after-double-colon) ()
+              "Unsyntactic IPv6 address literal ~S, too few address components and no double-colon filler found" string)
+      (loop with vector = (make-array 16 :element-type '(unsigned-byte 8))
+            for i below 16 by 2
+            for word in (append words-before-double-colon
+                                (make-list (- 8 number-of-words-specified) :initial-element 0)
+                                words-after-double-colon)
+            do (setf (aref vector i) (ldb (byte 8 8) word)
+                     (aref vector (1+ i)) (ldb (byte 8 0) word))
+            finally (return vector)))))
+
 (defun host-to-hostname (host)
-  "Translate a string or vector quad to a stringified hostname."
+  "Translate a string, vector quad or 16 byte IPv6 address to a
+stringified hostname."
   (etypecase host
     (string host)
     ((or (vector t 4)
          (array (unsigned-byte 8) (4)))
      (vector-quad-to-dotted-quad host))
+    ((or (vector t 16)
+         (array (unsigned-byte 8) (16)))
+     (vector-to-ipv6 host))
     (integer (hbo-to-dotted-quad host))
     (null "0.0.0.0")))
 
@@ -457,12 +542,10 @@ such as 3232235777."
   (etypecase ip1
     (string (string= ip1 (host-to-hostname ip2)))
     ((or (vector t 4)
-         (array (unsigned-byte 8) (4)))
-     (or (eq ip1 ip2)
-         (and (= (aref ip1 0) (aref ip2 0))
-              (= (aref ip1 1) (aref ip2 1))
-              (= (aref ip1 2) (aref ip2 2))
-              (= (aref ip1 3) (aref ip2 3)))))
+         (array (unsigned-byte 8) (4))
+         (vector t 16)
+         (array (unsigned-byte 8) (16)))
+     (equalp ip1 ip2))
     (integer (= ip1 (host-byte-order ip2)))))
 
 (defun ip/= (ip1 ip2)
