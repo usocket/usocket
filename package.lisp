@@ -55,12 +55,16 @@
 	     #:datagram-usocket-p
 	     |#
 
-             #:host-byte-order ; IP(v4) utility functions
+             #:host-byte-order ; IPv4 utility functions
              #:hbo-to-dotted-quad
              #:hbo-to-vector-quad
              #:vector-quad-to-dotted-quad
              #:dotted-quad-to-vector-quad
-             #:ip=
+
+             #:vector-to-ipv6-host ; IPv6 utility functions
+             #:ipv6-host-to-vector
+
+             #:ip= ; IPv4+IPv6 utility function
              #:ip/=
 
              #:integer-to-octet-buffer ; Network utility functions
