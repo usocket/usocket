@@ -534,7 +534,7 @@ stringified hostname."
      (vector-quad-to-dotted-quad host))
     ((or (vector t 16)
          (array (unsigned-byte 8) (16)))
-     (vector-to-ipv6 host))
+     (vector-to-ipv6-host host))
     (integer (hbo-to-dotted-quad host))
     (null "0.0.0.0")))
 
