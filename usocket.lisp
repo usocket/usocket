@@ -6,10 +6,14 @@
 (in-package :usocket)
 
 (defparameter *wildcard-host* #(0 0 0 0)
-  "Hostname to pass when all interfaces in the current system are to be bound.")
+  "Hostname to pass when all interfaces in the current system are to
+  be bound.  If this variable is passed to socket-listen, IPv6 capable
+  systems will also listen for IPv6 connections.")
 
 (defparameter *auto-port* 0
   "Port number to pass when an auto-assigned port number is wanted.")
+
+(defparameter *version* #.(asdf:component-version (asdf:find-system :usocket)))
 
 (defconstant +max-datagram-packet-size+ 65507
   "The theoretical maximum amount of data in a UDP datagram.
@@ -642,11 +646,11 @@ Returns a usocket object.")
 ;;###FIXME: extend with default-element-type
 (setf (documentation 'socket-listen 'function)
       "Bind to interface `host' on `port'. `host' should be the
-representation of an ready-interface address.  The implementation is not
-required to do an address lookup, making no guarantees that hostnames
-will be correctly resolved.  If `*wildcard-host*' is passed for `host',
-the socket will be bound to all available interfaces for the IPv4
-protocol in the system.  `port' can be selected by the IP stack by
+representation of an ready-interface address.  The implementation is
+not required to do an address lookup, making no guarantees that
+hostnames will be correctly resolved.  If `*wildcard-host*' or NIL is
+passed for `host', the socket will be bound to all available
+interfaces for the system.  `port' can be selected by the IP stack by
 passing `*auto-port*'.
 
 Returns an object of type `stream-server-usocket'.
