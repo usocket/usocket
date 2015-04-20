@@ -361,10 +361,15 @@
   (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
          (comm::*use_so_reuseaddr* reuseaddress)
          (hostname (host-to-hostname host))
-         (sock (with-mapped-conditions ()
-                  #-lispworks4.1 (comm::create-tcp-socket-for-service
-                                  port :address hostname :backlog backlog)
-                  #+lispworks4.1 (comm::create-tcp-socket-for-service port))))
+         (socket-res-list (with-mapped-conditions ()
+                            (multiple-value-list
+                             #-lispworks4.1 (comm::create-tcp-socket-for-service
+                                             port :address hostname :backlog backlog)
+                             #+lispworks4.1 (comm::create-tcp-socket-for-service port))))
+         (sock (if (not (or (second socket-res-list) (third socket-res-list)))
+                   (first socket-res-list)
+                 (when (eq (second socket-res-list) :bind)
+                   (error 'address-in-use-error)))))
     (make-stream-server-socket sock :element-type element-type)))
 
 ;; Note: COMM::GET-FD-FROM-SOCKET contains addition socket wait operations, which
