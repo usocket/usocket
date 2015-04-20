@@ -101,11 +101,13 @@
     (setf nodelay t))
   (with-mapped-conditions ()
     (let* ((remote (when (and host port)
-                     (openmcl-socket:resolve-address :host host :port port :socket-type protocol)))
+                     (openmcl-socket:resolve-address :host (host-to-hostname host)
+						     :port port
+						     :socket-type protocol)))
            (mcl-sock (openmcl-socket:make-socket :type protocol
                                                  :address-family (openmcl-socket:socket-address-family remote)
                                                  :remote-address remote
-                                                 :local-host local-host
+                                                 :local-host (host-to-hbo local-host)
                                                  :local-port local-port
                                                  :format (to-format element-type protocol)
                                                  :external-format ccl:*default-external-format*
@@ -163,7 +165,8 @@
                         (reuseaddress (when reuse-address-supplied-p reuse-address))
                         (backlog 5)
                         (element-type 'character))
-  (let ((local-address (openmcl-socket:resolve-address :host host :port port :connect :passive)))
+  (let ((local-address (openmcl-socket:resolve-address :host (host-to-hostname host)
+						       :port port :connect :passive)))
     (with-mapped-conditions ()
       (make-stream-server-socket (openmcl-socket:make-socket :connect :passive
                                                              :address-family (openmcl-socket:socket-address-family local-address)
