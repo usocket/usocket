@@ -76,6 +76,13 @@
   (declare (type stream stream))
   (terpri stream))
 
+(defun echo-tcp-handler (stream)
+  (loop
+     (when (listen stream)
+       (let ((line (read-line stream nil)))
+	 (write-line line stream)
+	 (force-output stream)))))
+
 (defun tcp-event-loop (socket function &optional arguments
                        &key element-type multi-threading)
   (let ((real-function #'(lambda (client-socket &rest arguments)

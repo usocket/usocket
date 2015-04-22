@@ -171,8 +171,8 @@ error available."))
     ,@body))
 
 (defparameter +unix-errno-condition-map+
-  `(((11) . retry-condition) ;; EAGAIN
-    ((35) . retry-condition) ;; EDEADLCK
+  `(((11) . ns-try-again-condition) ;; EAGAIN
+    ((35) . ns-try-again-condition) ;; EDEADLCK
     ((4) . interrupted-condition))) ;; EINTR
 
 (defparameter +unix-errno-error-map+

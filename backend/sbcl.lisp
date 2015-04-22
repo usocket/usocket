@@ -44,7 +44,7 @@
    #+:msvc "#include <time.h>"
    #-:msvc "#include <sys/time.h>"
    "#include <ecl/ecl-inl.h>")
-
+#|
   #+:prefixed-api
   (ffi:clines
    "#define CONS(x, y) ecl_cons((x), (y))"
@@ -53,7 +53,7 @@
   (ffi:clines
    "#define CONS(x, y) make_cons((x), (y))"
    "#define MAKE_INTEGER(x) make_integer((x))")
-
+|#
   (defun fd-setsize ()
     (ffi:c-inline () () :fixnum
      "FD_SETSIZE" :one-liner t))
