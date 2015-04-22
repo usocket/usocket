@@ -5,7 +5,9 @@
 
 (defpackage :usocket
   (:use :common-lisp #+abcl :java)
-  (:export   #:*wildcard-host*
+  (:export   #:*version*
+
+             #:*wildcard-host*
              #:*auto-port*
 
              #:*remote-host* ; special variables (udp)
