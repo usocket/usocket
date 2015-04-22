@@ -1,3 +1,9 @@
+0.6.2:
+
+* Bugfix: [CCL] Fixed CCL-1.11 compatibility.
+* Bugfix: [ECL] Fixed compatibility on recent versions.
+* Bugfix: [LispWorks] Added support address-in-use-error condition on LW/Win32. (patch from Sergey Katrevich).
+
 0.6.1:
 
 * New feature: [MOCL] Initial MOCL support (TCP only, no W-F-I, patch from github.com/Wukix/usocket).
