@@ -5,6 +5,10 @@
 
 (in-package :usocket)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (when (find-class 'ccl::ip6-socket-address nil)
+    (pushnew :ccl-1.11-sockets *features*)))
+
 (defun get-host-name ()
   (ccl::%stack-block ((resultbuf 256))
     (when (zerop (#_gethostname resultbuf 256))
@@ -89,6 +93,33 @@
 	 :text)
 	(t :binary)))
 
+#+ccl-1.11-sockets
+(defun socket-connect (host port &key (protocol :stream) element-type
+                                   timeout deadline nodelay
+                                   local-host local-port)
+  (when (eq nodelay :if-supported)
+    (setf nodelay t))
+  (with-mapped-conditions ()
+    (let* ((remote (when (and host port)
+                     (openmcl-socket:resolve-address :host host :port port :socket-type protocol)))
+           (mcl-sock (openmcl-socket:make-socket :type protocol
+                                                 :address-family (openmcl-socket:socket-address-family remote)
+                                                 :remote-address remote
+                                                 :local-host local-host
+                                                 :local-port local-port
+                                                 :format (to-format element-type protocol)
+                                                 :external-format ccl:*default-external-format*
+                                                 :deadline deadline
+                                                 :nodelay nodelay
+                                                 :connect-timeout timeout
+                                                 :input-timeout timeout)))
+      (ecase protocol
+        (:stream
+         (make-stream-socket :stream mcl-sock :socket mcl-sock))
+        (:datagram
+         (make-datagram-socket mcl-sock :connected-p (and remote t)))))))
+
+#-ccl-1.11-sockets
 (defun socket-connect (host port &key (protocol :stream) element-type
 		       timeout deadline nodelay
                        local-host local-port)
@@ -98,9 +129,9 @@
     (ecase protocol
       (:stream
        (let ((mcl-sock
-	      (openmcl-socket:make-socket :remote-host (host-to-hostname host)
+	      (openmcl-socket:make-socket :remote-host host
 					  :remote-port port
-					  :local-host (when local-host (host-to-hostname local-host))
+					  :local-host local-host
 					  :local-port local-port
 					  :format (to-format element-type protocol)
 					  :external-format ccl:*default-external-format*
@@ -112,7 +143,7 @@
        (let* ((mcl-sock
                (openmcl-socket:make-socket :address-family :internet
                                            :type :datagram
-                                           :local-host (when local-host (host-to-hostname local-host))
+                                           :local-host local-port
                                            :local-port local-port
 					   :input-timeout timeout
 					   :format (to-format element-type protocol)
@@ -125,8 +156,26 @@
 	 (setf (connected-p usocket) t)
 	 usocket)))))
 
+#+ccl-1.11-sockets
 (defun socket-listen (host port
-                           &key reuseaddress
+                      &key
+                        (reuse-address nil reuse-address-supplied-p)
+                        (reuseaddress (when reuse-address-supplied-p reuse-address))
+                        (backlog 5)
+                        (element-type 'character))
+  (let ((local-address (openmcl-socket:resolve-address :host host :port port :connect :passive)))
+    (with-mapped-conditions ()
+      (make-stream-server-socket (openmcl-socket:make-socket :connect :passive
+                                                             :address-family (openmcl-socket:socket-address-family local-address)
+                                                             :local-address local-address
+                                                             :reuse-address reuseaddress
+                                                             :backlog backlog
+                                                             :format (to-format element-type :stream))
+                                 :element-type element-type))))
+
+#-ccl-1.11-sockets
+(defun socket-listen (host port
+                      &key reuseaddress
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
@@ -182,15 +231,22 @@
   (with-mapped-conditions (usocket)
     (openmcl-socket:receive-from (socket usocket) length :buffer buffer)))
 
+(defun usocket-host-address (address)
+  (cond
+    ((integerp address)
+     (hbo-to-vector-quad address))
+    ((and (arrayp address)
+          (= (length address) 16)
+          (every #'= address #(0 0 0 0 0 0 0 0 0 0 #xff #xff)))
+     (make-array 4 :displaced-to address :displaced-index-offset 12))
+    (t
+     address)))
+
 (defmethod get-local-address ((usocket usocket))
-  (let ((address (openmcl-socket:local-host (socket usocket))))
-    (when address
-      (hbo-to-vector-quad address))))
+  (usocket-host-address (openmcl-socket:local-host (socket usocket))))
 
 (defmethod get-peer-address ((usocket stream-usocket))
-  (let ((address (openmcl-socket:remote-host (socket usocket))))
-    (when address
-      (hbo-to-vector-quad address))))
+  (usocket-host-address (openmcl-socket:remote-host (socket usocket))))
 
 (defmethod get-local-port ((usocket usocket))
   (openmcl-socket:local-port (socket usocket)))
@@ -236,24 +292,24 @@
 
 (defun get-socket-option-reuseaddr (socket)
   (ccl::int-getsockopt (ccl::socket-device socket)
-                       #$SOL_SOCKET #$SO_REUSEADDR))
+                                  #$SOL_SOCKET #$SO_REUSEADDR))
 
 (defun set-socket-option-reuseaddr (socket value)
   (ccl::int-setsockopt (ccl::socket-device socket)
-			 #$SOL_SOCKET #$SO_REUSEADDR value))
+                                  #$SOL_SOCKET #$SO_REUSEADDR value))
 
 (defun get-socket-option-broadcast (socket)
   (ccl::int-getsockopt (ccl::socket-device socket)
-                       #$SOL_SOCKET #$SO_BROADCAST))
+                                  #$SOL_SOCKET #$SO_BROADCAST))
 
 (defun set-socket-option-broadcast (socket value)
   (ccl::int-setsockopt (ccl::socket-device socket)
-                       #$SOL_SOCKET #$SO_BROADCAST value))
+                                  #$SOL_SOCKET #$SO_BROADCAST value))
 
 (defun get-socket-option-tcp-nodelay (socket)
   (ccl::int-getsockopt (ccl::socket-device socket)
-                       #$IPPROTO_TCP #$TCP_NODELAY))
+                                  #$IPPROTO_TCP #$TCP_NODELAY))
 
 (defun set-socket-option-tcp-nodelay (socket value)
   (ccl::int-setsockopt (ccl::socket-device socket)
-                       #$IPPROTO_TCP #$TCP_NODELAY value))
+                                  #$IPPROTO_TCP #$TCP_NODELAY value))
