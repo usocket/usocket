@@ -619,7 +619,7 @@ happen. Use with care."
       (raise-usock-err (sockint::wsa-get-last-error) socket)))
 
   (defun os-socket-handle (usocket)
-    (sockint::fd->handle (sb-bsd-sockets:socket-file-descriptor (socket usocket))))
+    (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
 
   (defun bytes-available-for-read (socket)
     (sb-alien:with-alien ((int-ptr sb-alien:unsigned-long))
