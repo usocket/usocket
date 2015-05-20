@@ -57,3 +57,22 @@
 	(declare (ignore buffer size host port))
 	(reduce #'+ *receive-buffer* :start 0 :end 5))))
   15)
+
+(deftest mark-h-david ; Mark H. David's remarkable UDP test code
+  (let* ((host "localhost")
+	 (port 1111)
+	 (server-sock
+	  (usocket:socket-connect nil nil :protocol ':datagram :local-host host :local-port port))
+	 (client-sock
+	  (usocket:socket-connect host port :protocol ':datagram))
+	 (octet-vector
+	  (make-array 2 :element-type '(unsigned-byte 8) :initial-contents `(,(char-code #\O) ,(char-code #\K))))
+	 (recv-octet-vector
+	  (make-array 2 :element-type '(unsigned-byte 8))))
+    (usocket:socket-send client-sock octet-vector 2)
+    (usocket:socket-receive server-sock recv-octet-vector 2)
+    (prog1 (and (equalp octet-vector recv-octet-vector)
+		recv-octet-vector)
+      (usocket:socket-close server-sock)
+      (usocket:socket-close client-sock)))
+  #(79 75))
