@@ -104,17 +104,20 @@
                      (openmcl-socket:resolve-address :host (host-to-hostname host)
 						     :port port
 						     :socket-type protocol)))
-           (mcl-sock (openmcl-socket:make-socket :type protocol
-                                                 :address-family (openmcl-socket:socket-address-family remote)
-                                                 :remote-address remote
-                                                 :local-host (host-to-hbo local-host)
-                                                 :local-port local-port
-                                                 :format (to-format element-type protocol)
-                                                 :external-format ccl:*default-external-format*
-                                                 :deadline deadline
-                                                 :nodelay nodelay
-                                                 :connect-timeout timeout
-                                                 :input-timeout timeout)))
+           (mcl-sock (apply #'openmcl-socket:make-socket
+			    `(:type ,protocol
+			      ,@(when remote
+				  `(:address-family ,(openmcl-socket:socket-address-family remote)))
+			      :remote-address ,remote
+			      ,@(when (and local-host local-port)
+				  `(:local-host ,(host-to-hostname local-host)
+				    :local-port ,local-port))
+			      :format ,(to-format element-type protocol)
+			      :external-format ccl:*default-external-format*
+			      :deadline ,deadline
+			      :nodelay ,nodelay
+			      :connect-timeout ,timeout
+			      :input-timeout ,timeout))))
       (ecase protocol
         (:stream
          (make-stream-socket :stream mcl-sock :socket mcl-sock))
@@ -210,6 +213,7 @@
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
+#-ccl-1.11-sockets
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
   (with-mapped-conditions (usocket)
     (if (and host port)
@@ -229,6 +233,20 @@
 	      (ccl::with-eagain fd :output
 		(ccl::ignoring-eintr
 		  (ccl::check-socket-error (#_send fd bufptr size 0))))))))))
+
+#+ccl-1.11-sockets
+(defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
+  (let* ((ccl-socket (socket usocket))
+	 (socket-keys (ccl::socket-keys ccl-socket)))
+    (with-mapped-conditions (usocket)
+      (if (and host port)
+	  (openmcl-socket:send-to ccl-socket buffer size
+				  :remote-host (host-to-hostname host)
+				  :remote-port port
+				  :offset offset)
+	  (openmcl-socket:send-to ccl-socket buffer size
+				  :remote-address (getf socket-keys :remote-address)
+				  :offset offset)))))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
   (with-mapped-conditions (usocket)
