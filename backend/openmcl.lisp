@@ -131,7 +131,7 @@
 #-ccl-1.11-sockets
 (defun socket-connect (host port &key (protocol :stream) element-type
 		       timeout deadline nodelay
-                       local-host local-port)
+		       local-host local-port)
   (when (eq nodelay :if-supported)
     (setf nodelay t))
   (with-mapped-conditions ()
@@ -150,14 +150,14 @@
 	 (make-stream-socket :stream mcl-sock :socket mcl-sock)))
       (:datagram
        (let* ((mcl-sock
-               (openmcl-socket:make-socket :address-family :internet
-                                           :type :datagram
-                                           :local-host local-port
-                                           :local-port local-port
+	       (openmcl-socket:make-socket :address-family :internet
+					   :type :datagram
+					   :local-host local-host
+					   :local-port local-port
 					   :input-timeout timeout
 					   :format (to-format element-type protocol)
 					   :external-format ccl:*default-external-format*))
-              (usocket (make-datagram-socket mcl-sock)))
+	      (usocket (make-datagram-socket mcl-sock)))
 	 (when (and host port)
 	   (ccl::inet-connect (ccl::socket-device mcl-sock)
 			      (ccl::host-as-inet-host host)
