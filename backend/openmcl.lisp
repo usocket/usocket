@@ -101,17 +101,21 @@
     (setf nodelay t))
   (with-mapped-conditions ()
     (let* ((remote (when (and host port)
-                     (openmcl-socket:resolve-address :host (host-to-hostname host)
+		     (openmcl-socket:resolve-address :host (host-to-hostname host)
 						     :port port
 						     :socket-type protocol)))
-           (mcl-sock (apply #'openmcl-socket:make-socket
+	   (local  (when (and local-host local-port)
+		     (openmcl-socket:resolve-address :host (host-to-hostname local-host)
+						     :port local-port
+						     :socket-type protocol)))
+	   (mcl-sock (apply #'openmcl-socket:make-socket
 			    `(:type ,protocol
+			      ,@(when (or remote local)
+				  `(:address-family ,(openmcl-socket:socket-address-family (or remote local))))
 			      ,@(when remote
-				  `(:address-family ,(openmcl-socket:socket-address-family remote)))
-			      :remote-address ,remote
-			      ,@(when (and local-host local-port)
-				  `(:local-host ,(host-to-hostname local-host)
-				    :local-port ,local-port))
+				  `(:remote-address ,remote))
+			      ,@(when local
+				  `(:local-address ,local))
 			      :format ,(to-format element-type protocol)
 			      :external-format ccl:*default-external-format*
 			      :deadline ,deadline
