@@ -336,10 +336,12 @@ happen. Use with care."
                            (backlog 5)
                            (element-type 'character))
   (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
-         (ip (if (and host
-                      (not (eq host *wildcard-host*)))
-                 (host-to-vector-quad host)
-                 (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any)))
+         (ip #+sbcl
+	     (if (and host
+		      (not (eq host *wildcard-host*)))
+		 (host-to-vector-quad host)
+		 (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any))
+	     #-sbcl (host-to-vector-quad host))
          (sock (make-instance 'sb-bsd-sockets:inet-socket
                               :type :stream :protocol :tcp)))
     (handler-case
