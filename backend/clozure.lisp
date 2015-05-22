@@ -28,7 +28,7 @@
 			      ,@(when local
 				  `(:local-address ,local))
 			      :format ,(to-format element-type protocol)
-			      :external-format ccl:*default-external-format*
+			      :external-format ,ccl:*default-external-format*
 			      :deadline ,deadline
 			      :nodelay ,nodelay
 			      :connect-timeout ,timeout
