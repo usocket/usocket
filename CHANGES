@@ -1,3 +1,9 @@
+0.6.3:
+
+* Bugfix: [CCL] Further fixed CCL-1.11 compatibility and a typo in SOCKET-CONNECT for CCL-1.10.
+* Bugfix: [ECL] Fixed build in some versions.
+* Bugfix: [LispWorks] SOCKET-SEND and SOCKET-RECEIVE now throw conditions if something goes wrong.
+
 0.6.2:
 
 * Bugfix: [CCL] Fixed CCL-1.11 compatibility.
