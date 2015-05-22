@@ -1,38 +1,35 @@
 ;;;; -*- Mode: Lisp -*-
-;;;; $Id$
-;;;; $URL$
-
+;;;;
 ;;;; See the LICENSE file for licensing information.
 
 (defsystem usocket
     :name "usocket"
     :author "Erik Enge & Erik Huelsmann"
     :maintainer "Chun Tian (binghe) & Hans Huebner"
-    :version "0.6.2"
+    :version "0.6.3"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (#+(or sbcl ecl) :sb-bsd-sockets)
     :components ((:file "package")
 		 (:module "vendor" :depends-on ("package")
-		  :components ((:file "split-sequence")
-			       #+mcl (:file "kqueue")
+		  :components (#+mcl (:file "kqueue")
 			       #+mcl (:file "OpenTransportUDP")
 			       (:file "spawn-thread")))
 		 (:file "usocket" :depends-on ("vendor"))
 		 (:file "condition" :depends-on ("usocket"))
 		 (:module "backend" :depends-on ("condition")
 		  :components (#+abcl		(:file "abcl")
+			       #+allegro	(:file "allegro")
 			       #+clisp		(:file "clisp")
+			       #+clozure	(:file "clozure" :depends-on ("openmcl"))
 			       #+cmu		(:file "cmucl")
-			       #+scl		(:file "scl")
-			       #+ecl		(:file "ecl")
-			       #+(or sbcl ecl)	(:file "sbcl"
-						 :depends-on (#+ecl "ecl"))
+			       #+ecl		(:file "ecl" :depends-on ("sbcl"))
 			       #+lispworks	(:file "lispworks")
 			       #+mcl		(:file "mcl")
 			       #+mocl		(:file "mocl")
 			       #+openmcl	(:file "openmcl")
-			       #+allegro	(:file "allegro")))
+			       #+sbcl		(:file "sbcl")
+			       #+scl		(:file "scl")))
 		 (:file "option" :depends-on ("backend"))
 		 (:file "server" :depends-on ("backend" "option"))))
 
