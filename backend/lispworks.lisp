@@ -68,14 +68,16 @@
           (signal usock-err :socket socket))
       (error 'unknown-error
              :socket socket
-             :real-error condition))))
+             :real-error condition
+             :errno errno))))
 
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
   (typecase condition
     (condition (let ((errno #-win32 (lw:errno-value)
                             #+win32 (wsa-get-last-error)))
-                 (raise-usock-err errno socket condition)))))
+                 (unless (zerop errno)
+                   (raise-usock-err errno socket condition))))))
 
 (defconstant *socket_sock_dgram* 2
   "Connectionless, unreliable datagrams of fixed maximum length.")
@@ -304,9 +306,10 @@
              (not (eq nodelay :if-supported)))
     (unsupported 'nodelay 'socket-connect :minimum "LispWorks 5.1"))
 
-  #+lispworks4 #+lispworks4
+  #+lispworks4
   (when local-host
      (unsupported 'local-host 'socket-connect :minimum "LispWorks 5.0"))
+  #+lispworks4
   (when local-port
      (unsupported 'local-port 'socket-connect :minimum "LispWorks 5.0"))
 
@@ -433,22 +436,30 @@
   "Send message to a socket, using sendto()/send()"
   (declare (type integer socket-fd)
            (type sequence buffer))
-  (when host (setq host (host-to-hbo host)))
+  (when host (setq host (host-to-hostname host)))
   (fli:with-dynamic-lisp-array-pointer (ptr message :type '(:unsigned :byte))
     (replace message buffer :start2 offset :end2 (+ offset size))
-    (if (and host port)
-        (fli:with-dynamic-foreign-objects ()
-          (multiple-value-bind (error family client-addr client-addr-length)
-              (initialize-dynamic-sockaddr host port "udp")
-            (declare (ignore family))
-            (when error
-              (error "cannot resolve hostname ~S, port ~S: ~A"
-                     host port error))
-            (%sendto socket-fd ptr (min size +max-datagram-packet-size+) 0
-                     (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
-                     client-addr-length)))
-      (comm::%send socket-fd ptr (min size +max-datagram-packet-size+) 0))))
-
+    (let ((n (if (and host port)
+                 (fli:with-dynamic-foreign-objects ()
+                   (multiple-value-bind (error family client-addr client-addr-length)
+                       (initialize-dynamic-sockaddr host port "udp")
+                     (declare (ignore family))
+                     (when error
+                       (error "cannot resolve hostname ~S, port ~S: ~A"
+                              host port error))
+                     (%sendto socket-fd ptr (min size +max-datagram-packet-size+) 0
+                              (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
+                              client-addr-length)))
+               (comm::%send socket-fd ptr (min size +max-datagram-packet-size+) 0))))
+      (declare (type fixnum n))
+      (if (plusp n)
+          n
+        (let ((errno #-win32 (lw:errno-value)
+                     #+win32 (wsa-get-last-error)))
+          (if (zerop errno)
+              n
+            (raise-usock-err errno socket-fd)))))))
+    
 (defun receive-message (socket-fd message &optional buffer (length (length buffer))
 			&key read-timeout (max-buffer-size +max-datagram-packet-size+))
   "Receive message from socket, read-timeout is a float number in seconds.
@@ -475,6 +486,7 @@
         (let ((n (%recvfrom socket-fd ptr max-buffer-size 0
                             (fli:copy-pointer client-addr :type '(:struct comm::sockaddr))
                             len)))
+          (declare (type fixnum n))
           ;; restore old read timeout
           (when (and read-timeout (/= old-timeout read-timeout))
             (set-socket-receive-timeout socket-fd old-timeout))
@@ -498,7 +510,11 @@
                                                            :object-type '(:struct comm::sockaddr_in)
                                                            :type '(:unsigned :short)
                                                            :copy-foreign-object nil)))
-              (values nil n 0 0)))))))
+            (let ((errno #-win32 (lw:errno-value)
+                         #+win32 (wsa-get-last-error)))
+              (if (zerop errno)
+                  (values nil n 0 0)
+                (raise-usock-err errno socket-fd)))))))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length &key timeout)
   (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
@@ -536,9 +552,14 @@
 (defmethod get-peer-port ((usocket stream-usocket))
   (nth-value 1 (get-peer-name usocket)))
 
+(defun lw-hbo-to-vector-quad (hbo)
+  (if (comm:ipv6-address-p hbo)
+      (ipv6-host-to-vector (comm:ipv6-address-string hbo))
+    (hbo-to-vector-quad hbo)))
+
 (defun get-hosts-by-name (name)
   (with-mapped-conditions ()
-     (mapcar #'hbo-to-vector-quad
+     (mapcar #'lw-hbo-to-vector-quad
              (comm:get-host-entry name :fields '(:addresses)))))
 
 (defun os-socket-handle (usocket)

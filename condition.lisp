@@ -119,7 +119,10 @@ condition available."))
 (define-condition unknown-error (socket-error)
   ((real-error :initarg :real-error
                :accessor usocket-real-error
-               :initform nil))
+               :initform nil)
+   (errno      :initarg :errno
+               :reader usocket-errno
+               :initform 0))
   (:report (lambda (c stream)
              (typecase c
                (simple-condition
@@ -127,7 +130,9 @@ condition available."))
                         (simple-condition-format-control (usocket-real-error c))
                         (simple-condition-format-arguments (usocket-real-error c))))
                (otherwise
-                (format stream "The condition ~A occurred." (usocket-real-error c))))))
+                (format stream "The condition ~A occurred with errno: ~D."
+                        (usocket-real-error c)
+                        (usocket-errno c))))))
   (:documentation "Error raised when there's no other - more applicable -
 error available."))
 

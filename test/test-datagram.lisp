@@ -1,6 +1,3 @@
-;;;; $Id$
-;;;; $URL$
-
 (in-package :usocket-test)
 
 (defvar *echo-server*)
@@ -76,3 +73,15 @@
       (usocket:socket-close server-sock)
       (usocket:socket-close client-sock)))
   #(79 75))
+
+(deftest frank-james ; Frank James' test code for LispWorks/UDP
+  (with-caught-conditions (USOCKET:CONNECTION-RESET-ERROR nil)
+    (let ((sock (usocket:socket-connect "localhost" 1234
+                                        :protocol ':datagram :element-type '(unsigned-byte 8))))
+      (unwind-protect
+          (progn
+            (usocket:socket-send sock (make-array 16 :element-type '(unsigned-byte 8) :initial-element 0) 16)
+            (let ((buffer (make-array 16 :element-type '(unsigned-byte 8) :initial-element 0)))
+              (usocket:socket-receive sock buffer 16)))
+        (usocket:socket-close sock))))
+  nil)
