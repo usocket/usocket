@@ -75,7 +75,9 @@
   #(79 75))
 
 (deftest frank-james ; Frank James' test code for LispWorks/UDP
-  (with-caught-conditions (USOCKET:CONNECTION-RESET-ERROR nil)
+  (with-caught-conditions (#+win32 USOCKET:CONNECTION-RESET-ERROR
+			   #-win32 USOCKET:CONNECTION-REFUSED-ERROR
+			   nil)
     (let ((sock (usocket:socket-connect "localhost" 1234
                                         :protocol ':datagram :element-type '(unsigned-byte 8))))
       (unwind-protect
