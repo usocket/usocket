@@ -1,12 +1,3 @@
-### Content
-
- * Introduction
- * Remarks on licensing
- * Non-support for :external-format
- * API definition
- * Test suite
- * Known problems
-
 # Introduction
 
 This is the usocket Common Lisp sockets library: a library to bring
