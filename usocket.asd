@@ -6,7 +6,7 @@
     :name "usocket"
     :author "Erik Enge & Erik Huelsmann"
     :maintainer "Chun Tian (binghe) & Hans Huebner"
-    :version "0.6.3.1"
+    :version "0.6.3.2"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (#+(or sbcl ecl) :sb-bsd-sockets)
@@ -14,7 +14,8 @@
 		 (:module "vendor" :depends-on ("package")
 		  :components (#+mcl (:file "kqueue")
 			       #+mcl (:file "OpenTransportUDP")
-			       (:file "spawn-thread")))
+			       (:file "spawn-thread")
+			       (:file "split-sequence")))
 		 (:file "usocket" :depends-on ("vendor"))
 		 (:file "condition" :depends-on ("usocket"))
 		 (:module "backend" :depends-on ("condition")
