@@ -1,10 +1,12 @@
-;;;; $Id$
-;;;; $URL$
-
 ;;;; See LICENSE for licensing information.
 
 (in-package :usocket)
 
+#+cormanlisp
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (require :acl-socket))
+
+#+allegro
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require :sock)
   ;; for wait-for-input:
@@ -14,7 +16,8 @@
 
 (defun get-host-name ()
   ;; note: the line below requires ACL 7.0+ to actually *work* on windows
-  (excl.osi:gethostname))
+  #+allegro (excl.osi:gethostname)
+  #+cormanlisp "")
 
 (defparameter +allegro-identifier-error-map+
   '((:address-in-use . address-in-use-error)
@@ -34,6 +37,7 @@
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
   (typecase condition
+    #+allegro
     (excl:socket-error
      (let ((usock-err
             (cdr (assoc (excl:stream-error-identifier condition)
@@ -71,10 +75,12 @@
 					      :local-port local-port
 					      :format (to-format element-type)
 					      :nodelay nodelay)))
+                 #+allegro
 		 (if timeout
 		     (mp:with-timeout (timeout nil)
 		       (make-socket))
-		     (make-socket))))
+		     (make-socket))
+                 #+cormanlisp (make-socket)))
               (:datagram
 	       (apply #'socket:make-socket
 		      (nconc (list :type protocol
@@ -141,6 +147,7 @@
   (socket:local-port (socket usocket)))
 
 (defmethod get-peer-port ((usocket stream-usocket))
+  #+allegro
   (socket:remote-port (socket usocket)))
 
 (defmethod get-local-name ((usocket usocket))
@@ -151,6 +158,7 @@
   (values (get-peer-address usocket)
           (get-peer-port usocket)))
 
+#+allegro
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
   (with-mapped-conditions (usocket)
     (let ((s (socket usocket)))
@@ -162,6 +170,7 @@
 		      :remote-host host
 		      :remote-port port))))
 
+#+allegro
 (defmethod socket-receive ((socket datagram-usocket) buffer length &key)
   (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
 		   (integer 0)                          ; size
@@ -193,6 +202,7 @@
   (setf (wait-list-%wait wait-list)
         (remove (socket waiter) (wait-list-%wait wait-list))))
 
+#+allegro
 (defun wait-for-input-internal (wait-list &key timeout)
   (with-mapped-conditions ()
     (let ((active-internal-sockets

@@ -6,7 +6,7 @@
     :name "usocket"
     :author "Erik Enge & Erik Huelsmann"
     :maintainer "Chun Tian (binghe) & Hans Huebner"
-    :version "0.6.4-dev"
+    :version "0.6.3.1"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (#+(or sbcl ecl) :sb-bsd-sockets)
@@ -19,7 +19,8 @@
 		 (:file "condition" :depends-on ("usocket"))
 		 (:module "backend" :depends-on ("condition")
 		  :components (#+abcl		(:file "abcl")
-			       #+allegro	(:file "allegro")
+			       #+(or allegro cormanlisp)
+						(:file "allegro")
 			       #+clisp		(:file "clisp")
 			       #+clozure	(:file "clozure" :depends-on ("openmcl"))
 			       #+cmu		(:file "cmucl")
@@ -28,7 +29,7 @@
 			       #+mcl		(:file "mcl")
 			       #+mocl		(:file "mocl")
 			       #+openmcl	(:file "openmcl")
-			       #+sbcl		(:file "sbcl")
+			       #+(or ecl sbcl)	(:file "sbcl")
 			       #+scl		(:file "scl")))
 		 (:file "option" :depends-on ("backend"))
 		 (:file "server" :depends-on ("backend" "option"))))
