@@ -1,6 +1,3 @@
-;;;; $Id$
-;;;; $URL$
-
 ;;;; See LICENSE for licensing information.
 
 (in-package :usocket)
@@ -70,6 +67,15 @@ Note: Accessed, but not used for 'stream-usocket'.
 "The main socket class.
 
 Sockets should be closed using the `socket-close' method."))
+
+(defgeneric socket-state (socket)
+  (:documentation "NIL          - not ready
+:READ        - ready to read
+:READ-WRITE  - ready to read and write
+:WRITE       - ready to write"))
+
+(defmethod socket-state ((socket usocket))
+  (state socket))
 
 (defclass stream-usocket (usocket)
    ((stream

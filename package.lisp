@@ -1,6 +1,3 @@
-;;;; $Id$
-;;;; $URL$
-
 ;;;; See the LICENSE file for licensing information.
 
 (defpackage :usocket
@@ -48,6 +45,7 @@
              #:socket
              #:socket-stream
              #:datagram-usocket
+             #:socket-state ; 0.6.4
 
              ;; predicates (for version 0.6 or 1.0 ?)
              #:usocket-p
