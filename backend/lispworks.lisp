@@ -457,7 +457,7 @@
               n
             (raise-usock-err errno socket-fd)))))))
 
-(defmethod socket-receive ((socket datagram-usocket) buffer length &key timeout)
+(defmethod socket-receive ((socket datagram-usocket) buffer length &key timeout (max-buffer-size +max-datagram-packet-size+))
   "Receive message from socket, read-timeout is a float number in seconds.
 
    This function will return 4 values:
@@ -494,7 +494,7 @@
           (when (and read-timeout (/= old-timeout read-timeout))
             (set-socket-receive-timeout socket-fd old-timeout))
           ;; Frank James' patch: reset the %read-p for WAIT-FOR-INPUT
-          #+win32 (setf (%ready-p usocket) nil)
+          #+win32 (setf (%ready-p socket) nil)
           (if (plusp n)
               (values (if buffer
                           (replace buffer message
