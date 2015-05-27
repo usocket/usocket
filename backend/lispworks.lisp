@@ -1,6 +1,3 @@
-;;;; $Id$
-;;;; $URL$
-
 ;;;; See LICENSE for licensing information.
 
 (in-package :usocket)
@@ -65,7 +62,7 @@
     (if usock-err
         (if (subtypep usock-err 'error)
             (error usock-err :socket socket)
-          (signal usock-err :socket socket))
+          (signal usock-err))
       (error 'unknown-error
              :socket socket
              :real-error condition
@@ -432,7 +429,7 @@
 
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0)
                         &aux (socket-fd (socket usocket))
-                             (message (slot-value usocket 'send-buffer)))
+                             (message (slot-value usocket 'send-buffer))) ; TODO: multiple threads send together?
   "Send message to a socket, using sendto()/send()"
   (declare (type integer socket-fd)
            (type sequence buffer))
@@ -459,9 +456,8 @@
           (if (zerop errno)
               n
             (raise-usock-err errno socket-fd)))))))
-    
-(defun receive-message (socket-fd message &optional buffer (length (length buffer))
-			&key read-timeout (max-buffer-size +max-datagram-packet-size+))
+
+(defmethod socket-receive ((socket datagram-usocket) buffer length &key timeout)
   "Receive message from socket, read-timeout is a float number in seconds.
 
    This function will return 4 values:
@@ -469,12 +465,19 @@
    2. number of receive bytes
    3. remote address
    4. remote port"
-  (declare (type integer socket-fd)
-           (type sequence buffer))
-  (let (old-timeout)
+  (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
+                   (integer 0)                          ; size
+                   (unsigned-byte 32)                   ; host
+                   (unsigned-byte 16))                  ; port
+	   (type sequence buffer))
+  (let ((socket-fd (socket socket))
+        (message (slot-value socket 'recv-buffer)) ; TODO: how multiple threads do this in parallel?
+        (read-timeout timeout)
+        old-timeout)
+    (declare (type integer socket-fd))
     (fli:with-dynamic-foreign-objects ((client-addr (:struct comm::sockaddr_in))
                                        (len :int
-					    #-(or lispworks4 lispworks5.0) ; <= 5.0
+                                            #-(or lispworks4 lispworks5.0) ; <= 5.0
                                             :initial-element *length-of-sockaddr_in*))
       #+(or lispworks4 lispworks5.0) ; <= 5.0
       (setf (fli:dereference len) *length-of-sockaddr_in*)
@@ -490,6 +493,8 @@
           ;; restore old read timeout
           (when (and read-timeout (/= old-timeout read-timeout))
             (set-socket-receive-timeout socket-fd old-timeout))
+          ;; Frank James' patch: reset the %read-p for WAIT-FOR-INPUT
+          #+win32 (setf (%ready-p usocket) nil)
           (if (plusp n)
               (values (if buffer
                           (replace buffer message
@@ -515,18 +520,6 @@
               (if (zerop errno)
                   (values nil n 0 0)
                 (raise-usock-err errno socket-fd)))))))))
-
-(defmethod socket-receive ((socket datagram-usocket) buffer length &key timeout)
-  (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
-		   (integer 0)                          ; size
-		   (unsigned-byte 32)                   ; host
-		   (unsigned-byte 16)))                 ; port
-  (multiple-value-bind (buffer size host port)
-      (receive-message (socket socket)
-                       (slot-value socket 'recv-buffer)
-                       buffer length
-                       :read-timeout timeout)
-    (values buffer size host port)))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind

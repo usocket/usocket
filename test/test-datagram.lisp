@@ -87,3 +87,36 @@
               (usocket:socket-receive sock buffer 16)))
         (usocket:socket-close sock))))
   nil)
+
+(defun frank-wfi-test ()
+  (let ((s (usocket:socket-connect nil nil
+                                   :protocol :datagram
+                                   :element-type '(unsigned-byte 8)
+                                   :local-port 8001)))
+    (unwind-protect
+        (do ((i 0 (1+ i))
+             (buffer (make-array 1024 :element-type '(unsigned-byte 8)
+                                 :initial-element 0))
+             (now (get-universal-time))
+             (done nil))
+            ((or done (= i 4))
+             nil)
+          (format t "~Ds ~D Waiting state ~S~%" (- (get-universal-time) now) i (usocket::state s))
+          (when (usocket:wait-for-input s :ready-only t :timeout 5)
+            (format t "~D state ~S~%" i (usocket::state s))
+            (handler-bind 
+                ((error (lambda (c) 
+                          (format t "socket-receive error: ~A~%" c)
+                          (break)
+                          nil)))
+              (multiple-value-bind (buffer count remote-host remote-port)
+                  (usocket:socket-receive s buffer 1024)
+                (handler-bind
+                    ((error (lambda (c)
+                               (format t "socket-send error: ~A~%" c)
+                               (break))))                             
+                  (when buffer 
+                    (usocket:socket-send s (subseq buffer 0 count) count
+                                         :host remote-host
+                                         :port remote-port)))))))
+      (usocket:socket-close s))))
