@@ -96,7 +96,7 @@
     (ecase protocol
       (:stream
        (let ((mcl-sock
-	      (openmcl-socket:make-socket :remote-host host
+	      (openmcl-socket:make-socket :remote-host (host-to-hostname host)
 					  :remote-port port
 					  :local-host local-host
 					  :local-port local-port
