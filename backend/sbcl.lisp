@@ -32,7 +32,8 @@
   #-:wsock
   (ffi:clines
    "#include <errno.h>"
-   "#include <sys/socket.h>")
+   "#include <sys/socket.h>"
+   "#include <unistd.h>")
   #+:wsock
   (ffi:clines
    "#ifndef FD_SETSIZE"
