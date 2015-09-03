@@ -75,6 +75,11 @@
   (with-mapped-conditions (usocket)
     (socket-close (socket usocket))))
 
+(defmethod socket-shutdown ((usocket usocket) direction)
+  (declare (ignore usocket direction))
+  ;; As far as I can tell there isn't a way to shutdown a socket in mcl.
+  (unsupported "shutdown" 'socket-shutdown))
+
 (defmethod ccl::stream-close ((usocket usocket))
   (socket-close usocket))
 

@@ -414,6 +414,10 @@
   "Additional socket-close method for datagram-usocket"
   (setf (%open-p socket) nil))
 
+(defmethod socket-shutdown ((usocket stream-usocket) direction)
+  (with-mapped-conditions (usocket)
+    (comm:socket-stream-shutdown (socket usocket) direction)))
+
 (defmethod initialize-instance :after ((socket datagram-usocket) &key)
   (setf (slot-value socket 'send-buffer)
         (make-array +max-datagram-packet-size+

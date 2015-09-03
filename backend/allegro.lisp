@@ -109,6 +109,10 @@
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
+(defmethod socket-shutdown ((usocket stream-usocket) direction)
+  (with-mapped-conditions (usocket)
+    (socket:shutdown (socket usocket) :direction direction)))
+
 (defun socket-listen (host port
                            &key reuseaddress
                            (reuse-address nil reuse-address-supplied-p)

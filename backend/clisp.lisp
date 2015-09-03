@@ -188,6 +188,10 @@
      (remove-waiter (wait-list usocket) usocket))
   (socket:socket-server-close (socket usocket)))
 
+(defmethod socket-shutdown ((usocket stream-usocket) direction)
+  (with-mapped-conditions (usocket)
+    (socket:socket-stream-shutdown (socket usocket) direction)))
+
 (defmethod get-local-name ((usocket stream-usocket))
   (multiple-value-bind
       (address port)

@@ -174,6 +174,12 @@
    length
    flags))
 
+(defmethod socket-shutdown ((usocket usocket) direction)
+  (with-mapped-conditions (usocket)
+    (ext:inet-shutdown (socket usocket) (ecase direction
+                                          (:input ext:shut-rd)
+                                          (:output ext:shut-wr)))))
+
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0)
 			&aux (real-buffer (if (zerop offset)
 					      buffer

@@ -55,6 +55,11 @@
    "#define CONS(x, y) make_cons((x), (y))"
    "#define MAKE_INTEGER(x) make_integer((x))")
 |#
+
+  (defun cerrno ()
+    (ffi:c-inline () () :int
+     "errno" :one-liner t))
+
   (defun fd-setsize ()
     (ffi:c-inline () () :fixnum
      "FD_SETSIZE" :one-liner t))
@@ -79,7 +84,8 @@
     (ffi:c-inline (fdset fd) (:pointer-void :fixnum) :bool
      "FD_ISSET(#1,(fd_set*)#0)" :one-liner t))
 
-  (declaim (inline fd-setsize
+  (declaim (inline cerrno
+                   fd-setsize
                    fdset-alloc
                    fdset-zero
                    fdset-set
@@ -131,7 +137,7 @@
            (values nil nil))
           ((< count 0)
            ;; check for EINTR and EAGAIN; these should not err
-           (values nil (ffi:c-inline () () :int "errno" :one-liner t)))
+           (values nil (cerrno)))
           (t
            (dolist (sock sockets)
              (when (fdset-fd-isset rfds (sb-bsd-sockets:socket-file-descriptor
@@ -396,6 +402,21 @@ happen. Use with care."
      (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket-stream usocket))))
+
+#+sbcl
+(defmethod socket-shutdown ((usocket stream-usocket) direction)
+  (with-mapped-conditions (usocket)
+    (sb-bsd-sockets:socket-shutdown (socket usocket) :direction direction)))
+
+#+ecl
+(defmethod socket-shutdown ((usocket stream-usocket) direction)
+  (let ((sock-fd (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
+        (direction-flag (ecase direction
+                          (:input 0)
+                          (:output 1))))
+    (unless (zerop (ffi:c-inline (sock-fd direction-flag) (:int :int) :int
+                               "shutdown(#0, #1)" :one-liner t))
+      (error (map-errno-error (cerrno))))))
 
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
   (with-mapped-conditions (usocket)

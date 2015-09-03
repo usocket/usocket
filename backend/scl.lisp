@@ -136,6 +136,10 @@
 (defmethod socket-close :after ((socket datagram-usocket))
   (setf (%open-p socket) nil))
 
+(defmethod socket-shutdown ((usocket usocket) direction)
+  (declare (ignore usocket direction))
+  (unsupported "shutdown" 'socket-shutdown))
+
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port)
   (let ((s (socket usocket))
 	(host (if host (host-to-hbo host)))

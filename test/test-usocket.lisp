@@ -157,5 +157,23 @@
         (usocket:socket-close sock))))
   t)
 
+(deftest socket-shutdown.1
+    (with-caught-conditions (nil nil)
+      (let ((sock (usocket:socket-connect *common-lisp-net* 80)))
+        (unwind-protect
+             (usocket:socket-shutdown sock :input)
+          (usocket:socket-close sock))
+        t))
+  t)
+
+(deftest socket-shutdown.2
+    (with-caught-conditions (nil nil)
+      (let ((sock (usocket:socket-connect *common-lisp-net* 80)))
+        (unwind-protect
+             (usocket:socket-shutdown sock :output)
+          (usocket:socket-close sock))
+        t))
+  t)
+
 (defun run-usocket-tests ()
   (do-tests))
