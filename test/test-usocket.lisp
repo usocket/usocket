@@ -161,7 +161,8 @@
     (with-caught-conditions (nil nil)
       (let ((sock (usocket:socket-connect *common-lisp-net* 80)))
         (unwind-protect
-             (usocket:socket-shutdown sock :input)
+             (usocket::ignore-unsupported-warnings
+               (usocket:socket-shutdown sock :input))
           (usocket:socket-close sock))
         t))
   t)
@@ -170,7 +171,8 @@
     (with-caught-conditions (nil nil)
       (let ((sock (usocket:socket-connect *common-lisp-net* 80)))
         (unwind-protect
-             (usocket:socket-shutdown sock :output)
+             (usocket::ignore-unsupported-warnings
+               (usocket:socket-shutdown sock :output))
           (usocket:socket-close sock))
         t))
   t)
