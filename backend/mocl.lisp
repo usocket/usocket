@@ -65,6 +65,11 @@
 ;; (defmethod socket-close :after ((socket datagram-usocket))
 ;;   (setf (%open-p socket) nil))
 
+(defmethod socket-shutdown ((usocket stream-usocket) direction)
+  (declare (ignore usocket direction))
+  ;; sure would be nice if there was some documentation for mocl...
+  (unimplemented "shutdown" 'socket-shutdown))
+
 ;; (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port)
 ;;   (let ((s (socket usocket))
 ;; 	(host (if host (host-to-hbo host)))

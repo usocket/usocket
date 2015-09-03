@@ -62,6 +62,8 @@
 (defvar $@close/Selector/0 (jmethod $*Selector "close"))
 (defvar $@close/ServerSocket/0 (jmethod $*ServerSocket "close"))
 (defvar $@close/Socket/0 (jmethod $*Socket "close"))
+(defvar $@shutdownInput/Socket/0 (jmethod $*Socket "shutdownInput"))
+(defvar $@shutdownOutput/Socket/0 (jmethod $*Socket "shutdownOutput"))
 (defvar $@configureBlocking/1 (jmethod $*SelectableChannel "configureBlocking" $*boolean))
 (defvar $@connect/DatagramChannel/1 (jmethod $*DatagramChannel "connect" $*SocketAddress))
 (defvar $@connect/Socket/1 (jmethod $*Socket "connect" $*SocketAddress))
@@ -280,6 +282,14 @@
 (defmethod socket-close ((usocket datagram-usocket))
   (with-mapped-conditions (usocket)
     (jcall $@close/DatagramSocket/0 (socket usocket))))
+
+(defmethod socket-shutdown ((usocket stream-usocket) direction)
+  (with-mapped-conditions (usocket)
+    (ecase direction
+      (:input
+       (jcall $@shutdownInput/Socket/0 (socket usocket)))
+      (:output
+       (jcall $@shutdownOutput/Socket/0 (socket usocket))))))
 
 ;;; GET-LOCAL/PEER-NAME/ADDRESS/PORT
 

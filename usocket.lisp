@@ -187,6 +187,16 @@ explicitly specified, or the element-type passed to `socket-listen' otherwise.")
 (defgeneric socket-close (usocket)
   (:documentation "Close a previously opened `usocket'."))
 
+(defgeneric socket-shutdown (usocket direction)
+  (:documentation "Shutdown communication on the socket in DIRECTION.
+
+After a shutdown no input and/or output of the indicated DIRECTION
+can be performed on the `usocket'.
+
+DIRECTION should be either :INPUT or :OUTPUT
+
+Only guaranteed to work for STREAM-SOCKETs."))
+
 (defgeneric socket-send (usocket buffer length &key host port)
   (:documentation "Send packets through a previously opend `usocket'."))
 
@@ -631,15 +641,15 @@ an IP address represented in vector notation, such as #(192 168 1 1).
 stream associated with the socket.  The default is 'character.
 
 `nodelay' Allows to disable/enable Nagle's algorithm (http://en.wikipedia.org/wiki/Nagle%27s_algorithm).
-If this parameter is omitted, the behaviour is inherited from the 
-CL implementation (in most cases, Nagle's algorithm is 
+If this parameter is omitted, the behaviour is inherited from the
+CL implementation (in most cases, Nagle's algorithm is
 enabled by default, but for example in ACL it is disabled).
-If the parmeter is specified, one of these three values is possible: 
+If the parmeter is specified, one of these three values is possible:
   T - Disable Nagle's algorithm; signals an UNSUPPORTED
-      condition if the implementation does not support explicit 
+      condition if the implementation does not support explicit
       manipulation with that option.
   NIL - Leave Nagle's algorithm enabled on the socket;
-      signals an UNSUPPORTED condition if the implementation does 
+      signals an UNSUPPORTED condition if the implementation does
       not support explicit manipulation with that option.
   :IF-SUPPORTED - Disables Nagle's algorithm if the implementation
       allows this, otherwises just ignore this option.

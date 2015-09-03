@@ -157,6 +157,10 @@
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
+(defmethod socket-shutdown ((usocket stream-usocket) direction)
+  (with-mapped-conditions (usocket)
+    (openmcl-socket:shutdown sock :direction direction)))
+
 #-ipv6
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
   (with-mapped-conditions (usocket)
