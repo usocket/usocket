@@ -73,6 +73,7 @@ layer a flexi-stream (from flexi-streams) on top of a usocket stream.
  - socket-stream (usocket slot accessor),
     socket-stream socket
       the return value of which satisfies the normal stream interface
+ - socket-shutdown
 
 ## Errors:
  - address-in-use-error
