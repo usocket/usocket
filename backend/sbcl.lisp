@@ -563,7 +563,7 @@ happen. Use with care."
   (defun wait-for-input-internal (wait-list &key timeout)
     (when (waiting-required (wait-list-waiters wait-list))
       (let ((rv (wsa-wait-for-multiple-events 1 (wait-list-%wait wait-list)
-                                              nil (truncate (* 1000 timeout)) nil)))
+                                              nil (truncate (* 1000 (if timeout timeout 0))) nil)))
         (ecase rv
           ((#.+wsa-wait-event-0+)
            (update-ready-and-state-slots (wait-list-waiters wait-list)))
