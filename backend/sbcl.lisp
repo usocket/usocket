@@ -95,7 +95,7 @@
   (defun get-host-name ()
     (ffi:c-inline
      () () :object
-     "{ char *buf = ecl_alloc_atomic(257);
+     "{ char *buf = (char *) ecl_alloc_atomic(257);
 
         if (gethostname(buf,256) == 0)
           @(return) = make_simple_base_string(buf);
@@ -247,6 +247,16 @@ happen. Use with care."
 	  ,timeout
 	  (return-from ,block ,timeout-form)))))
 
+(defun get-hosts-by-name (name)
+  (with-mapped-conditions ()
+    (multiple-value-bind (host4 host6)
+        (sb-bsd-sockets:get-host-by-name name)
+      (let ((addr4 (when host4
+                     (sb-bsd-sockets::host-ent-addresses host4)))
+            (addr6 (when host6
+                     (sb-bsd-sockets::host-ent-addresses host6))))
+        (append addr4 addr6)))))
+
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port
@@ -267,12 +277,23 @@ happen. Use with care."
   (when (eq nodelay :if-supported)
     (setf nodelay t))
 
-  (let ((socket (make-instance 'sb-bsd-sockets:inet-socket
-                               :type protocol
-                               :protocol (case protocol
-                                           (:stream :tcp)
-                                           (:datagram :udp))))
-        usocket ok)
+  (let* ((remote (when host
+                   (car (get-hosts-by-name (host-to-hostname host)))))
+         (local (when local-host
+                  (car (get-hosts-by-name (host-to-hostname local-host)))))
+         (ipv6 (or (and remote (= 16 (length remote)))
+                   (and local (= 16 (length local)))))
+         (socket (make-instance #+sbcl (if ipv6
+                                           'sb-bsd-sockets:inet6-socket
+                                           'sb-bsd-sockets:inet-socket)
+                                #+ecl 'sb-bsd-sockets:inet-socket
+                                :type protocol
+                                :protocol (case protocol
+                                            (:stream :tcp)
+                                            (:datagram :udp))))
+         usocket
+         ok)
+
     (unwind-protect
          (progn
            (ecase protocol
@@ -287,18 +308,20 @@ happen. Use with care."
                 (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) nodelay))
               (when (or local-host local-port)
                 (sb-bsd-sockets:socket-bind socket
-					    (host-to-vector-quad
-					     (or local-host *wildcard-host*))
+                                            (if ipv6
+                                                (or local (ipv6-host-to-vector "::0"))
+                                                (or local (host-to-vector-quad *wildcard-host*)))
                                             (or local-port *auto-port*)))
+
               (with-mapped-conditions (usocket)
 		#+(and sbcl (not win32))
 		(labels ((connect ()
-			   (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)))
+                           (sb-bsd-sockets:socket-connect socket remote port)))
 		  (if timeout
 		      (%with-timeout (timeout (error 'sb-ext:timeout)) (connect))
 		      (connect)))
 		#+(or ecl (and sbcl win32))
-		(sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)
+		(sb-bsd-sockets:socket-connect socket remote port)
                 ;; Now that we're connected make the stream.
                 (setf (socket-stream usocket)
                       (sb-bsd-sockets:socket-make-stream socket
@@ -323,13 +346,14 @@ happen. Use with care."
              (:datagram
               (when (or local-host local-port)
                 (sb-bsd-sockets:socket-bind socket
-                                            (host-to-vector-quad
-                                             (or local-host *wildcard-host*))
+                                            (if ipv6
+                                                (or local (ipv6-host-to-vector "::0"))
+                                                (or local (host-to-vector-quad *wildcard-host*)))
                                             (or local-port *auto-port*)))
               (setf usocket (make-datagram-socket socket))
               (when (and host port)
                 (with-mapped-conditions (usocket)
-                  (sb-bsd-sockets:socket-connect socket (host-to-vector-quad host) port)
+                  (sb-bsd-sockets:socket-connect socket remote port)
                   (setf (connected-p usocket) t)))))
            (setf ok t))
       ;; Clean up in case of an error.
@@ -342,15 +366,20 @@ happen. Use with care."
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
-  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
-         (ip #+sbcl
-	     (if (and host
-		      (not (eq host *wildcard-host*)))
-		 (host-to-vector-quad host)
-		 (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any))
-	     #-sbcl (host-to-vector-quad host))
-         (sock (make-instance 'sb-bsd-sockets:inet-socket
-                              :type :stream :protocol :tcp)))
+  (let* ((local (when host
+                  (car (get-hosts-by-name (host-to-hostname host)))))
+         (ipv6 (and local (= 16 (length local))))
+         (reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
+         (ip #+sbcl (if (and local (not (eq host *wildcard-host*)))
+                        local
+                        (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any))
+             #+ecl (host-to-vector-quad host))
+         (sock (make-instance #+sbcl (if ipv6
+                                         'sb-bsd-sockets:inet6-socket
+                                         'sb-bsd-sockets:inet-socket)
+                              #+ecl 'sb-bsd-sockets:inet-socket
+                              :type :stream
+                              :protocol :tcp)))
     (handler-case
         (with-mapped-conditions ()
           (setf (sb-bsd-sockets:sockopt-reuse-address sock) reuseaddress)
@@ -419,19 +448,21 @@ happen. Use with care."
       (error (map-errno-error (cerrno))))))
 
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
-  (with-mapped-conditions (usocket)
-    (let* ((s (socket usocket))
-	   (dest (if (and host port) (list (host-to-vector-quad host) port) nil))
-	   (real-buffer (if (zerop offset)
-			    buffer
-			    (subseq buffer offset (+ offset size)))))
-      (sb-bsd-sockets:socket-send s real-buffer size :address dest))))
+  (let ((remote (when host
+                  (car (get-hosts-by-name (host-to-hostname host))))))
+    (with-mapped-conditions (usocket)
+      (let* ((s (socket usocket))
+             (dest (if (and host port) (list remote port) nil))
+             (real-buffer (if (zerop offset)
+                              buffer
+                              (subseq buffer offset (+ offset size)))))
+        (sb-bsd-sockets:socket-send s real-buffer size :address dest)))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length
 			   &key (element-type '(unsigned-byte 8)))
   (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
 		   (integer 0)                          ; size
-		   (unsigned-byte 32)                   ; host
+		   (simple-array (unsigned-byte 8) (*)) ; host
 		   (unsigned-byte 16)))                 ; port
   (with-mapped-conditions (socket)
     (let ((s (socket socket)))
@@ -459,11 +490,6 @@ happen. Use with care."
   (with-mapped-conditions ()
     (sb-bsd-sockets::host-ent-name
         (sb-bsd-sockets:get-host-by-address address))))
-
-(defun get-hosts-by-name (name)
-  (with-mapped-conditions ()
-     (sb-bsd-sockets::host-ent-addresses
-         (sb-bsd-sockets:get-host-by-name name))))
 
 #+(and sbcl (not win32))
 (progn
