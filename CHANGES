@@ -1,3 +1,12 @@
+0.6.4:
+
+* New feature: [SBCL] IPv6 support (patch from Guillaume LE VAILLANT, #15)
+* New feature: [API] SOCKET-SHUTDOWN added (patch from Thayne McCombs #9)
+* New feature: [Corman] minimal initial support of this platform
+* Bugfix: [SBCL/win32] wait-for-input nil-timeout bug (patch from Michal Herda, #13)
+* Bugfix: [ECL] included unistd.h for gethostname() (patch from Daniel Kochmanski, #7)
+* Bugfix: [LispWorks] SOCKET-RECEIVE now updates %READ-P (patch from Frank James)
+
 0.6.3:
 
 * Bugfix: [CCL] Further fixed CCL-1.11 compatibility and a typo in SOCKET-CONNECT for CCL-1.10.
