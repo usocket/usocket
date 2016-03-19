@@ -284,7 +284,7 @@ happen. Use with care."
          (ipv6 (or (and remote (= 16 (length remote)))
                    (and local (= 16 (length local)))))
          (socket (make-instance #+sbcl (if ipv6
-                                           'sb-bsd-sockets:inet6-socket
+                                           'sb-bsd-sockets::inet6-socket
                                            'sb-bsd-sockets:inet-socket)
                                 #+ecl 'sb-bsd-sockets:inet-socket
                                 :type protocol
@@ -375,7 +375,7 @@ happen. Use with care."
                         (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any))
              #+ecl (host-to-vector-quad host))
          (sock (make-instance #+sbcl (if ipv6
-                                         'sb-bsd-sockets:inet6-socket
+                                         'sb-bsd-sockets::inet6-socket
                                          'sb-bsd-sockets:inet-socket)
                               #+ecl 'sb-bsd-sockets:inet-socket
                               :type :stream
@@ -435,7 +435,7 @@ happen. Use with care."
 #+sbcl
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
   (with-mapped-conditions (usocket)
-    (sb-bsd-sockets:socket-shutdown (socket usocket) :direction direction)))
+    (sb-bsd-sockets::socket-shutdown (socket usocket) :direction direction)))
 
 #+ecl
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
