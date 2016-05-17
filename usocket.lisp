@@ -331,6 +331,13 @@ to do the associated garbage collection.
 
 Without the READY-ONLY arg, you need to check the socket STATE slot for
 the values documented in usocket.lisp in the usocket class."
+
+  ;; for NULL sockets, return NIL with respect of TIMEOUT.
+  (when (null socket-or-sockets)
+    (when timeout
+      (sleep timeout))
+    (return-from wait-for-input nil))
+
   (unless (wait-list-p socket-or-sockets)
     (let ((wl (make-wait-list (if (listp socket-or-sockets)
                                   socket-or-sockets (list socket-or-sockets)))))
