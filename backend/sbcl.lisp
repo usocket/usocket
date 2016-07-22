@@ -178,9 +178,11 @@
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
 
     ;; Nameservice errors: mapped to unknown-error
-    #-ecl #-ecl #-ecl
+    #-ecl
     (sb-bsd-sockets:no-recovery-error . ns-no-recovery-error)
+    #-ecl
     (sb-bsd-sockets:try-again-error . ns-try-again-condition)
+    #-ecl
     (sb-bsd-sockets:host-not-found-error . ns-host-not-found-error)))
 
 (defun handle-condition (condition &optional (socket nil))
