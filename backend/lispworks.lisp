@@ -86,6 +86,11 @@
   #+linux 20
   "Socket receive timeout")
 
+(defconstant *sockopt_so_sndtimeo*
+  #-linux #x1007
+  #+linux 21
+  "Socket send timeout")
+
 (fli:define-c-struct timeval
   (tv-sec :long)
   (tv-usec :long))
@@ -136,6 +141,24 @@
                                (fli:size-of '(:struct timeval))))
             seconds)))))
 
+#-win32
+(defun set-socket-send-timeout (socket-fd seconds)
+  "Set socket option: SNDTIMEO, argument seconds can be a float number"
+  (declare (type integer socket-fd)
+           (type number seconds))
+  (multiple-value-bind (sec usec) (truncate seconds)
+    (fli:with-dynamic-foreign-objects ((timeout (:struct timeval)))
+      (fli:with-foreign-slots (tv-sec tv-usec) timeout
+        (setf tv-sec sec
+              tv-usec (truncate (* 1000000 usec)))
+        (if (zerop (comm::setsockopt socket-fd
+                               comm::*sockopt_sol_socket*
+                               *sockopt_so_sndtimeo*
+                               (fli:copy-pointer timeout
+                                                 :type '(:pointer :void))
+                               (fli:size-of '(:struct timeval))))
+            seconds)))))
+
 #+win32
 (defun set-socket-receive-timeout (socket-fd seconds)
   "Set socket option: RCVTIMEO, argument seconds can be a float number.
@@ -148,6 +171,23 @@
     (if (zerop (comm::setsockopt socket-fd
                            comm::*sockopt_sol_socket*
                            *sockopt_so_rcvtimeo*
+                           (fli:copy-pointer timeout
+                                             :type '(:pointer :char))
+                           (fli:size-of :int)))
+        seconds)))
+
+#+win32
+(defun set-socket-send-timeout (socket-fd seconds)
+  "Set socket option: SNDTIMEO, argument seconds can be a float number.
+   On win32, you must bind the socket before use this function."
+  (declare (type integer socket-fd)
+           (type number seconds))
+  (fli:with-dynamic-foreign-objects ((timeout :int))
+    (setf (fli:dereference timeout)
+          (truncate (* 1000 seconds)))
+    (if (zerop (comm::setsockopt socket-fd
+                           comm::*sockopt_sol_socket*
+                           *sockopt_so_sndtimeo*
                            (fli:copy-pointer timeout
                                              :type '(:pointer :char))
                            (fli:size-of :int)))
@@ -168,6 +208,21 @@
     (fli:with-foreign-slots (tv-sec tv-usec) timeout
       (float (+ tv-sec (/ tv-usec 1000000))))))
 
+#-win32
+(defun get-socket-send-timeout (socket-fd)
+  "Get socket option: SNDTIMEO, return value is a float number"
+  (declare (type integer socket-fd))
+  (fli:with-dynamic-foreign-objects ((timeout (:struct timeval))
+                                     (len :int))
+    (comm::getsockopt socket-fd
+                comm::*sockopt_sol_socket*
+                *sockopt_so_sndtimeo*
+                (fli:copy-pointer timeout
+                                  :type '(:pointer :void))
+                len)
+    (fli:with-foreign-slots (tv-sec tv-usec) timeout
+      (float (+ tv-sec (/ tv-usec 1000000))))))
+
 #+win32
 (defun get-socket-receive-timeout (socket-fd)
   "Get socket option: RCVTIMEO, return value is a float number"
@@ -177,6 +232,20 @@
     (comm::getsockopt socket-fd
                 comm::*sockopt_sol_socket*
                 *sockopt_so_rcvtimeo*
+                (fli:copy-pointer timeout
+                                  :type '(:pointer :void))
+                len)
+    (float (/ (fli:dereference timeout) 1000))))
+
+#+win32
+(defun get-socket-send-timeout (socket-fd)
+  "Get socket option: SNDTIMEO, return value is a float number"
+  (declare (type integer socket-fd))
+  (fli:with-dynamic-foreign-objects ((timeout :int)
+                                     (len :int))
+    (comm::getsockopt socket-fd
+                comm::*sockopt_sol_socket*
+                *sockopt_so_sndtimeo*
                 (fli:copy-pointer timeout
                                   :type '(:pointer :void))
                 len)
@@ -218,8 +287,8 @@
                     server-addr
                     (if (eql family comm::*socket_af_inet*)
                         (fli:size-of '(:struct comm::sockaddr_in))
-                      (fli:size-of '(:struct comm::sockaddr_in6))))))
-      :bad-host)))
+			(fli:size-of '(:struct comm::sockaddr_in6))))))
+	:bad-host)))
 
 (defun open-udp-socket (&key local-address local-port read-timeout
                              (address-family comm::*socket_af_inet*))
@@ -416,7 +485,8 @@
 
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
   (with-mapped-conditions (usocket)
-    (comm::socket-stream-shutdown (socket usocket) direction)))
+    (#-lispworks7 comm::socket-stream-shutdown
+     #+lispworks7 comm:socket-stream-shutdown (socket usocket) direction)))	; 2016-08-09 JDP
 
 (defmethod initialize-instance :after ((socket datagram-usocket) &key)
   (setf (slot-value socket 'send-buffer)
