@@ -22,7 +22,6 @@
              #:get-peer-port
              #:get-local-name
              #:get-peer-name
-             #:listen
 
              #:socket-send    ; udp function (send)
              #:socket-receive ; udp function (receive)
