@@ -102,7 +102,7 @@ layer a flexi-stream (from flexi-streams) on top of a usocket stream.
  - unkown-condition
 
 (for a description of the API methods and functions see
-  http://common-lisp.net/project/usocket/api-docs.shtml.)
+  https://common-lisp.net/project/usocket/api-docs.shtml)
 
 # Test suite
 

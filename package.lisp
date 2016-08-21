@@ -3,7 +3,6 @@
 (defpackage :usocket
   (:use :common-lisp #+abcl :java)
   (:export   #:*version*
-
              #:*wildcard-host*
              #:*auto-port*
 
@@ -23,6 +22,7 @@
              #:get-peer-port
              #:get-local-name
              #:get-peer-name
+             #:listen
 
              #:socket-send    ; udp function (send)
              #:socket-receive ; udp function (receive)
