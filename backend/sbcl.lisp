@@ -1,6 +1,4 @@
-;;;; -*- Mode: Lisp -*-
-;;;; $Id$
-;;;; $URL$
+;;;; -*- Mode: Common-Lisp -*-
 
 ;;;; See LICENSE for licensing information.
 

@@ -484,6 +484,11 @@
   (setf (%open-p socket) nil))
 
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
+  (declare (ignore direction))
+  (with-mapped-conditions (usocket)
+    (comm::shutdown (socket usocket))))
+
+(defmethod socket-shutdown ((usocket datagram-usocket) direction)
   (with-mapped-conditions (usocket)
     (#-lispworks7 comm::socket-stream-shutdown
      #+lispworks7 comm:socket-stream-shutdown (socket usocket) direction)))	; 2016-08-09 JDP
