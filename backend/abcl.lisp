@@ -175,7 +175,9 @@
            (vector (jbyte 0) (jbyte 1) (jbyte 2) (jbyte 3)))
           ((= 16 length)
            (vector (jbyte 0) (jbyte 1) (jbyte 2) (jbyte 3) 
-                   (jbyte 4) (jbyte 5) (jbyte 6) (jbyte 7)))
+                   (jbyte 4) (jbyte 5) (jbyte 6) (jbyte 7)
+                   (jbyte 8) (jbyte 9) (jbyte 10) (jbyte 11)
+                   (jbyte 12) (jbyte 13) (jbyte 14) (jbyte 15)))
           (t nil)))))) ; neither a IPv4 nor IPv6 address?!
 
 (defun get-hosts-by-name (name)
