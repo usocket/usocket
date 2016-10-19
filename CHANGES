@@ -1,3 +1,11 @@
+0.6.5:
+
+* New feature: SOCKET-OPTION and (setf SOCKET-OPTION) for :SEND-TIMEOUT (thanks to John Pallister)
+* Bugfix: Let (WAIT-FOR-INPUT NIL &TIMEOUT) return NIL with respect to TIMEOUT.
+* Bugfix: [LW] fixed loading in LispWorks 5.x & 6.x.
+* Bugfix: [LW] fixed SOCKET-SHUTDOWN in all versions.
+* Bugfix: [ABCL] Fixed incorrect IPv6 addresses (#26), patch from Elias Mårtenson (lokedhs)
+
 0.6.4:
 
 * New feature: [SBCL] IPv6 support (patch from Guillaume LE VAILLANT, #15)

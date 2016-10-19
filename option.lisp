@@ -1,6 +1,3 @@
-;;;; $Id$
-;;;; $URL$
-
 ;;;; SOCKET-OPTION, a high-level socket option get/set framework
 
 ;;;; See LICENSE for licensing information.
@@ -91,6 +88,68 @@
     (setf (sb-bsd-sockets:sockopt-receive-timeout socket) timeout)
     #+lispworks
     (set-socket-receive-timeout socket timeout)
+    #+mcl
+    () ; TODO
+    #+mocl
+    () ; unknown
+    #+sbcl
+    (setf (sb-impl::fd-stream-timeout (socket-stream usocket))
+          (coerce timeout 'single-float))
+    #+scl
+    () ; TODO
+    new-value))
+
+;;; Socket option: SEND-TIMEOUT (SO_SNDTIMEO)
+
+(defmethod socket-option ((usocket stream-usocket)
+                          (option (eql :send-timeout)) &key)
+  (declare (ignorable option))
+  (let ((socket (socket usocket)))
+    (declare (ignorable socket))
+    #+abcl
+    () ; TODO
+    #+allegro
+    () ; TODO
+    #+clisp
+    (socket:socket-options socket :so-sndtimeo)
+    #+clozure
+    (ccl:stream-output-timeout socket)
+    #+cmu
+    (lisp::fd-stream-timeout (socket-stream usocket))
+    #+ecl
+    (sb-bsd-sockets:sockopt-send-timeout socket)
+    #+lispworks
+    (get-socket-send-timeout socket)
+    #+mcl
+    () ; TODO
+    #+mocl
+    () ; unknown
+    #+sbcl
+    (sb-impl::fd-stream-timeout (socket-stream usocket))
+    #+scl
+    ())) ; TODO
+
+(defmethod (setf socket-option) (new-value (usocket stream-usocket)
+                                           (option (eql :send-timeout)) &key)
+  (declare (type number new-value) (ignorable new-value option))
+  (let ((socket (socket usocket))
+        (timeout new-value))
+    (declare (ignorable socket timeout))
+    #+abcl
+    () ; TODO
+    #+allegro
+    () ; TODO
+    #+clisp
+    (socket:socket-options socket :so-sndtimeo timeout)
+    #+clozure
+    (setf (ccl:stream-output-timeout socket) timeout)
+    #+cmu
+    (setf (lisp::fd-stream-timeout (socket-stream usocket))
+          (coerce timeout 'integer))
+    #+ecl
+    (setf (sb-bsd-sockets:sockopt-send-timeout socket) timeout)
+    #+lispworks
+    (set-socket-send-timeout socket timeout)
     #+mcl
     () ; TODO
     #+mocl
