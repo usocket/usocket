@@ -483,15 +483,44 @@
   "Additional socket-close method for datagram-usocket"
   (setf (%open-p socket) nil))
 
-(defmethod socket-shutdown ((usocket stream-usocket) direction)
-  (declare (ignore direction))
-  (with-mapped-conditions (usocket)
-    (comm::shutdown (socket usocket))))
+(defconstant +shutdown-read+ 0)
+(defconstant +shutdown-write+ 1)
+(defconstant +shutdown-read-write+ 2)
+
+;;; int
+;;; shutdown(int socket, int what);
+(fli:define-foreign-function (%shutdown "shutdown" :source)
+    ((socket :int)
+     (what :int))
+  :result-type :int
+  #+win32 :module
+  #+win32 "ws2_32")
 
 (defmethod socket-shutdown ((usocket datagram-usocket) direction)
+  (unless (member direction '(:input :output :io))
+    (error 'invalid-argument-error))
+  (let ((what (case direction
+		(:input +shutdown-read+)
+		(:output +shutdown-write+)
+		(:io +shutdown-read-write+))))
+    (with-mapped-conditions (usocket)
+      #-(or lispworks4 lispworks5 lispworks6) ; lispworks 7.0+
+      (comm::shutdown (socket usocket) what)
+      #+(or lispworks4 lispworks5 lispworks6)
+      (= 0 (%shutdown (socket usocket) what)))))
+
+(defmethod socket-shutdown ((usocket stream-usocket) direction)
+  (unless (member direction '(:input :output :io))
+    (error 'invalid-argument-error))
   (with-mapped-conditions (usocket)
-    (#-lispworks7 comm::socket-stream-shutdown
-     #+lispworks7 comm:socket-stream-shutdown (socket usocket) direction)))	; 2016-08-09 JDP
+    #-(or lispworks4 lispworks5 lispworks6)
+    (comm:socket-stream-shutdown (socket usocket) direction)
+    #+(or lispworks4 lispworks5 lispworks6)
+    (let ((what (case direction
+		  (:input +shutdown-read+)
+		  (:output +shutdown-write+)
+		  (:io +shutdown-read-write+))))
+      (= 0 (%shutdown (comm:socket-stream-socket (socket usocket)) what)))))
 
 (defmethod initialize-instance :after ((socket datagram-usocket) &key)
   (setf (slot-value socket 'send-buffer)

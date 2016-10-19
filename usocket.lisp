@@ -187,15 +187,14 @@ explicitly specified, or the element-type passed to `socket-listen' otherwise.")
 (defgeneric socket-close (usocket)
   (:documentation "Close a previously opened `usocket'."))
 
+;; also see http://stackoverflow.com/questions/4160347/close-vs-shutdown-socket
 (defgeneric socket-shutdown (usocket direction)
   (:documentation "Shutdown communication on the socket in DIRECTION.
 
 After a shutdown no input and/or output of the indicated DIRECTION
 can be performed on the `usocket'.
 
-DIRECTION should be either :INPUT or :OUTPUT
-
-Only guaranteed to work for STREAM-SOCKETs."))
+DIRECTION should be either :INPUT or :OUTPUT or :IO"))
 
 (defgeneric socket-send (usocket buffer length &key host port)
   (:documentation "Send packets through a previously opend `usocket'."))
