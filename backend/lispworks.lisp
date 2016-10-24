@@ -264,7 +264,7 @@
             comm::*socket_af_inet*
             server-addr
             (fli:pointer-element-size server-addr)))
-  #-(or lispworks4 lispworks5 lispworks6.0)
+  #-(or lispworks4 lispworks5 lispworks6.0) ; version>=6.1
   (progn
     (when (stringp hostname)
       (setq hostname (comm:string-ip-address hostname))
@@ -654,6 +654,9 @@
   (nth-value 1 (get-peer-name usocket)))
 
 (defun lw-hbo-to-vector-quad (hbo)
+  #+(or lispworks4 lispworks5 lispworks6.0)
+  (hbo-to-vector-quad hbo)
+  #-(or lispworks4 lispworks5 lispworks6.0) ; version>= 6.1
   (if (comm:ipv6-address-p hbo)
       (ipv6-host-to-vector (comm:ipv6-address-string hbo))
     (hbo-to-vector-quad hbo)))
