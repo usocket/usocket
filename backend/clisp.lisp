@@ -250,7 +250,7 @@
                             (socket:socket-status request-list)))
              (sockets (wait-list-waiters wait-list)))
         (do* ((x (pop sockets) (pop sockets))
-              (y (cdr (pop status-list)) (cdr (pop status-list))))
+              (y (pop status-list) (pop status-list)))
              ((null x))
           (when (member y '(T :INPUT))
             (setf (state x) :READ)))
