@@ -1,3 +1,8 @@
+0.6.6:
+
+* Bugfix: [CCL] fixed issues in SOCKET-SHUTDOWN
+* Bugfix: [CLISP] fixed issues in WAIT-FOR-INPUT (patch from vibs29, #27)
+
 0.6.5:
 
 * New feature: SOCKET-OPTION and (setf SOCKET-OPTION) for :SEND-TIMEOUT (thanks to John Pallister)
