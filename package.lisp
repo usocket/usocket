@@ -1,7 +1,8 @@
 ;;;; See the LICENSE file for licensing information.
 
 (defpackage :usocket
-  (:use :common-lisp #+abcl :java)
+  (:use :common-lisp #+abcl :java
+        :split-sequence)
   (:export   #:*version*
              #:*wildcard-host*
              #:*auto-port*
@@ -25,7 +26,6 @@
 
              #:socket-send    ; udp function (send)
              #:socket-receive ; udp function (receive)
-             #:socket-server  ; udp server
              #:socket-option  ; 0.6.x
 
              #:wait-for-input ; waiting for input-ready state (select() like)

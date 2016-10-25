@@ -3,19 +3,18 @@
 ;;;; See the LICENSE file for licensing information.
 
 (defsystem usocket
-    :name "usocket"
+    :name "usocket (client)"
     :author "Erik Enge & Erik Huelsmann"
     :maintainer "Chun Tian (binghe) & Hans Huebner"
     :version "0.6.6-dev"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
-    :depends-on (#+(or sbcl ecl) :sb-bsd-sockets)
+    :depends-on (#+(or sbcl ecl) :sb-bsd-sockets
+                 :split-sequence)
     :components ((:file "package")
 		 (:module "vendor" :depends-on ("package")
 		  :components (#+mcl (:file "kqueue")
-			       #+mcl (:file "OpenTransportUDP")
-			       (:file "spawn-thread")
-			       (:file "split-sequence")))
+			       #+mcl (:file "OpenTransportUDP")))
 		 (:file "usocket" :depends-on ("vendor"))
 		 (:file "condition" :depends-on ("usocket"))
 		 (:module "backend" :depends-on ("condition")
@@ -32,9 +31,18 @@
 			       #+openmcl	(:file "openmcl")
 			       #+(or ecl sbcl)	(:file "sbcl")
 			       #+scl		(:file "scl")))
-		 (:file "option" :depends-on ("backend"))
-		 (:file "server" :depends-on ("backend" "option"))))
+		 (:file "option" :depends-on ("backend"))))
+
+(defsystem usocket-server
+    :name "usocket (server)"
+    :author "Chun Tian (binghe)"
+    :version "1.0"
+    :licence "MIT"
+    :description "Universal socket library for Common Lisp (server side)"
+    :depends-on (:usocket :portable-threads)
+    :components ((:file "server")))
 
 (defmethod perform ((op test-op) (c (eql (find-system :usocket))))
+  (oos 'load-op :usocket-server)
   (oos 'load-op :usocket-test)
   (oos 'test-op :usocket-test))

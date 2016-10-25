@@ -1,7 +1,8 @@
-;;;; $Id$
-;;;; $URL$
-
 (in-package :usocket)
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (use-package :portable-threads)
+  (export 'socket-server))
 
 (defun socket-server (host port function &optional arguments
                       &key in-new-thread (protocol :stream)

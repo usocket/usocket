@@ -109,4 +109,4 @@
 [TODO]
 
 * New feature: CLISP support some advanced TCP features which CLISP's SOCKET interface not provide
-* New feature: SOCKET-SHUTDOWN for TCP and UDP sockets.
+
