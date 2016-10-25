@@ -384,9 +384,8 @@
           (error "cannot create socket"))))))
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'base-char)
-                       timeout deadline (nodelay t nodelay-specified)
+                       timeout deadline (nodelay t)
                        local-host local-port)
-
   ;; What's the meaning of this keyword?
   (when deadline
     (unimplemented 'deadline 'socket-connect))
@@ -394,11 +393,6 @@
   #+(and lispworks4 (not lispworks4.4)) ; < 4.4.5
   (when timeout
     (unsupported 'timeout 'socket-connect :minimum "LispWorks 4.4.5"))
-
-  #+(or lispworks4 lispworks5.0) ; < 5.1
-  (when (and nodelay-specified 
-             (not (eq nodelay :if-supported)))
-    (unsupported 'nodelay 'socket-connect :minimum "LispWorks 5.1"))
 
   #+lispworks4
   (when local-host
@@ -411,7 +405,7 @@
     (:stream
      (let ((hostname (host-to-hostname host))
            (stream))
-       (setf stream
+       (setq stream
              (with-mapped-conditions ()
                (comm:open-tcp-stream hostname port
                                      :element-type element-type
@@ -425,6 +419,15 @@
                                      #-(or lispworks4 lispworks5.0) ; >= 5.1
                                      #-(or lispworks4 lispworks5.0)
                                      :nodelay nodelay)))
+
+       ;; Then handle `nodelay' separately for older versions <= 5.0
+       #+(or lispworks4 lispworks5.0)
+       (when (and stream nodelay)
+         (#+lispworks4 set-socket-tcp-nodelay
+          #+lispworks5.0 comm::set-socket-tcp-nodelay
+           (comm:socket-stream-socket stream)
+           (bool->int nodelay))) ; ":if-supported" maps to 1 too.
+
        (if stream
            (make-stream-socket :socket (comm:socket-stream-socket stream)
                                :stream stream)

@@ -683,3 +683,10 @@ streams to be created by `socket-accept'.  `reuseaddress' is supported for
 backward compatibility (but deprecated); when both `reuseaddress' and
 `reuse-address' have been specified, the latter takes precedence.
 ")
+
+;;; Small utility functions mapping true/false to 1/0, moved here from option.lisp
+
+(proclaim '(inline bool->int int->bool))
+
+(defun bool->int (bool) (if bool 1 0))
+(defun int->bool (int) (= 1 int))

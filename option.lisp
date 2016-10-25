@@ -4,11 +4,6 @@
 
 (in-package :usocket)
 
-;;; Small utility functions
-(declaim (inline bool->int) (inline int->bool))
-(defun bool->int (bool) (if bool 1 0))
-(defun int->bool (int) (= 1 int))
-
 ;;; Interface definition
 
 (defgeneric socket-option (socket option &key)
