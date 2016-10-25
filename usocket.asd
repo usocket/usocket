@@ -2,6 +2,8 @@
 ;;;;
 ;;;; See the LICENSE file for licensing information.
 
+(in-package :asdf)
+
 (defsystem usocket
     :name "usocket (client)"
     :author "Erik Enge & Erik Huelsmann"
@@ -32,15 +34,6 @@
 			       #+(or ecl sbcl)	(:file "sbcl")
 			       #+scl		(:file "scl")))
 		 (:file "option" :depends-on ("backend"))))
-
-(defsystem usocket-server
-    :name "usocket (server)"
-    :author "Chun Tian (binghe)"
-    :version "1.0"
-    :licence "MIT"
-    :description "Universal socket library for Common Lisp (server side)"
-    :depends-on (:usocket :portable-threads)
-    :components ((:file "server")))
 
 (defmethod perform ((op test-op) (c (eql (find-system :usocket))))
   (oos 'load-op :usocket-server)
