@@ -251,6 +251,34 @@
                 len)
     (float (/ (fli:dereference timeout) 1000))))
 
+#+lispworks4
+(defun set-socket-tcp-nodelay (socket-fd new-value)
+  "Set socket option: TCP_NODELAY, argument is a fixnum (0 or 1)"
+  (declare (type integer socket-fd)
+           (type (integer 0 1) new-value))
+  (fli:with-dynamic-foreign-objects ((zero-or-one :int))
+    (setf (fli:dereference zero-or-one) new-value)
+    (when (zerop (comm::setsockopt socket-fd
+                                   comm::*sockopt_sol_socket*
+                                   comm::*sockopt_tcp_nodelay*
+                                   (fli:copy-pointer zero-or-one
+                                                     :type '(:pointer #+win32 :char #-win32 :void))
+                                   (fli:size-of :int)))
+        new-value)))
+
+(defun get-socket-tcp-nodelay (socket-fd)
+  "Get socket option: TCP_NODELAY, return value is a fixnum (0 or 1)"
+  (declare (type integer socket-fd))
+  (fli:with-dynamic-foreign-objects ((zero-or-one :int)
+                                     (len :int))
+    (if (zerop (comm::getsockopt socket-fd
+                                 comm::*sockopt_sol_socket*
+                                 comm::*sockopt_tcp_nodelay*
+                                 (fli:copy-pointer zero-or-one
+                                                   :type '(:pointer #+win32 :char #-win32 :void))
+                                 len))
+        zero-or-one 0))) ; on error, return 0
+
 (defun initialize-dynamic-sockaddr (hostname service protocol &aux (original-hostname hostname))
   (declare (ignorable original-hostname))
   #+(or lispworks4 lispworks5 lispworks6.0)
