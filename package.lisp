@@ -7,9 +7,6 @@
              #:*wildcard-host*
              #:*auto-port*
 
-             #:*remote-host* ; special variables (udp)
-             #:*remote-port*
-
              #:+max-datagram-packet-size+
 
              #:socket-connect ; socket constructors and methods

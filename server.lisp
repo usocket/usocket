@@ -2,7 +2,10 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (use-package :portable-threads)
-  (export 'socket-server))
+
+  (export '(socket-server
+            *remote-host*
+            *remote-port*)))
 
 (defun socket-server (host port function &optional arguments
                       &key in-new-thread (protocol :stream)
