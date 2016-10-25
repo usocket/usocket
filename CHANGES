@@ -1,7 +1,13 @@
-0.6.6:
+0.7.0:
 
+* General: Separated USOCKET and USOCKET-SERVER systems (only the server part depends on Portable-threads)
+* General: USOCKET now depends on SPLIT-SEQUENCE (the exactly same vendor code is removed from usocket code base)
+* New feature: [LW] (SOCKET-OPTION :TCP-NODELAY) and its SETF version now works on LispWorks 4/5/6/7.
+* New feature: [LW] SOCKET-CONNECT now supports setting "tcp_nodelay" in version 4.x and 5.0.
 * Bugfix: [CCL] fixed issues in SOCKET-SHUTDOWN
-* Bugfix: [CLISP] fixed issues in WAIT-FOR-INPUT (patch from vibs29, #27)
+* Bugfix: [CLISP] fixed issues in WAIT-FOR-INPUT (Thanks to a patch by @vibs29, #27)
+* Bugfix: [LW] fixed loading in version <= 6.0 (actually 0.6.5 only fixed loading in LW 6.1)
+* Bugfix: [ECL] all compilation warnings were checked and fixed.
 
 0.6.5:
 
@@ -109,4 +115,3 @@
 [TODO]
 
 * New feature: CLISP support some advanced TCP features which CLISP's SOCKET interface not provide
-
