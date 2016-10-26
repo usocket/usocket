@@ -11,7 +11,7 @@
     :version "0.2.0"
     :licence "MIT"
     :description "Tests for usocket"
-    :depends-on (:usocket
+    :depends-on (:usocket-server
                  :rt)
     :components ((:module "test"
 		  :serial t
