@@ -1,6 +1,4 @@
 ;;;; -*- Mode: Lisp -*-
-;;;; $Id$
-;;;; $URL$
 
 ;;;; Foreign functions defined by ECL's DFFI, used for #+ecl-bytecmp only.
 ;;;; See LICENSE for licensing information.

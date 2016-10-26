@@ -4,6 +4,9 @@
 
 (in-package :usocket)
 
+(eval-when (:load-toplevel :execute)
+  (setq *backend* :native))
+
 #+sbcl
 (progn
   #-win32

@@ -1,9 +1,9 @@
-;;;; $Id$
-;;;; $URL$
-
 ;;;; See LICENSE for licensing information.
 
 (in-package :usocket)
+
+(eval-when (:load-toplevel :execute)
+  (setq *backend* :native))
 
 (defparameter +scl-error-map+
   (append +unix-errno-condition-map+

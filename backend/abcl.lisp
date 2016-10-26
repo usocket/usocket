@@ -1,12 +1,12 @@
-;;;; $Id$
-;;;; $URL$
-
 ;;;; New ABCL networking support (replacement to old armedbear.lisp)
 ;;;; Author: Chun Tian (binghe)
 
 ;;;; See LICENSE for licensing information.
 
 (in-package :usocket)
+
+(eval-when (:load-toplevel :execute)
+  (setq *backend* :native))
 
 ;;; Java Classes ($*...)
 (defvar $*boolean (jclass "boolean"))

@@ -1,10 +1,10 @@
-;;;; $Id$
-;;;; $URL$
-
 ;; MCL backend for USOCKET 0.4.1
 ;; Terje Norderhaug <terje@in-progress.com>, January 1, 2009
 
 (in-package :usocket)
+
+(eval-when (:load-toplevel :execute)
+  (setq *backend* :native))
 
 (defun handle-condition (condition &optional socket)
   ; incomplete, needs to handle additional conditions

@@ -1,9 +1,10 @@
 ;;;; See the LICENSE file for licensing information.
 
+(unless (find-package :usocket) ; do not redefine packages
 (defpackage :usocket
-  (:use :common-lisp #+abcl :java
-        :split-sequence)
+  (:use :common-lisp :split-sequence #+abcl :java)
   (:export   #:*version*
+             #:*backend*
              #:*wildcard-host*
              #:*auto-port*
 
@@ -84,3 +85,4 @@
              #:insufficient-implementation ; conditions regarding usocket support level
              #:unsupported
              #:unimplemented))
+) ; unless

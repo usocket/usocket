@@ -4,10 +4,10 @@
 
 (in-package :asdf)
 
-(defsystem usocket-server
+(defsystem #:usocket-server
     :name "usocket (server)"
     :author "Chun Tian (binghe)"
-    :version "0.7.0"
+    :version "0.8.0-dev"
     :licence "MIT"
     :description "Universal socket library for Common Lisp (server side)"
     :depends-on (:usocket :portable-threads)

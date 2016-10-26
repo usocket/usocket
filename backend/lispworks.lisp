@@ -2,6 +2,9 @@
 
 (in-package :usocket)
 
+(eval-when (:load-toplevel :execute)
+  (setq *backend* :native))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require "comm")
 
