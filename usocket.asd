@@ -18,8 +18,8 @@
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (:split-sequence
-                 #+(and (or sbcl ecl) (not usocket-iolib)) :sb-bsd-sockets
-                 #+usocket-iolib :iolib)
+		 #+(and (or sbcl ecl) (not usocket-iolib)) :sb-bsd-sockets
+		 #+usocket-iolib :iolib)
     :components ((:file "package")
 		 (:module "vendor" :depends-on ("package")
 		  :components (#+mcl (:file "kqueue")
@@ -42,13 +42,13 @@
 			       #+mcl		(:file "mcl")
 			       #+mocl		(:file "mocl")
 			       #+scl		(:file "scl")
-                               #+usocket-iolib  (:file "iolib")))
-                 #-usocket-iolib
-                 (:file "option" :depends-on ("backend"))
-                 #+usocket-iolib
+			       #+usocket-iolib  (:file "iolib")))
+		 #-usocket-iolib
+		 (:file "option" :depends-on ("backend"))
+		 #+usocket-iolib
 		 (:module "backend" :depends-on ("condition")
-                  :components ((:file "iolib" :depends-on ("iolib-sockopt"))
-                               (:file "iolib-sockopt")))
+		  :components ((:file "iolib" :depends-on ("iolib-sockopt"))
+			       (:file "iolib-sockopt")))
 		 ))
 
 (defmethod perform ((op test-op) (c (eql (find-system :usocket))))

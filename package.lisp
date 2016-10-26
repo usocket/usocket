@@ -84,5 +84,9 @@
 
              #:insufficient-implementation ; conditions regarding usocket support level
              #:unsupported
-             #:unimplemented))
+             #:unimplemented
+
+             #:socket-server
+             #:*remote-host*
+             #:*remote-port*))
 ) ; unless
