@@ -14,7 +14,7 @@
     :name "usocket (client)"
     :author "Erik Enge & Erik Huelsmann"
     :maintainer "Chun Tian (binghe) & Hans Huebner"
-    :version "0.8.0-dev"
+    :version "0.8.0"
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (:split-sequence
