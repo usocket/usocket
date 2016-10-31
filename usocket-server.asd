@@ -7,7 +7,7 @@
 (defsystem #:usocket-server
     :name "usocket (server)"
     :author "Chun Tian (binghe)"
-    :version "0.8.0-dev"
+    :version "0.8.0"
     :licence "MIT"
     :description "Universal socket library for Common Lisp (server side)"
     :depends-on (:usocket :portable-threads)
