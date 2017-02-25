@@ -165,25 +165,25 @@
      . operation-not-permitted-error)
     (sb-bsd-sockets:protocol-not-supported-error
      . protocol-not-supported-error)
-    #-ecl
+    #-(or ecl clasp)
     (sb-bsd-sockets:unknown-protocol
      . protocol-not-supported-error)
     (sb-bsd-sockets:socket-type-not-supported-error
      . socket-type-not-supported-error)
     (sb-bsd-sockets:network-unreachable-error . network-unreachable-error)
     (sb-bsd-sockets:operation-timeout-error . timeout-error)
-    #-ecl
+    #-(or ecl clasp)
     (sb-sys:io-timeout . timeout-error)
     #+sbcl
     (sb-ext:timeout . timeout-error)
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
 
     ;; Nameservice errors: mapped to unknown-error
-    #-ecl
+    #-(or ecl clasp)
     (sb-bsd-sockets:no-recovery-error . ns-no-recovery-error)
-    #-ecl
+    #-(or ecl clasp)
     (sb-bsd-sockets:try-again-error . ns-try-again-condition)
-    #-ecl
+    #-(or ecl clasp)
     (sb-bsd-sockets:host-not-found-error . ns-host-not-found-error)))
 
 (defun handle-condition (condition &optional (socket nil))
@@ -267,7 +267,7 @@ happen. Use with care."
 		       (sockopt-tcp-nodelay-p
 			(fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
   (when deadline (unsupported 'deadline 'socket-connect))
-  #+ecl
+  #+(or ecl clasp)
   (when timeout (unsupported 'timeout 'socket-connect))
   (when (and nodelay-specified
              ;; 20080802: ECL added this function to its sockets
@@ -289,7 +289,7 @@ happen. Use with care."
          (socket (make-instance #+sbcl (if ipv6
                                            'sb-bsd-sockets::inet6-socket
                                            'sb-bsd-sockets:inet-socket)
-                                #+ecl 'sb-bsd-sockets:inet-socket
+                                #+(or ecl clasp) 'sb-bsd-sockets:inet-socket
                                 :type protocol
                                 :protocol (case protocol
                                             (:stream :tcp)
@@ -323,7 +323,7 @@ happen. Use with care."
 		  (if timeout
 		      (%with-timeout (timeout (error 'sb-ext:timeout)) (connect))
 		      (connect)))
-		#+(or ecl (and sbcl win32))
+		#+(or ecl clasp (and sbcl win32))
 		(sb-bsd-sockets:socket-connect socket remote port)
                 ;; Now that we're connected make the stream.
                 (setf (socket-stream usocket)
@@ -378,11 +378,11 @@ happen. Use with care."
          (ip #+sbcl (if (and local (not (eq host *wildcard-host*)))
                         local
                         (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any))
-             #+ecl (host-to-vector-quad host))
+             #+(or ecl clasp) (host-to-vector-quad host))
          (sock (make-instance #+sbcl (if ipv6
                                          'sb-bsd-sockets::inet6-socket
                                          'sb-bsd-sockets:inet-socket)
-                              #+ecl 'sb-bsd-sockets:inet-socket
+                              #+(or ecl clasp) 'sb-bsd-sockets:inet-socket
                               :type :stream
                               :protocol :tcp)))
     (handler-case
@@ -442,7 +442,7 @@ happen. Use with care."
   (with-mapped-conditions (usocket)
     (sb-bsd-sockets::socket-shutdown (socket usocket) :direction direction)))
 
-#+ecl
+#+(or ecl clasp)
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
   (let ((sock-fd (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
         (direction-flag (ecase direction
@@ -749,7 +749,7 @@ happen. Use with care."
 
 ) ; progn
 
-#+(and ecl (not win32))
+#+(and (or ecl clasp) (not win32))
 (progn
   (defun wait-for-input-internal (wl &key timeout)
     (with-mapped-conditions ()
@@ -772,7 +772,7 @@ happen. Use with care."
     (declare (ignore wl w)))
 ) ; progn
 
-#+(and ecl win32 (not ecl-bytecmp))
+#+(and (or ecl clasp) win32 (not ecl-bytecmp))
 (progn
   (defun maybe-wsa-error (rv &optional syscall)
     (unless (zerop rv)

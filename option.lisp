@@ -49,7 +49,7 @@
     (ccl:stream-input-timeout socket)
     #+cmu
     (lisp::fd-stream-timeout (socket-stream usocket))
-    #+ecl
+    #+(or ecl clasp)
     (sb-bsd-sockets:sockopt-receive-timeout socket)
     #+lispworks
     (get-socket-receive-timeout socket)
@@ -79,7 +79,7 @@
     #+cmu
     (setf (lisp::fd-stream-timeout (socket-stream usocket))
           (coerce timeout 'integer))
-    #+ecl
+    #+(or ecl clasp)
     (setf (sb-bsd-sockets:sockopt-receive-timeout socket) timeout)
     #+lispworks
     (set-socket-receive-timeout socket timeout)
@@ -111,7 +111,7 @@
     (ccl:stream-output-timeout socket)
     #+cmu
     (lisp::fd-stream-timeout (socket-stream usocket))
-    #+ecl
+    #+(or ecl clasp)
     (sb-bsd-sockets:sockopt-send-timeout socket)
     #+lispworks
     (get-socket-send-timeout socket)
@@ -141,7 +141,7 @@
     #+cmu
     (setf (lisp::fd-stream-timeout (socket-stream usocket))
           (coerce timeout 'integer))
-    #+ecl
+    #+(or ecl clasp)
     (setf (sb-bsd-sockets:sockopt-send-timeout socket) timeout)
     #+lispworks
     (set-socket-send-timeout socket timeout)
@@ -179,7 +179,7 @@
     () ; TODO
     #+mocl
     () ; unknown
-    #+(or ecl sbcl)
+    #+(or ecl sbcl clasp)
     (sb-bsd-sockets:sockopt-reuse-address socket)
     #+scl
     ())) ; TODO
@@ -205,7 +205,7 @@
     () ; TODO
     #+mocl
     () ; unknown
-    #+(or ecl sbcl)
+    #+(or ecl sbcl clasp)
     (setf (sb-bsd-sockets:sockopt-reuse-address socket) new-value)
     #+scl
     () ; TODO
@@ -228,7 +228,7 @@
     (int->bool (get-socket-option-broadcast socket))
     #+cmu
     () ; TODO
-    #+ecl
+    #+(or ecl clasp)
     () ; TODO
     #+lispworks
     () ; TODO
@@ -256,7 +256,7 @@
     (set-socket-option-broadcast socket (bool->int new-value))
     #+cmu
     () ; TODO
-    #+ecl
+    #+(or ecl clasp)
     () ; TODO
     #+lispworks
     () ; TODO
@@ -292,7 +292,7 @@
     (int->bool (get-socket-option-tcp-nodelay socket))
     #+cmu
     ()
-    #+ecl
+    #+(or ecl clasp)
     (sb-bsd-sockets::sockopt-tcp-nodelay socket)
     #+lispworks
     (int->bool (get-socket-tcp-nodelay socket))
@@ -325,7 +325,7 @@
     (set-socket-option-tcp-nodelay socket (bool->int new-value))
     #+cmu
     ()
-    #+ecl
+    #+(or ecl clasp)
     (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) new-value)
     #+lispworks
     (progn
