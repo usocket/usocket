@@ -1,22 +1,21 @@
-#+clasp
+#-clasp
 (progn
   #-:wsock
   (ffi:clines
    "#include <errno.h>"
    "#include <sys/socket.h>"
    "#include <unistd.h>")
-  #+(and (not clasp) :wsock)
+  #+:wsock
   (ffi:clines
    "#ifndef FD_SETSIZE"
    "#define FD_SETSIZE 1024"
    "#endif"
    "#include <winsock2.h>")
-  #-clasp
   (ffi:clines
    #+:msvc "#include <time.h>"
    #-:msvc "#include <sys/time.h>"
-   "#include <ecl/ecl-inl.h>")
-
+   "#include <ecl/ecl-inl.h>"))
+(progn
   #-clasp
   (defun cerrno ()
     (ffi:c-inline () () :int

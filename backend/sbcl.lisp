@@ -442,7 +442,7 @@ happen. Use with care."
   (with-mapped-conditions (usocket)
     (sb-bsd-sockets::socket-shutdown (socket usocket) :direction direction)))
 
-#+(or ecl clasp)
+#+ecl
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
   (let ((sock-fd (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
         (direction-flag (ecase direction
@@ -450,6 +450,15 @@ happen. Use with care."
                           (:output 1))))
     (unless (zerop (ffi:c-inline (sock-fd direction-flag) (:int :int) :int
                                "shutdown(#0, #1)" :one-liner t))
+      (error (map-errno-error (cerrno))))))
+
+#+clasp
+(defmethod socket-shutdown ((usocket stream-usocket) direction)
+  (let ((sock-fd (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
+        (direction-flag (ecase direction
+                          (:input 0)
+                          (:output 1))))
+    (unless (zerop (sockets-internal:shutdown sock-fd direction-flag))
       (error (map-errno-error (cerrno))))))
 
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
