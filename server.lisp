@@ -1,6 +1,3 @@
-;;;; $Id$
-;;;; $URL$
-
 (in-package :usocket)
 
 (defun socket-server (host port function &optional arguments
@@ -32,7 +29,7 @@
                                   :timeout timeout
                                   :max-buffer-size max-buffer-size)))))
       (if in-new-thread
-	  (values (spawn-thread (or name "USOCKET Server") #'real-call) socket)
+	  (values (portable-threads:spawn-thread (or name "USOCKET Server") #'real-call) socket)
 	  (real-call)))))
 
 (defvar *remote-host*)
@@ -98,7 +95,7 @@
                                        `(,socket ,@(when element-type `(:element-type ,element-type)))))
                  (client-stream (socket-stream client-socket)))
             (if multi-threading
-                (apply #'spawn-thread "USOCKET Client" real-function client-socket arguments)
+                (apply #'portable-threads:spawn-thread "USOCKET Client" real-function client-socket arguments)
               (prog1 (apply real-function client-socket arguments)
                 (close client-stream)
                 (socket-close client-socket)))

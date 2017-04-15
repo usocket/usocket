@@ -1,13 +1,12 @@
 ;;;; See the LICENSE file for licensing information.
 
+(unless (find-package :usocket) ; do not redefine packages
 (defpackage :usocket
-  (:use :common-lisp #+abcl :java)
+  (:use :common-lisp :split-sequence #+abcl :java)
   (:export   #:*version*
+             #:*backend*
              #:*wildcard-host*
              #:*auto-port*
-
-             #:*remote-host* ; special variables (udp)
-             #:*remote-port*
 
              #:+max-datagram-packet-size+
 
@@ -25,7 +24,6 @@
 
              #:socket-send    ; udp function (send)
              #:socket-receive ; udp function (receive)
-             #:socket-server  ; udp server
              #:socket-option  ; 0.6.x
 
              #:wait-for-input ; waiting for input-ready state (select() like)
@@ -86,4 +84,9 @@
 
              #:insufficient-implementation ; conditions regarding usocket support level
              #:unsupported
-             #:unimplemented))
+             #:unimplemented
+
+             #:socket-server
+             #:*remote-host*
+             #:*remote-port*))
+) ; unless

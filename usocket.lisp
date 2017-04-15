@@ -2,6 +2,8 @@
 
 (in-package :usocket)
 
+(defvar *backend*) ; either :native or :iolib
+
 (defparameter *wildcard-host* #(0 0 0 0)
   "Hostname to pass when all interfaces in the current system are to
   be bound.  If this variable is passed to socket-listen, IPv6 capable
@@ -683,3 +685,10 @@ streams to be created by `socket-accept'.  `reuseaddress' is supported for
 backward compatibility (but deprecated); when both `reuseaddress' and
 `reuse-address' have been specified, the latter takes precedence.
 ")
+
+;;; Small utility functions mapping true/false to 1/0, moved here from option.lisp
+
+(proclaim '(inline bool->int int->bool))
+
+(defun bool->int (bool) (if bool 1 0))
+(defun int->bool (int) (= 1 int))

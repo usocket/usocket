@@ -4,11 +4,6 @@
 
 (in-package :usocket)
 
-;;; Small utility functions
-(declaim (inline bool->int) (inline int->bool))
-(defun bool->int (bool) (if bool 1 0))
-(defun int->bool (int) (= 1 int))
-
 ;;; Interface definition
 
 (defgeneric socket-option (socket option &key)
@@ -275,10 +270,15 @@
     () ; TODO
     new-value))
 
-;;; Socket option: TCP-NO-DELAY (TCP_NODELAY), for TCP client
+;;; Socket option: TCP-NODELAY (TCP_NODELAY), for TCP client
 
 (defmethod socket-option ((usocket stream-usocket)
                           (option (eql :tcp-no-delay)) &key)
+  (declare (ignore option))
+  (socket-option usocket :tcp-nodelay))
+
+(defmethod socket-option ((usocket stream-usocket)
+                          (option (eql :tcp-nodelay)) &key)
   (declare (ignorable option))
   (let ((socket (socket usocket)))
     (declare (ignorable socket))
@@ -295,7 +295,7 @@
     #+ecl
     (sb-bsd-sockets::sockopt-tcp-nodelay socket)
     #+lispworks
-    () ; TODO
+    (int->bool (get-socket-tcp-nodelay socket))
     #+mcl
     () ; TODO
     #+mocl
@@ -307,6 +307,11 @@
 
 (defmethod (setf socket-option) (new-value (usocket stream-usocket)
                                            (option (eql :tcp-no-delay)) &key)
+  (declare (ignore option))
+  (setf (socket-option usocket :tcp-nodelay) new-value))
+
+(defmethod (setf socket-option) (new-value (usocket stream-usocket)
+                                           (option (eql :tcp-nodelay)) &key)
   (declare (type boolean new-value) (ignorable new-value option))
   (let ((socket (socket usocket)))
     (declare (ignorable socket))
@@ -323,7 +328,11 @@
     #+ecl
     (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) new-value)
     #+lispworks
-    (comm::set-socket-tcp-nodelay socket new-value)
+    (progn
+      #-lispworks4
+      (comm::set-socket-tcp-nodelay socket new-value)
+      #+lispworks4
+      (set-socket-tcp-nodelay socket (bool->int new-value)))
     #+mcl
     () ; TODO
     #+mocl

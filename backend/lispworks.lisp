@@ -2,6 +2,9 @@
 
 (in-package :usocket)
 
+(eval-when (:load-toplevel :execute)
+  (setq *backend* :native))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require "comm")
 
@@ -251,6 +254,34 @@
                 len)
     (float (/ (fli:dereference timeout) 1000))))
 
+#+lispworks4
+(defun set-socket-tcp-nodelay (socket-fd new-value)
+  "Set socket option: TCP_NODELAY, argument is a fixnum (0 or 1)"
+  (declare (type integer socket-fd)
+           (type (integer 0 1) new-value))
+  (fli:with-dynamic-foreign-objects ((zero-or-one :int))
+    (setf (fli:dereference zero-or-one) new-value)
+    (when (zerop (comm::setsockopt socket-fd
+                                   comm::*sockopt_sol_socket*
+                                   comm::*sockopt_tcp_nodelay*
+                                   (fli:copy-pointer zero-or-one
+                                                     :type '(:pointer #+win32 :char #-win32 :void))
+                                   (fli:size-of :int)))
+        new-value)))
+
+(defun get-socket-tcp-nodelay (socket-fd)
+  "Get socket option: TCP_NODELAY, return value is a fixnum (0 or 1)"
+  (declare (type integer socket-fd))
+  (fli:with-dynamic-foreign-objects ((zero-or-one :int)
+                                     (len :int))
+    (if (zerop (comm::getsockopt socket-fd
+                                 comm::*sockopt_sol_socket*
+                                 comm::*sockopt_tcp_nodelay*
+                                 (fli:copy-pointer zero-or-one
+                                                   :type '(:pointer #+win32 :char #-win32 :void))
+                                 len))
+        zero-or-one 0))) ; on error, return 0
+
 (defun initialize-dynamic-sockaddr (hostname service protocol &aux (original-hostname hostname))
   (declare (ignorable original-hostname))
   #+(or lispworks4 lispworks5 lispworks6.0)
@@ -264,7 +295,7 @@
             comm::*socket_af_inet*
             server-addr
             (fli:pointer-element-size server-addr)))
-  #-(or lispworks4 lispworks5 lispworks6.0)
+  #-(or lispworks4 lispworks5 lispworks6.0) ; version>=6.1
   (progn
     (when (stringp hostname)
       (setq hostname (comm:string-ip-address hostname))
@@ -356,9 +387,8 @@
           (error "cannot create socket"))))))
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'base-char)
-                       timeout deadline (nodelay t nodelay-specified)
+                       timeout deadline (nodelay t)
                        local-host local-port)
-
   ;; What's the meaning of this keyword?
   (when deadline
     (unimplemented 'deadline 'socket-connect))
@@ -366,11 +396,6 @@
   #+(and lispworks4 (not lispworks4.4)) ; < 4.4.5
   (when timeout
     (unsupported 'timeout 'socket-connect :minimum "LispWorks 4.4.5"))
-
-  #+(or lispworks4 lispworks5.0) ; < 5.1
-  (when (and nodelay-specified 
-             (not (eq nodelay :if-supported)))
-    (unsupported 'nodelay 'socket-connect :minimum "LispWorks 5.1"))
 
   #+lispworks4
   (when local-host
@@ -383,7 +408,7 @@
     (:stream
      (let ((hostname (host-to-hostname host))
            (stream))
-       (setf stream
+       (setq stream
              (with-mapped-conditions ()
                (comm:open-tcp-stream hostname port
                                      :element-type element-type
@@ -397,6 +422,15 @@
                                      #-(or lispworks4 lispworks5.0) ; >= 5.1
                                      #-(or lispworks4 lispworks5.0)
                                      :nodelay nodelay)))
+
+       ;; Then handle `nodelay' separately for older versions <= 5.0
+       #+(or lispworks4 lispworks5.0)
+       (when (and stream nodelay)
+         (#+lispworks4 set-socket-tcp-nodelay
+          #+lispworks5.0 comm::set-socket-tcp-nodelay
+           (comm:socket-stream-socket stream)
+           (bool->int nodelay))) ; ":if-supported" maps to 1 too.
+
        (if stream
            (make-stream-socket :socket (comm:socket-stream-socket stream)
                                :stream stream)
@@ -654,6 +688,9 @@
   (nth-value 1 (get-peer-name usocket)))
 
 (defun lw-hbo-to-vector-quad (hbo)
+  #+(or lispworks4 lispworks5 lispworks6.0)
+  (hbo-to-vector-quad hbo)
+  #-(or lispworks4 lispworks5 lispworks6.0) ; version>= 6.1
   (if (comm:ipv6-address-p hbo)
       (ipv6-host-to-vector (comm:ipv6-address-string hbo))
     (hbo-to-vector-quad hbo)))

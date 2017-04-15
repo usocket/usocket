@@ -4,6 +4,9 @@
 
 (in-package :usocket)
 
+(eval-when (:load-toplevel :execute)
+  (setq *backend* :native))
+
 #+sbcl
 (progn
   #-win32
@@ -366,8 +369,10 @@ happen. Use with care."
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
-  (let* ((local (when host
+  (let* (#+sbcl
+	 (local (when host
                   (car (get-hosts-by-name (host-to-hostname host)))))
+	 #+sbcl
          (ipv6 (and local (= 16 (length local))))
          (reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
          (ip #+sbcl (if (and local (not (eq host *wildcard-host*)))
@@ -460,6 +465,7 @@ happen. Use with care."
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length
 			   &key (element-type '(unsigned-byte 8)))
+  #+sbcl
   (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
 		   (integer 0)                          ; size
 		   (simple-array (unsigned-byte 8) (*)) ; host
@@ -747,12 +753,11 @@ happen. Use with care."
 (progn
   (defun wait-for-input-internal (wl &key timeout)
     (with-mapped-conditions ()
-      (multiple-value-bind
-            (secs usecs)
+      (multiple-value-bind (secs usecs)
           (split-timeout (or timeout 1))
-        (multiple-value-bind
-              (result-fds err)
+        (multiple-value-bind (result-fds err)
             (read-select wl (when timeout secs) usecs)
+	  (declare (ignore result-fds))
           (unless (null err)
             (error (map-errno-error err)))))))
 

@@ -1,6 +1,3 @@
-;;;; $Id$
-;;;; $URL$
-
 ;;;; See the LICENSE file for licensing information.
 
 (in-package :cl-user)
