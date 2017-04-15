@@ -231,7 +231,14 @@
   (declare (ignore wait-list)))
 
 (defun %add-waiter (wait-list waiter)
-  (push (cons (socket waiter) NIL) (wait-list-%wait wait-list)))
+  ;; clisp's #'socket-status takes a list whose elts look either like,
+  ;; (socket-stream direction . x) or like,
+  ;; (socket-server . x)
+  ;; and it replaces the x's.
+  (push (cons (socket waiter)
+              (cond ((stream-usocket-p waiter) (cons NIL NIL))
+                    (t NIL)))
+        (wait-list-%wait wait-list)))
 
 (defun %remove-waiter (wait-list waiter)
   (setf (wait-list-%wait wait-list)
@@ -243,16 +250,17 @@
         (secs musecs)
         (split-timeout (or timeout 1))
       (dolist (x (wait-list-%wait wait-list))
-        (setf (cdr x) :INPUT))
+        (when (consp (cdr x)) ;it's a socket-stream not socket-server
+          (setf (cadr x) :INPUT)))
       (let* ((request-list (wait-list-%wait wait-list))
              (status-list (if timeout
                               (socket:socket-status request-list secs musecs)
                             (socket:socket-status request-list)))
              (sockets (wait-list-waiters wait-list)))
         (do* ((x (pop sockets) (pop sockets))
-              (y (pop status-list) (pop status-list)))
+              (y (cdr (last (pop status-list))) (cdr (last (pop status-list)))))
              ((null x))
-          (when (member y '(T :INPUT))
+          (when (member y '(T :INPUT :EOF))
             (setf (state x) :READ)))
         wait-list))))
 
