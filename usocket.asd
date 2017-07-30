@@ -11,7 +11,7 @@
 (pushnew :usocket-iolib *features*)
 
 (defsystem #:usocket
-    :name "usocket (client)"
+    :name "usocket (client, with server symbols)"
     :author "Erik Enge & Erik Huelsmann"
     :maintainer "Chun Tian (binghe) & Hans Huebner"
     :version "0.8.0"
@@ -26,14 +26,14 @@
 			       #+mcl (:file "OpenTransportUDP")))
 		 (:file "usocket" :depends-on ("vendor"))
 		 (:file "condition" :depends-on ("usocket"))
-                 #-usocket-iolib
+		 #-usocket-iolib
 		 (:module "backend" :depends-on ("condition")
 		  :components (#+abcl		(:file "abcl")
 			       #+(or allegro cormanlisp)
 						(:file "allegro")
 			       #+clisp		(:file "clisp")
 			       #+(or openmcl clozure)
-                                                (:file "openmcl")
+						(:file "openmcl")
 			       #+clozure	(:file "clozure" :depends-on ("openmcl"))
 			       #+cmu		(:file "cmucl")
 			       #+(or sbcl ecl)	(:file "sbcl")
