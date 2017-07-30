@@ -1,6 +1,8 @@
 0.8.0:
 
 * New feature: IOlib backend (all usocket features are supported when IOlib is available in your platform).
+* Bugfix: [CLISP] fixed issues in server sockets and error handling. (patch from @vibs29, #28, #29)
+* Bugfix: [SBCL, ECL] Fix wait-for-input on Windows SBCL and ECL. (patch from Stas Boukarev, #30)
 
 0.7.0: (Oct 25, 2016)
 
