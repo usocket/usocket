@@ -329,9 +329,9 @@
     (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) new-value)
     #+lispworks
     (progn
-      #-lispworks4
+      #-(or lispworks4 lispworks5.0)
       (comm::set-socket-tcp-nodelay socket new-value)
-      #+lispworks4
+      #+(or lispworks4 lispworks5.0)
       (set-socket-tcp-nodelay socket (bool->int new-value)))
     #+mcl
     () ; TODO
