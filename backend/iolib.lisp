@@ -37,7 +37,7 @@
 	   (socket (apply #'iolib:make-socket
 			  `(:type ,protocol
 			    :address-family :internet
-			    :ipv6 ipv6
+			    :ipv6 ,ipv6
 			    :connect ,(if (eq protocol :stream) :active
 					(if (and host port) :active
 					  :passive))
@@ -76,8 +76,8 @@
 			 :backlog backlog
 			 :reuse-address (or reuse-address reuseaddress)))))
 
-(defmethod socket-accept ((socket stream-server-usocket) &key element-type)
-  (with-mapped-condtitions (usocket)
+(defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
+  (with-mapped-conditions (usocket)
     (let ((socket (iolib:accept-connection (socket usocket))))
       (make-stream-socket :socket socket :stream socket))))
 
