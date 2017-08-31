@@ -254,7 +254,7 @@
                 len)
     (float (/ (fli:dereference timeout) 1000))))
 
-#+lispworks4
+#+(and lispworks4 lispworks5.0)
 (defun set-socket-tcp-nodelay (socket-fd new-value)
   "Set socket option: TCP_NODELAY, argument is a fixnum (0 or 1)"
   (declare (type integer socket-fd)
@@ -426,8 +426,7 @@
        ;; Then handle `nodelay' separately for older versions <= 5.0
        #+(or lispworks4 lispworks5.0)
        (when (and stream nodelay)
-         (#+lispworks4 set-socket-tcp-nodelay
-          #+lispworks5.0 comm::set-socket-tcp-nodelay
+         (set-socket-tcp-nodelay
            (comm:socket-stream-socket stream)
            (bool->int nodelay))) ; ":if-supported" maps to 1 too.
 
