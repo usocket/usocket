@@ -1,3 +1,5 @@
+(in-package :usocket)
+
 #-clasp
 (progn
   #-:wsock
@@ -59,7 +61,7 @@
   (defun fdset-fd-isset (fdset fd)
     (ffi:c-inline (fdset fd) (:pointer-void :fixnum) :bool
 		  "FD_ISSET(#1,(fd_set*)#0)" :one-liner t))
-  #+clasp(defun fdset-isset (fdset fd) (sockets-internal:fdset-isset fd fdset))
+  #+clasp(defun fdset-fd-isset (fdset fd) (sockets-internal:fdset-isset fd fdset))
 
   (declaim (inline cerrno
                    fd-setsize
