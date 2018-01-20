@@ -652,7 +652,7 @@ stream associated with the socket.  The default is 'character.
 If this parameter is omitted, the behaviour is inherited from the
 CL implementation (in most cases, Nagle's algorithm is
 enabled by default, but for example in ACL it is disabled).
-If the parmeter is specified, one of these three values is possible:
+If the parameter is specified, one of these three values is possible:
   T - Disable Nagle's algorithm; signals an UNSUPPORTED
       condition if the implementation does not support explicit
       manipulation with that option.
