@@ -18,8 +18,10 @@
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (:split-sequence
-		 #+(and (or sbcl ecl) (not usocket-iolib)) :sb-bsd-sockets
-		 #+usocket-iolib :iolib)
+		 #+(and (or sbcl ecl)
+			(not usocket-iolib)) :sb-bsd-sockets
+		 #+usocket-iolib :iolib/sockets
+		 #+usocket-iolib :iolib/multiplex)
     :components ((:file "package")
 		 (:module "vendor" :depends-on ("package")
 		  :components (#+mcl (:file "kqueue")

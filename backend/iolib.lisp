@@ -34,7 +34,7 @@
 		     (car (get-hosts-by-name (host-to-hostname local-host)))))
 	   (ipv6 (or (and remote (= 16 (length remote)))
 		     (and local (= 16 (length local)))))
-	   (socket (apply #'iolib:make-socket
+	   (socket (apply #'iolib/sockets:make-socket
 			  `(:type ,protocol
 			    :address-family :internet
 			    :ipv6 ,ipv6
@@ -56,11 +56,14 @@
   (close (socket usocket)))
 
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
-  (apply #'iolib:shutdown
-	 `(,(socket usocket) ,@(case direction
-				 (:input '(:read t))
-				 (:output '(:write t))
-				 (:io '(:read t :write t))))))
+  (with-mapped-conditions ()
+    (case direction
+      (:input
+       (iolib/sockets:shutdown (socket usocket) :read t))
+      (:output
+       (iolib/sockets:shutdown (socket usocket) :write t))
+      (t ; :io by default
+       (iolib/sockets:shutdown (socket usocket) :read t :write t)))))
 
 (defun socket-listen (host port
                            &key reuseaddress
@@ -69,29 +72,29 @@
                            (element-type 'character))
   (with-mapped-conditions ()
     (make-stream-server-socket
-      (iolib:make-socket :connect :passive
-			 :address-family :internet
-			 :local-host host
-			 :local-port port
-			 :backlog backlog
-			 :reuse-address (or reuse-address reuseaddress)))))
+      (iolib/sockets:make-socket :connect :passive
+				 :address-family :internet
+				 :local-host host
+				 :local-port port
+				 :backlog backlog
+				 :reuse-address (or reuse-address reuseaddress)))))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
   (with-mapped-conditions (usocket)
-    (let ((socket (iolib:accept-connection (socket usocket))))
+    (let ((socket (iolib/sockets:accept-connection (socket usocket))))
       (make-stream-socket :socket socket :stream socket))))
 
 (defmethod get-local-address ((usocket usocket))
-  (iolib:local-host (socket usocket)))
+  (iolib/sockets:local-host (socket usocket)))
 
 (defmethod get-peer-address ((usocket stream-usocket))
-  (iolib:remote-host (socket usocket)))
+  (iolib/sockets:remote-host (socket usocket)))
 
 (defmethod get-local-port ((usocket usocket))
-  (iolib:local-port (socket usocket)))
+  (iolib/sockets:local-port (socket usocket)))
 
 (defmethod get-peer-port ((usocket stream-usocket))
-  (iolib:remote-port (socket usocket)))
+  (iolib/sockets:remote-port (socket usocket)))
 
 (defmethod get-local-name ((usocket usocket))
   (values (get-local-address usocket)
@@ -102,14 +105,16 @@
           (get-peer-port usocket)))
 
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
-  (iolib:send-to (socket usocket) buffer :start offset :end (+ offset size)
-		 :remote-host host :remote-port port))
+  (iolib/sockets:send-to (socket usocket) buffer
+			 :start offset :end (+ offset size)
+			 :remote-host host :remote-port port))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key start end)
-  (iolib:receive-from (socket usocket) :buffer buffer :size length :start start :end end))
+  (iolib/sockets:receive-from (socket usocket)
+			      :buffer buffer :size length :start start :end end))
 
 (defun get-hosts-by-name (name)
-  (iolib:lookup-hostname name))
+  (iolib/sockets:lookup-hostname name))
 
 (defun %setup-wait-list (wait-list)
   )
