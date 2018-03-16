@@ -44,8 +44,7 @@
 			       #+mcl		(:file "mcl")
 			       #+mocl		(:file "mocl")
 			       #+scl		(:file "scl")
-			       #+genera		(:file "genera")
-			       #+usocket-iolib  (:file "iolib")))
+			       #+genera		(:file "genera")))
 		 #-usocket-iolib
 		 (:file "option" :depends-on ("backend"))
 		 #+usocket-iolib
