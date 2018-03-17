@@ -1,6 +1,3 @@
-;;;; $Id$
-;;;; $URL$
-
 ;;;; See LICENSE for licensing information.
 
 ;;;; Usage: (usoct:run-usocket-tests) or (usoct:do-tests)

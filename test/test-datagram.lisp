@@ -1,3 +1,5 @@
+;;;; See LICENSE for licensing information.
+
 (in-package :usocket-test)
 
 (defvar *echo-server*)
