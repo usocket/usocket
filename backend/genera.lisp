@@ -1,5 +1,9 @@
 ;;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: USOCKET; Base: 10 -*-
 
+;;;; See LICENSE for licensing information.
+
+(in-package :usocket)
+
 (defclass genera-socket ()
     ((foreign-address :initform 0 :initarg :foreign-address :accessor gs-foreign-address)
      (foreign-port :initform 0 :initarg :foreign-port :accessor gs-foreign-port)

@@ -109,6 +109,7 @@
 			 :start offset :end (+ offset size)
 			 :remote-host host :remote-port port))
 
+;; TODO: check the return values structure
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key start end)
   (iolib/sockets:receive-from (socket usocket)
 			      :buffer buffer :size length :start start :end end))
@@ -117,13 +118,80 @@
   (iolib/sockets:lookup-hostname name))
 
 (defun %setup-wait-list (wait-list)
-  )
+  (setf (wait-list-%wait wait-list)
+	(make-instance 'iolib/multiplex:event-base)))
+
+(defun make-usocket-read-handler (usocket disconnector)
+  (lambda (fd event exception)
+    (declare (ignore fd event exception))
+    (handler-case
+	(if (eq (state usocket) :write)
+	    (setf (state usocket) :read-write)
+	  (setf (state usocket) :read))
+      (end-of-file ()
+	(funcall disconnector :close)))))
+
+(defun make-usocket-write-handler (usocket disconnector)
+  (lambda (fd event exception)
+    (declare (ignore fd event exception))
+    (handler-case
+	(if (eq (state usocket) :read)
+	    (setf (state usocket) :read-write)
+	  (setf (state usocket) :write))
+      (end-of-file ()
+	(funcall disconnector :close))
+      (iolib/streams:hangup ()
+	(funcall disconnector :close)))))
+
+(defun make-usocket-disconnector (event-base usocket)
+  (lambda (&rest events)
+    (let* ((socket (socket usocket))
+	   (fd (iolib/sockets:socket-os-fd socket)))
+      (if (not (intersection '(:read :write :error) events))
+	  (iolib/multiplex:remove-fd-handlers event-base fd :read t :write t :error t)
+	(progn
+	  (when (member :read events)
+	    (iolib/multiplex:remove-fd-handlers event-base fd :read t))
+	  (when (member :write events)
+	    (iolib/multiplex:remove-fd-handlers event-base fd :write t))
+	  (when (member :error events)
+	    (iolib/multiplex:remove-fd-handlers event-base fd :error t))))
+      ;; and finally if were asked to close the socket, we do so here
+      (when (member :close events)
+	(close socket :abort t)))))
 
 (defun %add-waiter (wait-list waiter)
-  )
+  (let ((event-base (wait-list-%wait wait-list)))
+    ;; reset socket state
+    (setf (state waiter) nil)
+    ;; set I/O handlers
+    (iolib/multiplex:set-io-handler
+      event-base
+      (iolib/sockets:socket-os-fd (socket waiter))
+      :read (make-usocket-read-handler waiter
+				       (make-usocket-disconnector event-base waiter)))
+    (iolib/multiplex:set-io-handler
+      event-base
+      (iolib/sockets:socket-os-fd (socket waiter))
+      :write (make-usocket-write-handler waiter
+					 (make-usocket-disconnector event-base waiter)))))
 
 (defun %remove-waiter (wait-list waiter)
-  )
+  (let ((event-base (wait-list-%wait wait-list)))
+    (iolib/multiplex:remove-fd-handlers event-base
+					(iolib/sockets:socket-os-fd (socket waiter))
+					:read t
+					:write t
+					:error t)))
 
+;; NOTE: `wait-list-waiters` returns all usockets
 (defun wait-for-input-internal (wait-list &key timeout)
-  )
+  (let ((event-base (wait-list-%wait wait-list)))
+    (handler-case
+	(progn
+	  (iolib/multiplex:event-dispatch event-base
+					  :timeout timeout)
+	  ;; close the event-base after use
+	  (close event-base))
+      (iolib/streams:hangup ())
+      (end-of-file ()))))
