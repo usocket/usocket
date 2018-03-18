@@ -2,8 +2,7 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :iolib))
+(defparameter *backend* :iolib)
 
 (defparameter +iolib-error-map+
   '((:address-in-use . address-in-use-error)

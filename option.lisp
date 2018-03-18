@@ -4,6 +4,9 @@
 
 (in-package :usocket)
 
+;; put here because option.lisp is for native backend only
+(defparameter *backend* :native)
+
 ;;; Interface definition
 
 (defgeneric socket-option (socket option &key)

@@ -2,9 +2,6 @@
 
 (in-package :usocket)
 
-(defvar *backend* :native
-  "either :native or :iolib")
-
 (defparameter *wildcard-host* #(0 0 0 0)
   "Hostname to pass when all interfaces in the current system are to
   be bound.  If this variable is passed to socket-listen, IPv6 capable
