@@ -1,12 +1,17 @@
 ;;;; See the LICENSE file for licensing information.
 
-(unless (find-package :usocket) ; do not redefine packages
 (defpackage :usocket
-  (:use :common-lisp :split-sequence #+abcl :java)
+  (:use #-genera :common-lisp
+        #+genera :future-common-lisp
+	#+abcl :java
+	:split-sequence)
   (:export   #:*version*
-             #:*backend*
              #:*wildcard-host*
              #:*auto-port*
+
+	     ;; 0.8.0 additions
+             #:*backend*
+	     #:*default-event-base*
 
              #:+max-datagram-packet-size+
 
@@ -89,4 +94,3 @@
              #:socket-server
              #:*remote-host*
              #:*remote-port*))
-) ; unless

@@ -117,9 +117,13 @@
 (defun get-hosts-by-name (name)
   (iolib/sockets:lookup-hostname name))
 
+(defvar *default-event-base* nil)
+
 (defun %setup-wait-list (wait-list)
   (setf (wait-list-%wait wait-list)
-	(make-instance 'iolib/multiplex:event-base)))
+	(or *default-event-base*
+	    ;; iolib/multiplex:*default-multiplexer* is used here
+	    (make-instance 'iolib/multiplex:event-base))))
 
 (defun make-usocket-read-handler (usocket disconnector)
   (lambda (fd event exception)
@@ -206,10 +210,10 @@
 (defun wait-for-input-internal (wait-list &key timeout)
   (let ((event-base (wait-list-%wait wait-list)))
     (handler-case
-	(progn
-	  (iolib/multiplex:event-dispatch event-base
-					  :timeout timeout)
-	  ;; close the event-base after use
-	  (close event-base))
+	(iolib/multiplex:event-dispatch event-base
+					:timeout timeout)
       (iolib/streams:hangup ())
-      (end-of-file ()))))
+      (end-of-file ()))
+    ;; close the event-base after use
+    (unless (eq event-base *default-event-base*)
+      (close event-base))))
