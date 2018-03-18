@@ -2,9 +2,6 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   #-ffi
   (warn "This image doesn't contain FFI package, GET-HOST-NAME won't work.")

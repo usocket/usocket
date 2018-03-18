@@ -2,9 +2,6 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
   (declare (ignore socket))

@@ -2,7 +2,8 @@
 
 (in-package :usocket)
 
-(defvar *backend*) ; either :native or :iolib
+(defvar *backend* :native
+  "either :native or :iolib")
 
 (defparameter *wildcard-host* #(0 0 0 0)
   "Hostname to pass when all interfaces in the current system are to

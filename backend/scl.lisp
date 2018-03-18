@@ -2,9 +2,6 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 (defparameter +scl-error-map+
   (append +unix-errno-condition-map+
           +unix-errno-error-map+))

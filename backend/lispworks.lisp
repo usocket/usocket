@@ -2,14 +2,11 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require "comm")
 
   #+lispworks3
-  (error "LispWorks 3 is not supported by USOCKET any more."))
+  (error "LispWorks 3 is not supported"))
 
 ;;; ---------------------------------------------------------------------------
 ;;;  Warn if multiprocessing is not running on Lispworks

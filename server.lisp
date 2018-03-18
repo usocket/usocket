@@ -1,3 +1,5 @@
+;;;; See LICENSE for licensing information.
+
 (in-package :usocket)
 
 (defun socket-server (host port function &optional arguments
