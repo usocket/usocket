@@ -1,7 +1,7 @@
 0.8.0: (to be released)
 
-* New feature: Symbolics Open Genera (Lisp machine) backend (patch from @Symbolics, #33)
-* New feature: IOlib backend (all usocket features are supported when IOlib is available in your platform).
+* New backend: IOlib.
+* New backend: Symbolics Open Genera (Lisp machine) (patch from @Symbolics, #33)
 * Bugfix: [CLISP] fixed issues in server sockets and error handling. (patch from @vibs29, #28, #29)
 * Bugfix: [SBCL, ECL] Fix wait-for-input on Windows SBCL and ECL. (patch from Stas Boukarev, #30)
 * Bugfix: [LW] fixed non-existing system calls in LW 5.0 (comm::socket-set-tcp-nodelay)

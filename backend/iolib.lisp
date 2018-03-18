@@ -143,6 +143,16 @@
       (iolib/streams:hangup ()
 	(funcall disconnector :close)))))
 
+(defun make-usocket-error-handler (usocket disconnector)
+  (lambda (fd event exception)
+    (declare (ignore fd event exception))
+    (handler-case
+	(setf (state usocket) nil)
+      (end-of-file ()
+	(funcall disconnector :close))
+      (iolib/streams:hangup ()
+	(funcall disconnector :close)))))
+
 (defun make-usocket-disconnector (event-base usocket)
   (lambda (&rest events)
     (let* ((socket (socket usocket))
@@ -168,13 +178,21 @@
     (iolib/multiplex:set-io-handler
       event-base
       (iolib/sockets:socket-os-fd (socket waiter))
-      :read (make-usocket-read-handler waiter
-				       (make-usocket-disconnector event-base waiter)))
+      :read
+      (make-usocket-read-handler waiter
+				 (make-usocket-disconnector event-base waiter)))
     (iolib/multiplex:set-io-handler
       event-base
       (iolib/sockets:socket-os-fd (socket waiter))
-      :write (make-usocket-write-handler waiter
-					 (make-usocket-disconnector event-base waiter)))))
+      :write
+      (make-usocket-write-handler waiter
+				  (make-usocket-disconnector event-base waiter)))
+    ;; set error handler
+    (iolib/multiplex:set-error-handler
+      event-base
+      (iolib/sockets:socket-os-fd (socket waiter))
+      (make-usocket-error-handler waiter
+				  (make-usocket-disconnector event-base waiter)))))
 
 (defun %remove-waiter (wait-list waiter)
   (let ((event-base (wait-list-%wait wait-list)))
