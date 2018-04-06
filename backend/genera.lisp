@@ -235,7 +235,7 @@
   (declare (ignore wait-list waiter)))
 
 (defun %remove-waiter (wait-list waiter)
-  (push (socket waiter) (wait-list-%wait wait-list)))
+  (declare (ignore wait-list waiter)))
 
 (defun wait-for-input-internal (wait-list &key timeout)
   (with-mapped-conditions ()
