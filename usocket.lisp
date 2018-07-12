@@ -10,7 +10,8 @@
 (defparameter *auto-port* 0
   "Port number to pass when an auto-assigned port number is wanted.")
 
-(defparameter *version* #.(asdf:component-version (asdf:find-system :usocket)))
+(defparameter *version* #.(asdf:component-version (asdf:find-system :usocket))
+  "usocket version string")
 
 (defconstant +max-datagram-packet-size+ 65507
   "The theoretical maximum amount of data in a UDP datagram.
@@ -425,7 +426,7 @@ parse-integer) on each of the string elements."
                (eql char #\.)))
          string))
 
-(defun hbo-to-dotted-quad (integer)
+(defun hbo-to-dotted-quad (integer) ; exported
   "Host-byte-order integer to dotted-quad string conversion utility."
   (let ((first (ldb (byte 8 24) integer))
         (second (ldb (byte 8 16) integer))
@@ -433,7 +434,7 @@ parse-integer) on each of the string elements."
         (fourth (ldb (byte 8 0) integer)))
     (format nil "~A.~A.~A.~A" first second third fourth)))
 
-(defun hbo-to-vector-quad (integer)
+(defun hbo-to-vector-quad (integer) ; exported
   "Host-byte-order integer to dotted-quad string conversion utility."
   (let ((first (ldb (byte 8 24) integer))
         (second (ldb (byte 8 16) integer))
@@ -441,18 +442,19 @@ parse-integer) on each of the string elements."
         (fourth (ldb (byte 8 0) integer)))
     (vector first second third fourth)))
 
-(defun vector-quad-to-dotted-quad (vector)
+(defun vector-quad-to-dotted-quad (vector) ; exported
   (format nil "~A.~A.~A.~A"
           (aref vector 0)
           (aref vector 1)
           (aref vector 2)
           (aref vector 3)))
 
-(defun dotted-quad-to-vector-quad (string)
+(defun dotted-quad-to-vector-quad (string) ; exported
   (let ((list (list-of-strings-to-integers (split-sequence #\. string))))
     (vector (first list) (second list) (third list) (fourth list))))
 
-(defgeneric host-byte-order (address))
+(defgeneric host-byte-order (address)) ; exported
+
 (defmethod host-byte-order ((string string))
   "Convert a string, such as 192.168.1.1, to host-byte-order,
 such as 3232235777."
@@ -460,20 +462,20 @@ such as 3232235777."
     (+ (* (first list) 256 256 256) (* (second list) 256 256)
        (* (third list) 256) (fourth list))))
 
-(defmethod host-byte-order ((vector vector))
+(defmethod host-byte-order ((vector vector)) ; IPv4 only
   "Convert a vector, such as #(192 168 1 1), to host-byte-order, such as
 3232235777."
   (+ (* (aref vector 0) 256 256 256) (* (aref vector 1) 256 256)
      (* (aref vector 2) 256) (aref vector 3)))
 
 (defmethod host-byte-order ((int integer))
-  int)
+  int) ; this assume input integer is already host-byte-order
 
 ;;
 ;; IPv6 utility functions
 ;;
 
-(defun vector-to-ipv6-host (vector)
+(defun vector-to-ipv6-host (vector) ; exported
   (with-output-to-string (*standard-output*)
     (loop with zeros-collapsed-p
           with collapsing-zeros-p
@@ -526,7 +528,7 @@ such as 3232235777."
             (return (list (nreverse words-before-double-colon) (nreverse words-after-double-colon)))
             (ensure-colon))))))
 
-(defun ipv6-host-to-vector (string)
+(defun ipv6-host-to-vector (string) ; exported
   (assert (> (length string) 2) ()
           "Unsyntactic IPv6 address literal ~S, expected at least three characters" string)
   (destructuring-bind (words-before-double-colon words-after-double-colon)
@@ -550,31 +552,33 @@ such as 3232235777."
                      (aref vector (1+ i)) (ldb (byte 8 0) word))
             finally (return vector)))))
 
-(defun host-to-hostname (host)
+(defun host-to-hostname (host) ; host -> string
   "Translate a string, vector quad or 16 byte IPv6 address to a
 stringified hostname."
   (etypecase host
-    (string host)
-    ((or (vector t 4)
+    (string host)      ; IPv4 or IPv6
+    ((or (vector t 4)  ; IPv4
          (array (unsigned-byte 8) (4)))
      (vector-quad-to-dotted-quad host))
-    ((or (vector t 16)
+    ((or (vector t 16) ; IPv6
          (array (unsigned-byte 8) (16)))
      (vector-to-ipv6-host host))
-    (integer (hbo-to-dotted-quad host))
-    (null "0.0.0.0")))
+    (integer (hbo-to-dotted-quad host)) ; integer input is IPv4 only
+    (null "0.0.0.0")))                  ; null is IPv4
 
-(defun ip= (ip1 ip2)
+(defun ip= (ip1 ip2) ; exported
   (etypecase ip1
-    (string (string= ip1 (host-to-hostname ip2)))
-    ((or (vector t 4)
-         (array (unsigned-byte 8) (4))
-         (vector t 16)
-         (array (unsigned-byte 8) (16)))
+    (string (string= ip1                  ; IPv4 or IPv6
+		     (host-to-hostname ip2)))
+    ((or (vector t 4)                     ; IPv4
+         (array (unsigned-byte 8) (4))    ; IPv4
+         (vector t 16)                    ; IPv6
+         (array (unsigned-byte 8) (16)))  ; IPv6
      (equalp ip1 ip2))
-    (integer (= ip1 (host-byte-order ip2)))))
+    (integer (= ip1                       ; IPv4 only
+		(host-byte-order ip2))))) ; convert ip2 to integer (hbo)
 
-(defun ip/= (ip1 ip2)
+(defun ip/= (ip1 ip2) ; exported
   (not (ip= ip1 ip2)))
 
 ;;
@@ -582,22 +586,29 @@ stringified hostname."
 ;;
 
 (defun get-host-by-name (name)
-  (let ((hosts (get-hosts-by-name name)))
-    (car hosts)))
+  "0.8.0+: if there're IPv4 addresses, return the first IPv4 address."
+  (let* ((hosts (get-hosts-by-name name))
+	 (pos (position-if #'(lambda (ip) (= 4 (length ip))) hosts)))
+    (if pos (elt hosts pos)
+      (car hosts))))
 
 (defun get-random-host-by-name (name)
-  (let ((hosts (get-hosts-by-name name)))
-    (when hosts
-      (elt hosts (random (length hosts))))))
+  "0.8.0+: if there're IPv4 addresses, only return a random IPv4 address."
+  (let* ((hosts (get-hosts-by-name name))
+	 (ipv4-hosts (remove-if-not #'(lambda (ip) (= 4 (length ip))) hosts)))
+    (cond (ipv4-hosts
+	   (elt ipv4-hosts (random (length ipv4-hosts))))
+	  (hosts
+	   (elt hosts (random (length hosts)))))))
 
-(defun host-to-vector-quad (host)
+(defun host-to-vector-quad (host) ; internal
   "Translate a host specification (vector quad, dotted quad or domain name)
 to a vector quad."
   (etypecase host
     (string (let* ((ip (when (ip-address-string-p host)
                          (dotted-quad-to-vector-quad host))))
               (if (and ip (= 4 (length ip)))
-                  ;; valid IP dotted quad?
+                  ;; valid IP dotted quad? not sure
                   ip
                 (get-random-host-by-name host))))
     ((or (vector t 4)
@@ -605,7 +616,7 @@ to a vector quad."
      host)
     (integer (hbo-to-vector-quad host))))
 
-(defun host-to-hbo (host)
+(defun host-to-hbo (host) ; internal
   (etypecase host
     (string (let ((ip (when (ip-address-string-p host)
                         (dotted-quad-to-vector-quad host))))

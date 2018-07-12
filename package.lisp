@@ -68,6 +68,9 @@
              #:ip= ; IPv4+IPv6 utility function
              #:ip/=
 
+             #:get-host-by-name ; DNS helper functions (0.8.0+)
+             #:get-random-host-by-name
+
              #:integer-to-octet-buffer ; Network utility functions
              #:octet-buffer-to-integer
              #:port-to-octet-buffer
