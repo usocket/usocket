@@ -683,6 +683,16 @@
 (defmethod get-peer-port ((usocket stream-usocket))
   (nth-value 1 (get-peer-name usocket)))
 
+(defun ipv6-address-p (hostname)
+  (when (stringp hostname)
+    (setq hostname (comm:string-ip-address hostname))
+    (unless hostname
+      (let ((resolved-hostname (comm:get-host-entry original-hostname :fields '(:address))))
+	(unless resolved-hostname
+	  (return-from ipv6-address-p nil))
+	(setq hostname resolved-hostname))))
+  (comm:ipv6-address-p resolved-hostname))
+
 (defun lw-hbo-to-vector-quad (hbo)
   #+(or lispworks4 lispworks5 lispworks6.0)
   (hbo-to-vector-quad hbo)

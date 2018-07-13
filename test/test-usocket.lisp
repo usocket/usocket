@@ -54,25 +54,25 @@
 
 (deftest socket-no-connect.1
   (with-caught-conditions (usocket:socket-error nil)
-    (usocket:socket-connect "127.0.0.0" +unused-local-port+ :timeout 1)
+    (usocket:socket-connect "127.0.0.1" +unused-local-port+ :timeout 1)
     t)
   nil)
 
 (deftest socket-no-connect.2
   (with-caught-conditions (usocket:socket-error nil)
-    (usocket:socket-connect #(127 0 0 0) +unused-local-port+ :timeout 1)
+    (usocket:socket-connect #(127 0 0 1) +unused-local-port+ :timeout 1)
     t)
   nil)
 
 (deftest socket-no-connect.3
   (with-caught-conditions (usocket:socket-error nil)
-    (usocket:socket-connect 2130706432 +unused-local-port+ :timeout 1) ;; == #(127 0 0 0)
+    (usocket:socket-connect 2130706433 +unused-local-port+ :timeout 1) ;; == #(127 0 0 1)
     t)
   nil)
 
 (deftest socket-failure.1
   (with-caught-conditions (usocket:timeout-error nil)
-    (usocket:socket-connect 2130706432 +unused-local-port+ :timeout 1) ;; == #(127 0 0 0)
+    (usocket:socket-connect 2130706433 +unused-local-port+ :timeout 1) ;; == #(127 0 0 1)
     :unreach)
   nil)
 

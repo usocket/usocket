@@ -15,27 +15,27 @@
    (iolib/sockets:socket-connection-aborted-error    . connection-aborted-error)
    (iolib/sockets:socket-connection-reset-error      . connection-reset-error)
    (iolib/sockets:socket-connection-refused-error    . connection-refused-error)
-   (iolib/sockets:socket-connection-timeout-error    . deadline-timeout-error)
+   (iolib/sockets:socket-connection-timeout-error    . timeout-error)
    ;; (iolib/sockets:socket-connection-in-progress-error . ?)
    (iolib/sockets:socket-endpoint-shutdown-error     . network-down-error)
    (iolib/sockets:socket-no-buffer-space-error       . no-buffers-error)
    (iolib/sockets:socket-host-down-error             . host-down-error)
    (iolib/sockets:socket-host-unreachable-error      . host-unreachable-error)
    ;; (iolib/sockets:socket-already-connected-error . ?)
-   ;; (iolib/sockets:socket-not-connected-error . ?)
+   (iolib/sockets:socket-not-connected-error         . connection-refused-error)
    (iolib/sockets:socket-option-not-supported-error  . operation-not-permitted-error)
    (iolib/sockets:socket-operation-not-supported-error . operation-not-supported-error)
    (iolib/sockets:unknown-protocol                   . protocol-not-supported-error)
    ;; (iolib/sockets:unknown-interface . ?)
    (iolib/sockets:unknown-service                    . protocol-not-supported-error)
-   ;; (iolib/sockets:socket-error . ,#'map-socket-error) ; no such function
+   (iolib/sockets:socket-error                       . socket-error)
 
    ;; Nameservice errors (src/sockets/dns/conditions.lisp)
-   (iolib/sockets:resolver-error . ns-error)
-   (iolib/sockets:resolver-fail-error . ns-no-recovery-error)
-   (iolib/sockets:resolver-again-error . ns-try-again-condition)
-   (iolib/sockets:resolver-no-name-error . ns-host-not-found-error)
-   (iolib/sockets:resolver-unknown-error . ns-unknown-error)
+   (iolib/sockets:resolver-error                     . ns-error)
+   (iolib/sockets:resolver-fail-error                . ns-no-recovery-error)
+   (iolib/sockets:resolver-again-error               . ns-try-again-condition)
+   (iolib/sockets:resolver-no-name-error             . ns-host-not-found-error)
+   (iolib/sockets:resolver-unknown-error             . ns-unknown-error)
    ))
 
 (defun handle-condition (condition &optional (socket nil))
@@ -50,7 +50,7 @@
 	   (error usock-error :socket socket)))))
 
 (defun ipv6-address-p (host)
-  nil) ; TODO
+  (iolib/sockets:ipv6-address-p (iolib/sockets:ensure-hostname host)))
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline
@@ -60,8 +60,8 @@
     (let* ((remote (when (and host port) (iolib/sockets:ensure-hostname host)))
 	   (local  (when (and local-host local-port)
 		     (iolib/sockets:ensure-hostname local-host)))
-	   (ipv6-p (or (ipv6-address-p remote)
-		       (ipv6-address-p local)))
+	   (ipv6-p (or (and remote (ipv6-address-p remote)
+		       (and local  (ipv6-address-p local)))))
 	   (socket (apply #'iolib/sockets:make-socket
 			  `(:type ,protocol
 			    :address-family :internet
@@ -74,7 +74,10 @@
 			    :nodelay nodelay))))
       (when remote
 	(apply #'iolib/sockets:connect
-	       `(,socket ,remote :port ,port ,@(when timeout `(:wait ,timeout)))))
+	       `(,socket ,remote :port ,port ,@(when timeout `(:wait ,timeout))))
+	(unless (iolib/sockets:socket-connected-p socket)
+	  (close socket)
+	  (error 'iolib/sockets:socket-error)))
       (ecase protocol
 	(:stream
 	 (make-stream-socket :stream socket :socket socket))
