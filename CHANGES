@@ -1,7 +1,7 @@
 0.8.0: (to be released)
 
-* New feature: GET-(RANDOM)-HOST-BY-NAME (now exported) prefer IPv4 on mixed IPv4/IPv6 cases (suggested by Mark H. David)
-* New backend: IOlib. (Push :USOCKET-IOLIB to *FEATURES* to enable this feature.)
+* New feature: GET-(RANDOM)-HOST(S)-BY-NAME (now exported) prefer IPv4 on mixed IPv4/IPv6 (suggested by Mark H. David)
+* New backend: IOlib. (Push :USOCKET-IOLIB to *FEATURES* to enable this feature)
 * New backend: Symbolics Open Genera (Lisp machine) (patch from @Symbolics, #33)
 * Bugfix: [CLISP] fixed issues in server sockets and error handling. (patch from @vibs29, #28, #29)
 * Bugfix: [SBCL, ECL] Fix wait-for-input on Windows SBCL and ECL. (patch from Stas Boukarev, #30)

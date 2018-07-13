@@ -13,7 +13,7 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defvar *common-lisp-net*
-    #.(first (usocket::get-hosts-by-name "common-lisp.net"))))
+    (get-host-by-name "common-lisp.net")))
 
 (defvar *local-ip*)
 

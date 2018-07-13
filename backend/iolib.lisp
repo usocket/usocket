@@ -113,8 +113,28 @@
   (iolib/sockets:receive-from (socket usocket)
 			      :buffer buffer :size length :start start :end end))
 
+;; IOlib uses (SIMPLE-ARRAY (UNSIGNED-BYTE 16) (8)) to represent IPv6 addresses,
+;; while USOCKET shared code uses (SIMPLE-ARRAY (UNSIGNED-BYTE 8) (16)). Here we do the
+;; conversion.
+(defun iolib-vector-to-vector-quad (host)
+  (etypecase host
+    ((or (vector t 4)  ; IPv4
+         (array (unsigned-byte 8) (4)))
+     host)
+    ((or (vector t 8) ; IPv6
+         (array (unsigned-byte 16) (8)))
+      (loop with vector = (make-array 16 :element-type '(unsigned-byte 8))
+            for i below 16 by 2
+            for word = (aref host (/ i 2))
+            do (setf (aref vector i) (ldb (byte 8 8) word)
+                     (aref vector (1+ i)) (ldb (byte 8 0) word))
+            finally (return vector)))))
+
 (defun get-hosts-by-name (name)
-  (iolib/sockets:lookup-hostname name))
+  (multiple-value-bind (address more-addresses)
+      (iolib/sockets:lookup-hostname name :ipv6 t)
+    (mapcar #'(lambda (x) (iolib-vector-to-vector-quad (iolib/sockets:address-name x)))
+	    (cons address more-addresses))))
 
 (defvar *default-event-base* nil)
 

@@ -69,6 +69,7 @@
              #:ip/=
 
              #:get-host-by-name ; DNS helper functions (0.8.0+)
+             #:get-hosts-by-name
              #:get-random-host-by-name
 
              #:integer-to-octet-buffer ; Network utility functions
