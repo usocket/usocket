@@ -44,32 +44,37 @@
 	 (usock-error (if (functionp usock-error)
 			  (funcall usock-error condition)
 			usock-error)))
-    (when usock-error
-      (error usock-error :socket socket))))
+    (cond ((typep condition 'iolib/sockets:resolver-error)
+	   (error usock-error :host-or-ip (iolib/sockets:resolver-error-datum condition)))
+	  (usock-error
+	   (error usock-error :socket socket)))))
+
+(defun ipv6-address-p (host)
+  nil) ; TODO
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline
                        (nodelay t) ;; nodelay == t is the ACL default
                        local-host local-port)
   (with-mapped-conditions ()
-    (let* ((remote (when (and host port)
-		     (car (get-hosts-by-name (host-to-hostname host)))))
+    (let* ((remote (when (and host port) (iolib/sockets:ensure-hostname host)))
 	   (local  (when (and local-host local-port)
-		     (car (get-hosts-by-name (host-to-hostname local-host)))))
-	   (ipv6 (or (and remote (= 16 (length remote)))
-		     (and local (= 16 (length local)))))
+		     (iolib/sockets:ensure-hostname local-host)))
+	   (ipv6-p (or (ipv6-address-p remote)
+		       (ipv6-address-p local)))
 	   (socket (apply #'iolib/sockets:make-socket
 			  `(:type ,protocol
 			    :address-family :internet
-			    :ipv6 ,ipv6
-			    :connect ,(if (eq protocol :stream) :active
-					(if (and host port) :active
-					  :passive))
-			    ,@(when remote
-				`(:remote-host remove :remote-port port))
+			    :ipv6 ,ipv6-p
+			    :connect ,(cond ((eq protocol :stream) :active)
+					    ((and host port)       :active)
+					    (t                     :passive))
 			    ,@(when local
-				`(:local-host local-host :local-port local-port))
+				`(:local-host ,local :local-port ,local-port))
 			    :nodelay nodelay))))
+      (when remote
+	(apply #'iolib/sockets:connect
+	       `(,socket ,remote :port ,port ,@(when timeout `(:wait ,timeout)))))
       (ecase protocol
 	(:stream
 	 (make-stream-socket :stream socket :socket socket))
@@ -129,9 +134,11 @@
           (get-peer-port usocket)))
 
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
-  (iolib/sockets:send-to (socket usocket) buffer
-			 :start offset :end (+ offset size)
-			 :remote-host host :remote-port port))
+  (apply #'iolib/sockets:send-to
+	 `(,(socket usocket) ,buffer :start ,offset :end ,(+ offset size)
+			     ,@(when (and host port)
+				 `(:remote-host ,(iolib/sockets:ensure-hostname host)
+				   :remote-port ,port)))))
 
 ;; TODO: check the return values structure
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key start end)
@@ -157,8 +164,9 @@
 
 (defun get-hosts-by-name (name)
   (multiple-value-bind (address more-addresses)
-      (iolib/sockets:lookup-hostname name :ipv6 t)
-    (mapcar #'(lambda (x) (iolib-vector-to-vector-quad (iolib/sockets:address-name x)))
+      (iolib/sockets:lookup-hostname name :ipv6 *ipv6*)
+    (mapcar #'(lambda (x) (iolib-vector-to-vector-quad
+			   (iolib/sockets:address-name x)))
 	    (cons address more-addresses))))
 
 (defvar *default-event-base* nil)

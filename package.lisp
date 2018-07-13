@@ -9,10 +9,6 @@
              #:*wildcard-host*
              #:*auto-port*
 
-	     ;; 0.8.0 additions
-             #:*backend*
-	     #:*default-event-base*
-
              #:+max-datagram-packet-size+
 
              #:socket-connect ; socket constructors and methods
@@ -68,10 +64,6 @@
              #:ip= ; IPv4+IPv6 utility function
              #:ip/=
 
-             #:get-host-by-name ; DNS helper functions (0.8.0+)
-             #:get-hosts-by-name
-             #:get-random-host-by-name
-
              #:integer-to-octet-buffer ; Network utility functions
              #:octet-buffer-to-integer
              #:port-to-octet-buffer
@@ -97,4 +89,16 @@
 
              #:socket-server
              #:*remote-host*
-             #:*remote-port*))
+             #:*remote-port*
+
+	     ;; added in 0.8.0
+	     #:*ipv6*
+             #:*backend*
+	     #:*default-event-base*
+             #:get-host-by-name
+             #:get-hosts-by-name
+             #:get-random-host-by-name
+	     #:ns-host-not-found-error
+	     #:ns-no-recovery-error
+	     #:ns-try-again-condition
+	     ))
