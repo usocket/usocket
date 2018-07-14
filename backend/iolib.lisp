@@ -24,6 +24,7 @@
    ;; (iolib/sockets:socket-already-connected-error . ?)
    (iolib/sockets:socket-not-connected-error         . connection-refused-error)
    (iolib/sockets:socket-option-not-supported-error  . operation-not-permitted-error)
+   (iolib/syscalls:eacces                            . operation-not-permitted-error)
    (iolib/sockets:socket-operation-not-supported-error . operation-not-supported-error)
    (iolib/sockets:unknown-protocol                   . protocol-not-supported-error)
    ;; (iolib/sockets:unknown-interface . ?)
@@ -32,11 +33,28 @@
 
    ;; Nameservice errors (src/sockets/dns/conditions.lisp)
    (iolib/sockets:resolver-error                     . ns-error)
-   (iolib/sockets:resolver-fail-error                . ns-no-recovery-error)
+   (iolib/sockets:resolver-fail-error                . ns-host-not-found-error)
    (iolib/sockets:resolver-again-error               . ns-try-again-condition)
-   (iolib/sockets:resolver-no-name-error             . ns-host-not-found-error)
+   (iolib/sockets:resolver-no-name-error             . ns-no-recovery-error)
    (iolib/sockets:resolver-unknown-error             . ns-unknown-error)
    ))
+
+;; IOlib uses (SIMPLE-ARRAY (UNSIGNED-BYTE 16) (8)) to represent IPv6 addresses,
+;; while USOCKET shared code uses (SIMPLE-ARRAY (UNSIGNED-BYTE 8) (16)). Here we do the
+;; conversion.
+(defun iolib-vector-to-vector-quad (host)
+  (etypecase host
+    ((or (vector t 4)  ; IPv4
+         (array (unsigned-byte 8) (4)))
+     host)
+    ((or (vector t 8) ; IPv6
+         (array (unsigned-byte 16) (8)))
+      (loop with vector = (make-array 16 :element-type '(unsigned-byte 8))
+            for i below 16 by 2
+            for word = (aref host (/ i 2))
+            do (setf (aref vector i) (ldb (byte 8 8) word)
+                     (aref vector (1+ i)) (ldb (byte 8 0) word))
+            finally (return vector)))))
 
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
@@ -106,7 +124,7 @@
     (make-stream-server-socket
       (iolib/sockets:make-socket :connect :passive
 				 :address-family :internet
-				 :local-host host
+				 :local-host (iolib/sockets:ensure-hostname host)
 				 :local-port port
 				 :backlog backlog
 				 :reuse-address (or reuse-address reuseaddress)))))
@@ -117,10 +135,12 @@
       (make-stream-socket :socket socket :stream socket))))
 
 (defmethod get-local-address ((usocket usocket))
-  (iolib/sockets:local-host (socket usocket)))
+  (iolib-vector-to-vector-quad
+   (iolib/sockets:address-to-vector (iolib/sockets:local-host (socket usocket)))))
 
 (defmethod get-peer-address ((usocket stream-usocket))
-  (iolib/sockets:remote-host (socket usocket)))
+  (iolib-vector-to-vector-quad
+   (iolib/sockets:address-to-vector (iolib/sockets:remote-host (socket usocket)))))
 
 (defmethod get-local-port ((usocket usocket))
   (iolib/sockets:local-port (socket usocket)))
@@ -143,40 +163,25 @@
 				 `(:remote-host ,(iolib/sockets:ensure-hostname host)
 				   :remote-port ,port)))))
 
-;; TODO: check the return values structure
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key start end)
-  (iolib/sockets:receive-from (socket usocket)
-			      :buffer buffer :size length :start start :end end))
-
-;; IOlib uses (SIMPLE-ARRAY (UNSIGNED-BYTE 16) (8)) to represent IPv6 addresses,
-;; while USOCKET shared code uses (SIMPLE-ARRAY (UNSIGNED-BYTE 8) (16)). Here we do the
-;; conversion.
-(defun iolib-vector-to-vector-quad (host)
-  (etypecase host
-    ((or (vector t 4)  ; IPv4
-         (array (unsigned-byte 8) (4)))
-     host)
-    ((or (vector t 8) ; IPv6
-         (array (unsigned-byte 16) (8)))
-      (loop with vector = (make-array 16 :element-type '(unsigned-byte 8))
-            for i below 16 by 2
-            for word = (aref host (/ i 2))
-            do (setf (aref vector i) (ldb (byte 8 8) word)
-                     (aref vector (1+ i)) (ldb (byte 8 0) word))
-            finally (return vector)))))
+  (multiple-value-bind (buffer size host port)
+      (iolib/sockets:receive-from (socket usocket)
+				  :buffer buffer :size length :start start :end end)
+    (values buffer size (iolib-vector-to-vector-quad host) port)))
 
 (defun get-hosts-by-name (name)
   (multiple-value-bind (address more-addresses)
-      (iolib/sockets:lookup-hostname name :ipv6 *ipv6*)
+      (iolib/sockets:lookup-hostname name :ipv6 iolib/sockets:*ipv6*)
     (mapcar #'(lambda (x) (iolib-vector-to-vector-quad
 			   (iolib/sockets:address-name x)))
 	    (cons address more-addresses))))
 
-(defvar *default-event-base* nil)
+(defparameter *event-base*
+  (make-instance 'iolib/multiplex:event-base))
 
 (defun %setup-wait-list (wait-list)
   (setf (wait-list-%wait wait-list)
-	(or *default-event-base*
+	(or *event-base*
 	    ;; iolib/multiplex:*default-multiplexer* is used here
 	    (make-instance 'iolib/multiplex:event-base))))
 
@@ -214,44 +219,34 @@
 
 (defun make-usocket-disconnector (event-base usocket)
   (lambda (&rest events)
-    (let* ((socket (socket usocket))
-	   (fd (iolib/sockets:socket-os-fd socket)))
-      (if (not (intersection '(:read :write :error) events))
-	  (iolib/multiplex:remove-fd-handlers event-base fd :read t :write t :error t)
-	(progn
-	  (when (member :read events)
-	    (iolib/multiplex:remove-fd-handlers event-base fd :read t))
-	  (when (member :write events)
-	    (iolib/multiplex:remove-fd-handlers event-base fd :write t))
-	  (when (member :error events)
-	    (iolib/multiplex:remove-fd-handlers event-base fd :error t))))
-      ;; and finally if were asked to close the socket, we do so here
+    (let ((socket (socket usocket)))
+      ;; if were asked to close the socket, we do so here
       (when (member :close events)
 	(close socket :abort t)))))
 
 (defun %add-waiter (wait-list waiter)
-  (let ((event-base (wait-list-%wait wait-list)))
+  (let ((event-base (wait-list-%wait wait-list))
+	(fd (iolib/sockets:socket-os-fd (socket waiter))))
     ;; reset socket state
     (setf (state waiter) nil)
-    ;; set I/O handlers
-    (iolib/multiplex:set-io-handler
-      event-base
-      (iolib/sockets:socket-os-fd (socket waiter))
-      :read
-      (make-usocket-read-handler waiter
-				 (make-usocket-disconnector event-base waiter)))
-    (iolib/multiplex:set-io-handler
-      event-base
-      (iolib/sockets:socket-os-fd (socket waiter))
-      :write
-      (make-usocket-write-handler waiter
-				  (make-usocket-disconnector event-base waiter)))
+    ;; set read handler
+    (unless (iolib/multiplex::fd-monitored-p event-base fd :read)
+      (iolib/multiplex:set-io-handler
+        event-base fd :read
+	(make-usocket-read-handler waiter
+				   (make-usocket-disconnector event-base waiter))))
+    ;; set write handler
+    (unless (iolib/multiplex::fd-monitored-p event-base fd :write)
+      (iolib/multiplex:set-io-handler
+        event-base fd :write
+	(make-usocket-write-handler waiter
+				    (make-usocket-disconnector event-base waiter))))
     ;; set error handler
-    (iolib/multiplex:set-error-handler
-      event-base
-      (iolib/sockets:socket-os-fd (socket waiter))
-      (make-usocket-error-handler waiter
-				  (make-usocket-disconnector event-base waiter)))))
+    (unless (iolib/multiplex::fd-has-error-handler-p event-base fd)
+      (iolib/multiplex:set-error-handler
+        event-base fd
+	(make-usocket-error-handler waiter
+				    (make-usocket-disconnector event-base waiter))))))
 
 (defun %remove-waiter (wait-list waiter)
   (let ((event-base (wait-list-%wait wait-list)))
@@ -265,10 +260,9 @@
 (defun wait-for-input-internal (wait-list &key timeout)
   (let ((event-base (wait-list-%wait wait-list)))
     (handler-case
-	(iolib/multiplex:event-dispatch event-base
-					:timeout timeout)
+	(iolib/multiplex:event-dispatch event-base :timeout timeout)
       (iolib/streams:hangup ())
       (end-of-file ()))
     ;; close the event-base after use
-    (unless (eq event-base *default-event-base*)
+    (unless (eq event-base *event-base*)
       (close event-base))))

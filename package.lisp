@@ -92,7 +92,6 @@
              #:*remote-port*
 
 	     ;; added in 0.8.0
-	     #:*ipv6*
              #:*backend*
 	     #:*default-event-base*
              #:get-host-by-name
