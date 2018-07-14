@@ -4,7 +4,8 @@
 
 
 
-<map><title>USOCKET Manual</title>
+<map xmlns:ditaarch = "http://dita.oasis-open.org/architecture/2005/">
+<title>USOCKET Manual</title>
 <topicref href = "intro.dita" type = "concept"><topicmeta><navtitle></navtitle></topicmeta></topicref>
 <topicref href = "reference.dita" type = "reference"><topicmeta>
 <navtitle>API References</navtitle></topicmeta></topicref></map>
