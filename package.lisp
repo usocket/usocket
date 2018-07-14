@@ -100,4 +100,7 @@
 	     #:ns-host-not-found-error
 	     #:ns-no-recovery-error
 	     #:ns-try-again-condition
+	     #:default-udp-handler
+	     #:default-tcp-handler
+	     #:echo-tcp-handler ;; server handlers
 	     ))

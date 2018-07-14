@@ -2,12 +2,14 @@
 
 (in-package :usocket)
 
+(defvar *server*)
+
 (defun socket-server (host port function &optional arguments
                       &key in-new-thread (protocol :stream)
                            ;; for udp
                            (timeout 1) (max-buffer-size +max-datagram-packet-size+)
                            ;; for tcp
-                           element-type reuse-address multi-threading
+                           element-type (reuse-address t) multi-threading
                            name)
   (let* ((real-host (or host *wildcard-host*))
          (socket (ecase protocol
@@ -32,7 +34,9 @@
                                   :max-buffer-size max-buffer-size)))))
       (if in-new-thread
 	  (values (portable-threads:spawn-thread (or name "USOCKET Server") #'real-call) socket)
-	  (real-call)))))
+	(progn
+	  (setq *server* socket)
+	  (real-call))))))
 
 (defvar *remote-host*)
 (defvar *remote-port*)
@@ -73,7 +77,7 @@
 
 (defun default-tcp-handler (stream) ; null
   (declare (type stream stream))
-  (terpri stream))
+  (format stream "Hello world!~%"))
 
 (defun echo-tcp-handler (stream)
   (loop
