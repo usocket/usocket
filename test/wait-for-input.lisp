@@ -34,9 +34,9 @@
                     "GET / HTTP/1.0~2%")
             (force-output (usocket:socket-stream sock))
             (usocket:wait-for-input sock :timeout *wait-for-input-timeout*)
-            (subseq (read-line (usocket:socket-stream sock)) 0 15))
+            (subseq (read-line (usocket:socket-stream sock)) 0 4))
         (usocket:socket-close sock))))
-  "HTTP/1.1 200 OK")
+  "HTTP")
 
 ;;; Advanced W-F-I tests by Elliott Slaughter <elliottslaughter@gmail.com>
 

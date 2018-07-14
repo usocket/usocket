@@ -236,6 +236,7 @@
 	(make-usocket-read-handler waiter
 				   (make-usocket-disconnector event-base waiter))))
     ;; set write handler
+    #+ignore
     (unless (iolib/multiplex::fd-monitored-p event-base fd :write)
       (iolib/multiplex:set-io-handler
         event-base fd :write
@@ -253,7 +254,7 @@
     (iolib/multiplex:remove-fd-handlers event-base
 					(iolib/sockets:socket-os-fd (socket waiter))
 					:read t
-					:write t
+					:write nil
 					:error t)))
 
 ;; NOTE: `wait-list-waiters` returns all usockets
