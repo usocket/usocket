@@ -1,6 +1,8 @@
+-*- Mode: Change-Log; Coding: utf-8 -*-
+
 0.8.0: (to be released)
 
-* New feature: GET-(RANDOM)-HOST(S)-BY-NAME (now exported) prefer IPv4 on mixed IPv4/IPv6 (suggested by Mark H. David)
+* New feature: GET-(RANDOM)-HOST-BY-NAME (now exported) prefer IPv4 on mixed IPv4/IPv6 (suggested by Mark H. David)
 * New backend: IOlib. (Push :USOCKET-IOLIB to *FEATURES* to enable this feature)
 * New backend: Symbolics Open Genera (Lisp machine) (patch from @Symbolics, #33)
 * Bugfix: [CLISP] fixed issues in server sockets and error handling. (patch from @vibs29, #28, #29)
@@ -94,7 +96,7 @@
 * Bugfix: [LispWorks] Fixed SOCKET-ACCEPT (Windows only) on WAIT-FOR-INPUTed sockets.
 * Bugfix: [SBCL, ECL] Fixed wrongly STATE set/unset for WAIT-FOR-INPUT on Windows (report by Elliott Slaughter)
 * Enhancement: Additional NAME keyword argument for SOCKET-SERVER for setting the server thread name.
-* Enhancement: [ABCL] GET-ADDRESS now works with underlying IP6 addresses.
+* Enhancement: [ABCL] GET-ADDRESS now works with underlying IPv6 addresses.
 * Enhancement: [CLISP] missing GET-LOCAL-* methods for STREAM-SERVER-USOCKET was now added.
 
 0.5.1: (Apr 2, 2011)
