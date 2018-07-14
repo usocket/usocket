@@ -25,7 +25,6 @@
 
              #:socket-send    ; udp function (send)
              #:socket-receive ; udp function (receive)
-             #:socket-option  ; 0.6.x
 
              #:wait-for-input ; waiting for input-ready state (select() like)
              #:make-wait-list

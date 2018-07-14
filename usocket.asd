@@ -49,9 +49,7 @@
 		 (:file "option" :depends-on ("backend"))
 		 #+usocket-iolib
 		 (:module "backend" :depends-on ("condition")
-		  :components ((:file "iolib")
-			       (:file "iolib-sockopt"
-				:depends-on ("iolib"))))))
+		  :components ((:file "iolib")))))
 
 (defmethod perform ((op test-op) (c (eql (find-system :usocket))))
   (oos 'load-op :usocket-server)

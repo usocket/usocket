@@ -345,3 +345,6 @@
     #+scl
     () ; TODO
     new-value))
+
+(eval-when (:load-toplevel :execute)
+  (export 'socket-option))
