@@ -2,9 +2,6 @@
 
 (in-package :usocket)
 
-(defvar *ipv6* t ; enable or disable IPv6
-  "T: IPv4/IPv6, NIL: IPv4 only, :IPV6 (IPv6 only)")
-
 (defparameter *wildcard-host* #(0 0 0 0)
   "Hostname to pass when all interfaces in the current system are to
   be bound.  If this variable is passed to socket-listen, IPv6 capable
@@ -347,6 +344,8 @@ the values documented in usocket.lisp in the usocket class."
       (multiple-value-bind
             (socks to)
           (wait-for-input wl :timeout timeout :ready-only ready-only)
+        ;; NOTE: in case waiter is not created by the user, it should be removed here.
+        (remove-all-waiters wl)
         (return-from wait-for-input
           (values (if ready-only socks socket-or-sockets) to)))))
   (let* ((start (get-internal-real-time))
