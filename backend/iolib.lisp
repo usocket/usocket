@@ -6,7 +6,7 @@
 
 (eval-when (:load-toplevel :execute)
   (import 'iolib/sockets:socket-option)
-  (export 'socket-option))
+  (export 'iolib/sockets:socket-option))
 
 (defparameter +iolib-error-map+
  `((iolib/sockets:socket-address-in-use-error        . address-in-use-error) ;
