@@ -20,8 +20,7 @@
     :depends-on (:split-sequence
 		 #+(and (or sbcl ecl)
 			(not usocket-iolib)) :sb-bsd-sockets
-		 #+usocket-iolib :iolib/sockets
-		 #+usocket-iolib :iolib/multiplex)
+		 #+usocket-iolib :iolib)
     :components ((:file "package")
 		 (:module "vendor" :depends-on ("package")
 		  :components (#+mcl (:file "kqueue")

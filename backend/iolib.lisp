@@ -78,6 +78,7 @@
                        timeout deadline
                        (nodelay t) ;; nodelay == t is the ACL default
                        local-host local-port)
+  (declare (ignore element-type deadline nodelay))
   (with-mapped-conditions ()
     (let* ((remote (when (and host port) (iolib/sockets:ensure-hostname host)))
 	   (local  (when (and local-host local-port)
@@ -120,10 +121,10 @@
        (iolib/sockets:shutdown (socket usocket) :read t :write t)))))
 
 (defun socket-listen (host port
-                           &key reuseaddress
-                           (reuse-address nil reuse-address-supplied-p)
+                           &key reuseaddress reuse-address
                            (backlog 5)
                            (element-type 'character))
+  (declare (ignore element-type))
   (with-mapped-conditions ()
     (make-stream-server-socket
       (iolib/sockets:make-socket :connect :passive
@@ -134,6 +135,7 @@
 				 :reuse-address (or reuse-address reuseaddress)))))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
+  (declare (ignore element-type))
   (with-mapped-conditions (usocket)
     (let ((socket (iolib/sockets:accept-connection (socket usocket))))
       (make-stream-socket :socket socket :stream socket))))
@@ -222,6 +224,7 @@
 	(funcall disconnector :close)))))
 
 (defun make-usocket-disconnector (event-base usocket)
+  (declare (ignore event-base))
   (lambda (&rest events)
     (let ((socket (socket usocket)))
       ;; if were asked to close the socket, we do so here
