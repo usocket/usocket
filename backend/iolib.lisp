@@ -5,11 +5,11 @@
 (defparameter *backend* :iolib)
 
 (eval-when (:load-toplevel :execute)
-  (import 'iolib/sockets:socket-option)
-  (export 'iolib/sockets:socket-option))
+  (shadowing-import 'iolib/sockets:socket-option)
+  (export 'socket-option))
 
 (defparameter +iolib-error-map+
- `((iolib/sockets:socket-address-in-use-error        . address-in-use-error) ;
+ `((iolib/sockets:socket-address-in-use-error        . address-in-use-error)
    (iolib/sockets:socket-address-family-not-supported-error . socket-type-not-supported-error)
    (iolib/sockets:socket-address-not-available-error . address-not-available-error)
    (iolib/sockets:socket-network-down-error          . network-down-error)
