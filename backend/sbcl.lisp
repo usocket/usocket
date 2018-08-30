@@ -186,13 +186,13 @@
 (defun handle-condition (condition &optional (socket nil))
   "Dispatch correct usocket condition."
   (typecase condition
-    (serious-condition (let* ((usock-error (cdr (assoc (type-of condition)
-                                           +sbcl-error-map+)))
-                  (usock-error (if (functionp usock-error)
-                                   (funcall usock-error condition)
-                                 usock-error)))
-             (when usock-error
-                 (error usock-error :socket socket))))
+    (serious-condition
+     (let* ((usock-error (cdr (assoc (type-of condition) +sbcl-error-map+)))
+	    (usock-error (if (functionp usock-error)
+			     (funcall usock-error condition)
+			   usock-error)))
+       (when usock-error
+	 (error usock-error :socket socket))))
     (condition (let* ((usock-cond (cdr (assoc (type-of condition)
                                               +sbcl-condition-map+)))
                       (usock-cond (if (functionp usock-cond)
@@ -543,6 +543,7 @@ happen. Use with care."
 #+win32 ; shared by ECL and SBCL
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defconstant +wsa-wait-failed+ #xffffffff)
+  (defconstant +wsa-infinite+ #xffffffff)
   (defconstant +wsa-wait-event-0+ 0)
   (defconstant +wsa-wait-timeout+ 258))
 
@@ -592,7 +593,11 @@ happen. Use with care."
   (defun wait-for-input-internal (wait-list &key timeout)
     (when (waiting-required (wait-list-waiters wait-list))
       (let ((rv (wsa-wait-for-multiple-events 1 (wait-list-%wait wait-list)
-                                              nil (truncate (* 1000 (if timeout timeout 0))) nil)))
+                                              nil
+                                              (if timeout
+                                                  (truncate (* 1000 timeout))
+                                                  +wsa-infinite+)
+                                              nil)))
         (ecase rv
           ((#.+wsa-wait-event-0+)
            (update-ready-and-state-slots (wait-list-waiters wait-list)))
@@ -851,7 +856,10 @@ happen. Use with care."
 
   (defun wait-for-input-internal (wait-list &key timeout)
     (when (waiting-required (wait-list-waiters wait-list))
-      (let ((rv (ffi:c-inline ((wait-list-%wait wait-list) (truncate (* 1000 timeout)))
+      (let ((rv (ffi:c-inline ((wait-list-%wait wait-list)
+                               (if timeout
+                                   (truncate (* 1000 timeout))
+                                   +wsa-infinite+))
                               (:fixnum :fixnum) :fixnum
                  "DWORD result;
                   WSAEVENT events[1];

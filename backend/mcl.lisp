@@ -1,6 +1,3 @@
-;;;; $Id$
-;;;; $URL$
-
 ;; MCL backend for USOCKET 0.4.1
 ;; Terje Norderhaug <terje@in-progress.com>, January 1, 2009
 

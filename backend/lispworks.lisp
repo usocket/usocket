@@ -6,7 +6,7 @@
   (require "comm")
 
   #+lispworks3
-  (error "LispWorks 3 is not supported by USOCKET any more."))
+  (error "LispWorks 3 is not supported"))
 
 ;;; ---------------------------------------------------------------------------
 ;;;  Warn if multiprocessing is not running on Lispworks
@@ -251,7 +251,7 @@
                 len)
     (float (/ (fli:dereference timeout) 1000))))
 
-#+lispworks4
+#+(or lispworks4 lispworks5.0)
 (defun set-socket-tcp-nodelay (socket-fd new-value)
   "Set socket option: TCP_NODELAY, argument is a fixnum (0 or 1)"
   (declare (type integer socket-fd)
@@ -423,8 +423,7 @@
        ;; Then handle `nodelay' separately for older versions <= 5.0
        #+(or lispworks4 lispworks5.0)
        (when (and stream nodelay)
-         (#+lispworks4 set-socket-tcp-nodelay
-          #+lispworks5.0 comm::set-socket-tcp-nodelay
+         (set-socket-tcp-nodelay
            (comm:socket-stream-socket stream)
            (bool->int nodelay))) ; ":if-supported" maps to 1 too.
 
@@ -683,6 +682,16 @@
 
 (defmethod get-peer-port ((usocket stream-usocket))
   (nth-value 1 (get-peer-name usocket)))
+
+(defun ipv6-address-p (hostname)
+  (when (stringp hostname)
+    (setq hostname (comm:string-ip-address hostname))
+    (unless hostname
+      (let ((resolved-hostname (comm:get-host-entry hostname :fields '(:address))))
+	(unless resolved-hostname
+	  (return-from ipv6-address-p nil))
+	(setq hostname resolved-hostname))))
+  (comm:ipv6-address-p hostname))
 
 (defun lw-hbo-to-vector-quad (hbo)
   #+(or lispworks4 lispworks5 lispworks6.0)

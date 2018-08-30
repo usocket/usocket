@@ -1,6 +1,3 @@
-;;;; $Id$
-;;;; $URL$
-
 ;;;; See LICENSE for licensing information.
 
 (in-package :usocket)
@@ -228,7 +225,6 @@ error available."))
 
 (defmacro unimplemented (feature context)
   `(signal 'unimplemented :feature ,feature :context ,context))
-
 
 ;;; People may want to ignore all unsupported warnings, here it is.
 (defmacro ignore-unsupported-warnings (&body body)

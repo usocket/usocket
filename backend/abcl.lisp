@@ -1,6 +1,3 @@
-;;;; $Id$
-;;;; $URL$
-
 ;;;; New ABCL networking support (replacement to old armedbear.lisp)
 ;;;; Author: Chun Tian (binghe)
 

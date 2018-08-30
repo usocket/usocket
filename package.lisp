@@ -1,8 +1,10 @@
 ;;;; See the LICENSE file for licensing information.
 
 (defpackage :usocket
-  (:use :common-lisp #+abcl :java
-        :split-sequence)
+  (:use #-genera :common-lisp
+        #+genera :future-common-lisp
+	#+abcl :java
+	:split-sequence)
   (:export   #:*version*
              #:*wildcard-host*
              #:*auto-port*
@@ -23,7 +25,6 @@
 
              #:socket-send    ; udp function (send)
              #:socket-receive ; udp function (receive)
-             #:socket-option  ; 0.6.x
 
              #:wait-for-input ; waiting for input-ready state (select() like)
              #:make-wait-list
@@ -87,4 +88,16 @@
 
              #:socket-server
              #:*remote-host*
-             #:*remote-port*))
+             #:*remote-port*
+
+             ;; added in 0.7.1
+             #:get-host-by-name
+             #:get-hosts-by-name
+             #:get-random-host-by-name
+             #:ns-host-not-found-error
+             #:ns-no-recovery-error
+             #:ns-try-again-condition
+             #:default-udp-handler
+             #:default-tcp-handler
+             #:echo-tcp-handler ;; server handlers
+             ))
