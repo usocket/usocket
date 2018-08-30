@@ -588,14 +588,14 @@ stringified hostname."
 ;;
 
 (defun get-host-by-name (name)
-  "0.8.0+: if there're IPv4 addresses, return the first IPv4 address."
+  "0.7.1+: if there're IPv4 addresses, return the first IPv4 address."
   (let* ((hosts (get-hosts-by-name name))
 	 (pos (position-if #'(lambda (ip) (= 4 (length ip))) hosts)))
     (if pos (elt hosts pos)
       (car hosts))))
 
 (defun get-random-host-by-name (name)
-  "0.8.0+: if there're IPv4 addresses, only return a random IPv4 address."
+  "0.7.1+: if there're IPv4 addresses, only return a random IPv4 address."
   (let* ((hosts (get-hosts-by-name name))
 	 (ipv4-hosts (remove-if-not #'(lambda (ip) (= 4 (length ip))) hosts)))
     (cond (ipv4-hosts

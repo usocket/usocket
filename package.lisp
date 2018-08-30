@@ -90,16 +90,18 @@
              #:*remote-host*
              #:*remote-port*
 
-	     ;; added in 0.8.0
-             #:*backend*
-	     #:*default-event-base*
+             ;; added in 0.7.1
              #:get-host-by-name
              #:get-hosts-by-name
              #:get-random-host-by-name
-	     #:ns-host-not-found-error
-	     #:ns-no-recovery-error
-	     #:ns-try-again-condition
-	     #:default-udp-handler
-	     #:default-tcp-handler
-	     #:echo-tcp-handler ;; server handlers
-	     ))
+             #:ns-host-not-found-error
+             #:ns-no-recovery-error
+             #:ns-try-again-condition
+             #:default-udp-handler
+             #:default-tcp-handler
+             #:echo-tcp-handler ;; server handlers
+
+             ;; added in 0.8.0
+             #:*backend*
+             #:*default-event-base*
+             ))

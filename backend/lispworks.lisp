@@ -683,6 +683,7 @@
 (defmethod get-peer-port ((usocket stream-usocket))
   (nth-value 1 (get-peer-name usocket)))
 
+#-(or lispworks4 lispworks5 lispworks6.0) ; version>= 6.1
 (defun ipv6-address-p (hostname)
   (when (stringp hostname)
     (setq hostname (comm:string-ip-address hostname))
