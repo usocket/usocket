@@ -28,3 +28,6 @@
       (:datagram
 	;;---*** TODO
 	(unsupported 'datagram 'socket-connect)))))
+
+(defmethod socket-close ((usocket stream-usocket))
+  (close (socket-stream usocket)))
