@@ -30,4 +30,5 @@
 	(unsupported 'datagram 'socket-connect)))))
 
 (defmethod socket-close ((usocket stream-usocket))
-  (close (socket-stream usocket)))
+  (with-mapped-conditions ()
+    (close (socket-stream usocket))))
