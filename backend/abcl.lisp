@@ -5,9 +5,6 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 ;;; Java Classes ($*...)
 (defvar $*boolean (jclass "boolean"))
 (defvar $*byte (jclass "byte"))

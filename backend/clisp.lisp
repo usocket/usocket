@@ -2,9 +2,6 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   #-ffi
   (warn "This image doesn't contain FFI package, GET-HOST-NAME won't work.")
@@ -66,7 +63,11 @@
     (:ESHUTDOWN . already-shutdown-error)
     (:ETIMEDOUT . timeout-error)
     (:EHOSTDOWN . host-down-error)
-    (:EHOSTUNREACH . host-unreachable-error))
+    (:EHOSTUNREACH . host-unreachable-error)
+    ;; when blocked reading, and we close our socket due to a timeout.
+    ;; POSIX.1 says that EAGAIN and EWOULDBLOCK may have the same values.
+    (:EAGAIN . timeout-error)
+    (:EWOULDBLOCK . timeout-error)) ;linux
   #+win32
   `((:WSAEADDRINUSE . address-in-use-error)
     (:WSAEADDRNOTAVAIL . address-not-available-error)
@@ -89,31 +90,35 @@
     (:WSAEHOSTDOWN . host-down-error)
     (:WSAEHOSTUNREACH . host-unreachable-error)))
 
+(defun parse-errno (condition)
+  "Returns a number or keyword if it can parse what is within parens, else NIL"
+  (let ((s (princ-to-string condition)))
+    (let ((pos1 (position #\( s))
+          (pos2 (position #\) s)))
+      ;mac: number, linux: keyword
+      (ignore-errors
+        (if (digit-char-p (char s (1+ pos1)))
+          (parse-integer s :start (1+ pos1) :end pos2)
+          (let ((*package* (find-package "KEYWORD")))
+            (car (read-from-string s t nil :start pos1 :end (1+ pos2)))))))))
+
 (defun handle-condition (condition &optional (socket nil))
-  "Dispatch correct usocket condition."
-  (let (error-keyword error-string)
-    (typecase condition
-      (ext:os-error
-       (let ((errno (car (simple-condition-format-arguments condition))))
-	 #+ffi
-	 (setq error-keyword (os:errno errno)
-	       error-string (os:strerror errno))))
-      (simple-error
-       (let ((keyword
-	      (car (simple-condition-format-arguments condition))))
-	 (setq error-keyword keyword)
-	 #+ffi
-	 (setq error-string (os:strerror keyword))))
-      (error (error 'unknown-error :real-error condition))
-      (condition (signal 'unknown-condition :real-condition condition)))
-    (when error-keyword
-      (let ((usocket-error
-	     (cdr (assoc error-keyword +clisp-error-map+ :test #'eq))))
-	(if usocket-error
-	    (if (subtypep usocket-error 'error)
-		(error usocket-error :socket socket)
-		(signal usocket-error :socket socket))
-	    (error "Unknown OS error: ~A (~A)" error-string error-keyword))))))
+  "Dispatch a usocket condition instead of a CLISP specific one, if we can."
+  (let ((errno
+          (cond
+            ;clisp 2.49+
+            ((typep condition (find-symbol "OS-STREAM-ERROR" "EXT"))
+             (parse-errno condition))
+            ;clisp 2.49
+            ((typep condition (find-symbol "SIMPLE-STREAM-ERROR" "SYSTEM"))
+             (car (simple-condition-format-arguments condition))))))
+    (when errno
+      (let ((error-keyword (if (keywordp errno) errno #+ffi(os:errno errno))))
+        (let ((usocket-error (cdr (assoc error-keyword +clisp-error-map+))))
+          (when usocket-error
+            (if (subtypep usocket-error 'error)
+              (error  usocket-error :socket socket)
+              (signal usocket-error :socket socket))))))))
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
@@ -231,7 +236,14 @@
   (declare (ignore wait-list)))
 
 (defun %add-waiter (wait-list waiter)
-  (push (cons (socket waiter) NIL) (wait-list-%wait wait-list)))
+  ;; clisp's #'socket-status takes a list whose elts look either like,
+  ;; (socket-stream direction . x) or like,
+  ;; (socket-server . x)
+  ;; and it replaces the x's.
+  (push (cons (socket waiter)
+              (cond ((stream-usocket-p waiter) (cons NIL NIL))
+                    (t NIL)))
+        (wait-list-%wait wait-list)))
 
 (defun %remove-waiter (wait-list waiter)
   (setf (wait-list-%wait wait-list)
@@ -243,16 +255,17 @@
         (secs musecs)
         (split-timeout (or timeout 1))
       (dolist (x (wait-list-%wait wait-list))
-        (setf (cdr x) :INPUT))
+        (when (consp (cdr x)) ;it's a socket-stream not socket-server
+          (setf (cadr x) :INPUT)))
       (let* ((request-list (wait-list-%wait wait-list))
              (status-list (if timeout
                               (socket:socket-status request-list secs musecs)
                             (socket:socket-status request-list)))
              (sockets (wait-list-waiters wait-list)))
         (do* ((x (pop sockets) (pop sockets))
-              (y (pop status-list) (pop status-list)))
+              (y (cdr (last (pop status-list))) (cdr (last (pop status-list)))))
              ((null x))
-          (when (member y '(T :INPUT))
+          (when (member y '(T :INPUT :EOF))
             (setf (state x) :READ)))
         wait-list))))
 

@@ -2,9 +2,6 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 #+cormanlisp
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require :acl-socket))

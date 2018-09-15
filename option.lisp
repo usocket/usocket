@@ -4,6 +4,9 @@
 
 (in-package :usocket)
 
+;; put here because option.lisp is for native backend only
+(defparameter *backend* :native)
+
 ;;; Interface definition
 
 (defgeneric socket-option (socket option &key)
@@ -329,9 +332,9 @@
     (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) new-value)
     #+lispworks
     (progn
-      #-lispworks4
+      #-(or lispworks4 lispworks5.0)
       (comm::set-socket-tcp-nodelay socket new-value)
-      #+lispworks4
+      #+(or lispworks4 lispworks5.0)
       (set-socket-tcp-nodelay socket (bool->int new-value)))
     #+mcl
     () ; TODO
@@ -342,3 +345,6 @@
     #+scl
     () ; TODO
     new-value))
+
+(eval-when (:load-toplevel :execute)
+  (export 'socket-option))

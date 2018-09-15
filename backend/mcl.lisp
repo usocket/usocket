@@ -3,9 +3,6 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 (defun handle-condition (condition &optional socket)
   ; incomplete, needs to handle additional conditions
   (flet ((raise-error (&optional socket-condition)

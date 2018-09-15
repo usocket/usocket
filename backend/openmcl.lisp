@@ -2,9 +2,6 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 (defun get-host-name ()
   (ccl::%stack-block ((resultbuf 256))
     (when (zerop (#_gethostname resultbuf 256))
