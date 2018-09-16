@@ -33,7 +33,7 @@
                                   :timeout timeout
                                   :max-buffer-size max-buffer-size)))))
       (if in-new-thread
-	  (values (portable-threads:spawn-thread (or name "USOCKET Server") #'real-call) socket)
+	  (values (bt:make-thread #'real-call :name (or name "USOCKET Server")) socket)
 	(progn
 	  (setq *server* socket)
 	  (real-call))))))
@@ -101,7 +101,8 @@
                                        `(,socket ,@(when element-type `(:element-type ,element-type)))))
                  (client-stream (socket-stream client-socket)))
             (if multi-threading
-                (apply #'portable-threads:spawn-thread "USOCKET Client" real-function client-socket arguments)
+                (bt:make-thread (lambda () (apply real-function client-socket arguments))
+                                :name "USOCKET Client")
               (prog1 (apply real-function client-socket arguments)
                 (close client-stream)
                 (socket-close client-socket)))
