@@ -517,18 +517,22 @@ happen. Use with care."
          (multiple-value-bind
              (secs musecs)
              (split-timeout (or timeout 1))
-           (multiple-value-bind
-               (count err)
-               (sb-unix:unix-fast-select
-                (1+ (reduce #'max (wait-list-%wait sockets)
-                            :key #'sb-bsd-sockets:socket-file-descriptor))
-                (sb-alien:addr rfds) nil nil
-                (when timeout secs) (when timeout musecs))
-	     (if (null count)
-		 (unless (= err sb-unix:EINTR)
-		   (error (map-errno-error err)))
-		 (when (< 0 count)
-		   ;; process the result...
+           (let* ((wait-list (wait-list-%wait sockets)))
+                  count err)
+             (if (null wait-list)
+                 (setq count 0) ;; no need to call
+               (multiple-value-setq (count err)
+                 (sb-unix:unix-fast-select
+                  ;; "invalid number of arguments: 0" if wait-list is null.
+                  (1+ (reduce #'max wait-list
+                              :key #'sb-bsd-sockets:socket-file-descriptor))
+                  (sb-alien:addr rfds) nil nil
+                  (when timeout secs) (when timeout musecs))))
+             (if (null count) ; something wrong in #'sb-unix:unix-fast-select
+                 (unless (= err sb-unix:EINTR)
+                   (error (map-errno-error err)))
+                 (when (< 0 count) ; do nothing if count = 0
+                   ;; process the result...
                    (dolist (x (wait-list-waiters sockets))
                      (when (sb-unix:fd-isset
                             (sb-bsd-sockets:socket-file-descriptor
