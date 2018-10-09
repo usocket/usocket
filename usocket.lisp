@@ -288,7 +288,7 @@ The `body' is an implied progn form."
   (let ((wl (%make-wait-list)))
     (setf (wait-list-map wl) (make-hash-table))
     (%setup-wait-list wl)
-    (dolist (x waiters wl)
+    (dolist (x waiters wl) ; wl is returned
       (add-waiter wl x))))
 
 (defun add-waiter (wait-list input)
@@ -310,7 +310,8 @@ The `body' is an implied progn form."
   (setf (wait-list-waiters wait-list) nil)
   (clrhash (wait-list-map wait-list)))
 
-(defun wait-for-input (socket-or-sockets &key timeout ready-only)
+(defun wait-for-input (socket-or-sockets &key timeout ready-only
+                                         &aux (single-socket-p (atom socket-or-sockets)))
   "Waits for one or more streams to become ready for reading from
 the socket.  When `timeout' (a non-negative real number) is
 specified, wait `timeout' seconds, or wait indefinitely when
@@ -338,16 +339,23 @@ the values documented in usocket.lisp in the usocket class."
       (sleep timeout))
     (return-from wait-for-input nil))
 
+  ;; create a new wait-list if it's not created by the caller.
   (unless (wait-list-p socket-or-sockets)
-    (let ((wl (make-wait-list (if (listp socket-or-sockets)
-                                  socket-or-sockets (list socket-or-sockets)))))
+    ;; OPTIMIZATION: in case socket-or-sockets is an atom, create the wait-list
+    ;; only once and store it into the usocket itself.   
+    (let ((wl (if (and single-socket-p (wait-list socket-or-sockets))
+                  (wait-list socket-or-sockets) ; reuse the wait-list
+                (make-wait-list (if (listp socket-or-sockets)
+                                    socket-or-sockets (list socket-or-sockets))))))
       (multiple-value-bind
-            (socks to)
+            (sockets to-result)
           (wait-for-input wl :timeout timeout :ready-only ready-only)
-        ;; NOTE: in case waiter is not created by the user, it should be removed here.
-        (remove-all-waiters wl)
+        ;; in case of single socket, keep the wait-list
+        (unless single-socket-p
+          (remove-all-waiters wl))
         (return-from wait-for-input
-          (values (if ready-only socks socket-or-sockets) to)))))
+          (values (if ready-only sockets socket-or-sockets) to-result)))))
+
   (let* ((start (get-internal-real-time))
          (sockets-ready 0))
     (dolist (x (wait-list-waiters socket-or-sockets))
@@ -362,7 +370,7 @@ the values documented in usocket.lisp in the usocket class."
     ;; the internal routine is responsibe for
     ;; making sure the wait doesn't block on socket-streams of
     ;; which theready- socket isn't ready, but there's space left in the
-    ;; buffer
+    ;; buffer.  socket-or-sockets is not destructed.
     (wait-for-input-internal socket-or-sockets
                              :timeout (if (zerop sockets-ready) timeout 0))
     (let ((to-result (when timeout
@@ -370,9 +378,16 @@ the values documented in usocket.lisp in the usocket class."
                                          internal-time-units-per-second)))
                          (when (< elapsed timeout)
                            (- timeout elapsed))))))
-      (values (if ready-only
-                  (remove-if #'null (wait-list-waiters socket-or-sockets) :key #'state)
-                  socket-or-sockets)
+      ;; two return values:
+      ;; 1) the original wait-list, or available sockets (ready-only)
+      ;; 2) remaining timeout
+      (values (cond (ready-only
+                     (cond (single-socket-p
+                            (if (null (state (car (wait-list-waiters socket-or-sockets))))
+                                nil ; nothing left if the only socket is not waiting
+                              (wait-list-waiters socket-or-sockets)))
+                           (t (remove-if #'null (wait-list-waiters socket-or-sockets) :key #'state))))
+                    (t socket-or-sockets))
               to-result))))
 
 ;;
@@ -571,14 +586,14 @@ stringified hostname."
 (defun ip= (ip1 ip2) ; exported
   (etypecase ip1
     (string (string= ip1                  ; IPv4 or IPv6
-		     (host-to-hostname ip2)))
+                     (host-to-hostname ip2)))
     ((or (vector t 4)                     ; IPv4
          (array (unsigned-byte 8) (4))    ; IPv4
          (vector t 16)                    ; IPv6
          (array (unsigned-byte 8) (16)))  ; IPv6
      (equalp ip1 ip2))
     (integer (= ip1                       ; IPv4 only
-		(host-byte-order ip2))))) ; convert ip2 to integer (hbo)
+                (host-byte-order ip2))))) ; convert ip2 to integer (hbo)
 
 (defun ip/= (ip1 ip2) ; exported
   (not (ip= ip1 ip2)))
@@ -590,18 +605,18 @@ stringified hostname."
 (defun get-host-by-name (name)
   "0.7.1+: if there're IPv4 addresses, return the first IPv4 address."
   (let* ((hosts (get-hosts-by-name name))
-	 (pos (position-if #'(lambda (ip) (= 4 (length ip))) hosts)))
+         (pos (position-if #'(lambda (ip) (= 4 (length ip))) hosts)))
     (if pos (elt hosts pos)
       (car hosts))))
 
 (defun get-random-host-by-name (name)
   "0.7.1+: if there're IPv4 addresses, only return a random IPv4 address."
   (let* ((hosts (get-hosts-by-name name))
-	 (ipv4-hosts (remove-if-not #'(lambda (ip) (= 4 (length ip))) hosts)))
+         (ipv4-hosts (remove-if-not #'(lambda (ip) (= 4 (length ip))) hosts)))
     (cond (ipv4-hosts
-	   (elt ipv4-hosts (random (length ipv4-hosts))))
-	  (hosts
-	   (elt hosts (random (length hosts)))))))
+           (elt ipv4-hosts (random (length ipv4-hosts))))
+          (hosts
+           (elt hosts (random (length hosts)))))))
 
 (defun host-to-vector-quad (host) ; internal
   "Translate a host specification (vector quad, dotted quad or domain name)
