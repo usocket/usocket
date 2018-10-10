@@ -48,15 +48,11 @@
 ;; are flushed and the socket is closed correctly afterwards.
 (defmethod socket-close ((usocket usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (rt::socket-shutdown usocket)
   (rt::c-fclose usocket))
 
 (defmethod socket-close ((usocket stream-usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (close (socket-stream usocket)))
 
 ;; (defmethod socket-close :after ((socket datagram-usocket))

@@ -152,8 +152,6 @@
 ;; and their associated objects are represented
 ;; by the same object.
 (defmethod socket-close ((usocket usocket))
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 

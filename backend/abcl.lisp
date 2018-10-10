@@ -265,10 +265,6 @@
 
 ;;; SOCKET-CLOSE
 
-(defmethod socket-close :before ((usocket usocket))
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket)))
-
 (defmethod socket-close ((usocket stream-server-usocket))
   (with-mapped-conditions (usocket)
     (jcall $@close/ServerSocket/0 (socket usocket))))

@@ -499,13 +499,9 @@
 ;; are correctly flushed and the socket closed.
 (defmethod socket-close ((usocket stream-usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (close (socket-stream usocket)))
 
 (defmethod socket-close ((usocket usocket))
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
      (comm::close-socket (socket usocket))))
 

@@ -142,15 +142,11 @@
 ;; socket stream when closing a stream socket.
 (defmethod socket-close ((usocket stream-usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket-stream usocket))))
 
 (defmethod socket-close ((usocket usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (ext:close-socket (socket usocket))))
 

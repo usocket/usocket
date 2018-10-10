@@ -94,8 +94,6 @@
 	(unsupported 'datagram 'socket-connect)))))
 
 (defmethod socket-close ((usocket usocket))
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (socket-close (socket usocket))))
 

@@ -183,14 +183,10 @@
 ;; are the same object
 (defmethod socket-close ((usocket usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
 (defmethod socket-close ((usocket stream-server-usocket))
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (socket:socket-server-close (socket usocket)))
 
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
@@ -346,8 +342,6 @@ and the address of the sender as values."
       rv))
 
   (defmethod socket-close ((usocket datagram-usocket))
-    (when (wait-list usocket)
-       (remove-waiter (wait-list usocket) usocket))
     (rawsock:sock-close (socket usocket)))
 
   (declaim (inline get-socket-name))
@@ -606,8 +600,6 @@ and the address of the sender as values."
     (ext:finalize usocket 'finalize-datagram-usocket))
 
   (defmethod socket-close ((usocket datagram-usocket))
-    (when (wait-list usocket)
-      (remove-waiter (wait-list usocket) usocket))
     (with-slots (recv-buffer socket) usocket
       (ffi:foreign-free recv-buffer)
       (zerop (%close socket))))

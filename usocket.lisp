@@ -188,6 +188,10 @@ explicitly specified, or the element-type passed to `socket-listen' otherwise.")
 (defgeneric socket-close (usocket)
   (:documentation "Close a previously opened `usocket'."))
 
+(defmethod socket-close :before ((usocket usocket))
+  (when (wait-list usocket)
+    (remove-waiter (wait-list usocket) usocket)))
+
 ;; also see http://stackoverflow.com/questions/4160347/close-vs-shutdown-socket
 (defgeneric socket-shutdown (usocket direction)
   (:documentation "Shutdown communication on the socket in DIRECTION.

@@ -423,14 +423,10 @@ happen. Use with care."
 ;; different objects. Be sure to close the stream (which
 ;; closes the socket too) when closing a stream-socket.
 (defmethod socket-close ((usocket usocket))
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (sb-bsd-sockets:socket-close (socket usocket))))
 
 (defmethod socket-close ((usocket stream-usocket))
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket-stream usocket))))
 

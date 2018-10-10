@@ -104,8 +104,6 @@
 ;; because socket-streams are also sockets.
 (defmethod socket-close ((usocket usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
