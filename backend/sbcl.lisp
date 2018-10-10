@@ -140,7 +140,7 @@
            (dolist (sock sockets)
              (when (fdset-fd-isset rfds (sb-bsd-sockets:socket-file-descriptor
                                          (socket sock)))
-               (setf (state sock) :READ)))))))
+               (setf (state sock) :READ))))))))
 ) ; progn
 
 (defun map-socket-error (sock-err)
@@ -534,7 +534,7 @@ happen. Use with care."
                             (sb-bsd-sockets:socket-file-descriptor
                              (socket x))
                             rfds)
-                       (setf (state x) :READ))))))))))
+                       (setf (state x) :READ)))))))))
 ) ; progn
 
 ;;; WAIT-FOR-INPUT support for SBCL on Windows platform (Chun Tian (binghe))
