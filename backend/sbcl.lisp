@@ -140,7 +140,7 @@
            (dolist (sock sockets)
              (when (fdset-fd-isset rfds (sb-bsd-sockets:socket-file-descriptor
                                          (socket sock)))
-               (setf (state sock) :READ))))))))
+               (setf (state sock) :READ)))))))
 ) ; progn
 
 (defun map-socket-error (sock-err)
