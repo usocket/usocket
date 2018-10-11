@@ -534,7 +534,7 @@ happen. Use with care."
                             (sb-bsd-sockets:socket-file-descriptor
                              (socket x))
                             rfds)
-                       (setf (state x) :READ))))))))))
+                       (setf (state x) :READ)))))))))
 ) ; progn
 
 ;;; WAIT-FOR-INPUT support for SBCL on Windows platform (Chun Tian (binghe))
