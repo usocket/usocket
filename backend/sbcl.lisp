@@ -513,7 +513,7 @@ happen. Use with care."
          (multiple-value-bind
              (secs musecs)
              (split-timeout (or timeout 1))
-           (let* ((wait-list (wait-list-%wait sockets)))
+           (let* ((wait-list (wait-list-%wait sockets))
                   count err)
              (if (null wait-list)
                  (setq count 0) ;; no need to call
