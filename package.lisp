@@ -104,4 +104,5 @@
              ;; added in 0.8.0
              #:*backend*
              #:*default-event-base*
+             #:host-to-hostname
              ))

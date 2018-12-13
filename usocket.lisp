@@ -573,6 +573,7 @@ such as 3232235777."
                      (aref vector (1+ i)) (ldb (byte 8 0) word))
             finally (return vector)))))
 
+;; exported since 0.8.0
 (defun host-to-hostname (host) ; host -> string
   "Translate a string, vector quad or 16 byte IPv6 address to a
 stringified hostname."
