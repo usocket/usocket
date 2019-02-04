@@ -1,8 +1,11 @@
 -*- Mode: Change-Log; Coding: utf-8 -*-
 
-0.8.0: (to be released)
+0.8.0: (Feb 4, 2019)
 
-* New backend: IOlib. (Push :USOCKET-IOLIB to *FEATURES* to enable this feature)
+* New backend (experimental): IOlib. (Push :USOCKET-IOLIB to *FEATURES* to enable this feature)
+* New feature: Optimized WAIT-FOR-INPUT for single-socket case (one-time consing)
+* New feature: Exported host-to-hostname (#42)
+* Bugfix: [SBCL] more robust/thread-safe WAIT-FOR-INPUT-INTERNAL
 
 0.7.1: (Aug 31, 2018)
 
