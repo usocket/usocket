@@ -10,5 +10,5 @@
     :version (:read-file-form "version.sexp")
     :licence "MIT"
     :description "Universal socket library for Common Lisp (server side)"
-    :depends-on (:usocket :portable-threads)
+    :depends-on (:usocket :bordeaux-threads)
     :components ((:file "server")))
