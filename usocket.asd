@@ -10,7 +10,7 @@
 #+sample
 (pushnew :usocket-iolib *features*)
 
-(defsystem #:usocket
+(defsystem usocket
     :name "usocket (client, with server symbols)"
     :author "Erik Enge & Erik Huelsmann"
     :maintainer "Chun Tian (binghe) & Hans Huebner"
@@ -52,6 +52,6 @@
 		  :components ((:file "iolib")))))
 
 (defmethod perform ((op test-op) (c (eql (find-system :usocket))))
-  (oos 'load-op :usocket-server)
-  (oos 'load-op :usocket-test)
-  (oos 'test-op :usocket-test))
+  (oos 'load-op #:usocket-server)
+  (oos 'load-op #:usocket-test)
+  (oos 'test-op #:usocket-test))

@@ -4,7 +4,7 @@
 
 (in-package :asdf)
 
-(defsystem #:usocket-server
+(defsystem usocket-server
     :name "usocket (server)"
     :author "Chun Tian (binghe)"
     :version (:read-file-form "version.sexp")
