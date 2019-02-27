@@ -1,5 +1,10 @@
 -*- Mode: Change-Log; Coding: utf-8 -*-
 
+0.8.1: (Feb 27, 2019)
+
+* New backend: clasp (patch from Christian Schafmeister, #45)
+* Bugfix: [SBCL] fixed loading usocket.asd in SBCL 1.5.0
+
 0.8.0: (Feb 4, 2019)
 
 * New backend (experimental): IOlib. (Push :USOCKET-IOLIB to *FEATURES* to enable this feature)
