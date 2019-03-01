@@ -52,6 +52,6 @@
 		  :components ((:file "iolib")))))
 
 (defmethod perform ((op test-op) (c (eql (find-system :usocket))))
-  (oos 'load-op #:usocket-server)
-  (oos 'load-op #:usocket-test)
-  (oos 'test-op #:usocket-test))
+  (oos 'load-op :usocket-server)
+  (oos 'load-op :usocket-test)
+  (oos 'test-op :usocket-test))
