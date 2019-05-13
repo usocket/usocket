@@ -119,4 +119,7 @@
              #:INVALID-SOCKET-STREAM-ERROR #:INTERRUPTED-CONDITION
              #:INVALID-ARGUMENT-ERROR #:OPERATION-NOT-PERMITTED-ERROR
              #:NETWORK-RESET-ERROR #:CONNECTION-REFUSED-ERROR
+
+             ;; added in 0.8.2
+             #:host-or-ip
              ))

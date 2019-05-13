@@ -168,9 +168,10 @@ condition available."))
   (:documentation "Error raised when there's no other - more applicable -
 error available."))
 
-(defmacro with-mapped-conditions ((&optional socket) &body body)
-  `(handler-bind ((condition #'(lambda (c) (handle-condition c ,socket))))
-    ,@body))
+(defmacro with-mapped-conditions ((&optional socket host-or-ip) &body body)
+  `(handler-bind ((condition
+                   #'(lambda (c) (handle-condition c ,socket ,host-or-ip))))
+     ,@body))
 
 (defparameter +unix-errno-condition-map+
   `(((11) . ns-try-again-condition) ;; EAGAIN

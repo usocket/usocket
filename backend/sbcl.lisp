@@ -183,16 +183,19 @@
     #-(or ecl clasp)
     (sb-bsd-sockets:host-not-found-error . ns-host-not-found-error)))
 
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
   (typecase condition
     (serious-condition
      (let* ((usock-error (cdr (assoc (type-of condition) +sbcl-error-map+)))
-	    (usock-error (if (functionp usock-error)
-			     (funcall usock-error condition)
-			   usock-error)))
-       (when usock-error
-	 (error usock-error :socket socket))))
+            (usock-error (if (functionp usock-error)
+                             (funcall usock-error condition)
+                             usock-error)))
+       (declare (type symbol usock-error))
+       (cond ((subtypep usock-error 'ns-condition)
+              (error usock-error :socket socket :host-or-ip host-or-ip))
+             (t
+              (error usock-error :socket socket)))))
     (condition (let* ((usock-cond (cdr (assoc (type-of condition)
                                               +sbcl-condition-map+)))
                       (usock-cond (if (functionp usock-cond)
@@ -248,7 +251,7 @@ happen. Use with care."
 	  (return-from ,block ,timeout-form)))))
 
 (defun get-hosts-by-name (name)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil name)
     (multiple-value-bind (host4 host6)
         (sb-bsd-sockets:get-host-by-name name)
       (let ((addr4 (when host4
@@ -495,7 +498,7 @@ happen. Use with care."
   (nth-value 1 (get-peer-name usocket)))
 
 (defun get-host-by-address (address)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil address)
     (sb-bsd-sockets::host-ent-name
         (sb-bsd-sockets:get-host-by-address address))))
 
