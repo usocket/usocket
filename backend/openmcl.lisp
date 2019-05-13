@@ -58,7 +58,7 @@
         (error usock-err :socket socket)
       (error 'unknown-error :socket socket :real-error real-condition))))
 
-(defun handle-condition (condition &optional socket)
+(defun handle-condition (condition &optional socket (host-or-ip nil))
   (typecase condition
     (openmcl-socket:socket-error
        (raise-error-from-id (openmcl-socket:socket-error-identifier condition)
@@ -73,8 +73,8 @@
 					    +openmcl-nameserver-error-map+))))
 	 (if nameserver-error
              (if (typep nameserver-error 'serious-condition)
-                 (error nameserver-error :host-or-ip nil)
-                 (signal nameserver-error :host-or-ip nil))
+                 (error nameserver-error :host-or-ip host-or-ip)
+                 (signal nameserver-error :host-or-ip host-or-ip))
 	   (raise-error-from-id condition-id socket condition))))))
 
 (defun to-format (element-type protocol)
@@ -92,7 +92,7 @@
 		       local-host local-port)
   (when (eq nodelay :if-supported)
     (setf nodelay t))
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil host)
     (ecase protocol
       (:stream
        (let ((mcl-sock
@@ -131,7 +131,7 @@
                            (element-type 'character))
   (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
 	 (real-host (host-to-hostname host))
-         (sock (with-mapped-conditions ()
+         (sock (with-mapped-conditions (nil host)
                   (apply #'openmcl-socket:make-socket
                          (append (list :connect :passive
                                        :reuse-address reuseaddress
@@ -161,7 +161,7 @@
 
 #-ipv6
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
-  (with-mapped-conditions (usocket)
+  (with-mapped-conditions (usocket host)
     (if (and host port)
 	(openmcl-socket:send-to (socket usocket) buffer size
 				:remote-host (host-to-hbo host)
@@ -216,11 +216,11 @@
           (get-peer-port usocket)))
 
 (defun get-host-by-address (address)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil address)
      (openmcl-socket:ipaddr-to-hostname (host-to-hbo address))))
 
 (defun get-hosts-by-name (name)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil name)
      (list (hbo-to-vector-quad (openmcl-socket:lookup-hostname
                                 (host-to-hostname name))))))
 

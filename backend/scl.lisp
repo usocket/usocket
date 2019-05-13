@@ -17,7 +17,7 @@
           :socket socket
           :real-error condition)))))
 
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
   (typecase condition
     (ext::socket-error

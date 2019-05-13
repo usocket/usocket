@@ -60,16 +60,25 @@
                      (aref vector (1+ i)) (ldb (byte 8 0) word))
             finally (return vector)))))
 
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
   (let* ((usock-error (cdr (assoc (type-of condition) +iolib-error-map+)))
 	 (usock-error (if (functionp usock-error)
 			  (funcall usock-error condition)
-			usock-error)))
-    (cond ((typep condition 'iolib/sockets:resolver-error)
-	   (error usock-error :host-or-ip (iolib/sockets:resolver-error-datum condition)))
-	  (usock-error
-	   (error usock-error :socket socket)))))
+                          usock-error)))
+    (if usock-error
+        (if (typep usock-error 'socket-error)
+            (cond ((subtypep usock-error 'ns-error)
+                  (error usock-error :socket socket :host-or-ip host-or-ip))
+                 (t
+                  (error usock-error :socket socket)))
+            (cond ((subtypep usock-error 'ns-condition)
+                  (signal usock-error :socket socket :host-or-ip host-or-ip))
+                 (t
+                  (signal usock-error :socket socket))))
+        (error 'unknown-error
+               :real-error condition
+               :socket socket))))
 
 (defun ipv6-address-p (host)
   (iolib/sockets:ipv6-address-p (iolib/sockets:ensure-hostname host)))
@@ -79,7 +88,7 @@
                        (nodelay t) ;; nodelay == t is the ACL default
                        local-host local-port)
   (declare (ignore element-type deadline nodelay))
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil host)
     (let* ((remote (when (and host port) (iolib/sockets:ensure-hostname host)))
 	   (local  (when (and local-host local-port)
 		     (iolib/sockets:ensure-hostname local-host)))
@@ -125,7 +134,7 @@
                            (backlog 5)
                            (element-type 'character))
   (declare (ignore element-type))
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil host)
     (make-stream-server-socket
       (iolib/sockets:make-socket :connect :passive
 				 :address-family :internet
@@ -176,13 +185,18 @@
     (values buffer size (iolib-vector-to-vector-quad host) port)))
 
 (defun get-hosts-by-name (name)
-  (multiple-value-bind (address more-addresses)
-      (iolib/sockets:lookup-hostname name :ipv6 iolib/sockets:*ipv6*)
-    (mapcar #'(lambda (x) (iolib-vector-to-vector-quad
-			   (iolib/sockets:address-name x)))
-	    (cons address more-addresses))))
+  (with-mapped-conditions (nil name)
+    (multiple-value-bind (address more-addresses)
+        (iolib/sockets:lookup-hostname name :ipv6 iolib/sockets:*ipv6*)
+      (mapcar #'(lambda (x) (iolib-vector-to-vector-quad
+                             (iolib/sockets:address-name x)))
+              (cons address more-addresses)))))
 
-(defparameter *event-base*
+(defun get-host-by-address (address)
+  (with-mapped-conditions (nil address)
+    nil)) ;; TODO
+
+(defvar *event-base*
   (make-instance 'iolib/multiplex:event-base))
 
 (defun %setup-wait-list (wait-list)

@@ -56,25 +56,31 @@
   (append +unix-errno-condition-map+
           +unix-errno-error-map+))
 
-(defun raise-usock-err (errno socket &optional condition)
-  (let ((usock-err
+(defun raise-usock-err (errno socket &optional condition (host-or-ip nil))
+  (let ((usock-error
          (cdr (assoc errno +lispworks-error-map+ :test #'member))))
-    (if usock-err
-        (if (subtypep usock-err 'error)
-            (error usock-err :socket socket)
-          (signal usock-err))
+    (if usock-error
+        (if (subtypep usock-error 'error)
+            (cond ((subtypep usock-error 'ns-error)
+                   (error usock-error :socket socket :host-or-ip host-or-ip))
+                  (t
+                   (error usock-error :socket socket)))
+            (cond ((subtypep usock-error 'ns-condition)
+                   (signal usock-error :socket socket :host-or-ip host-or-ip))
+                  (t
+                   (signal usock-error :socket socket))))
       (error 'unknown-error
              :socket socket
              :real-error condition
              :errno errno))))
 
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
   (typecase condition
     (condition (let ((errno #-win32 (lw:errno-value)
                             #+win32 (wsa-get-last-error)))
                  (unless (zerop errno)
-                   (raise-usock-err errno socket condition))))))
+                   (raise-usock-err errno socket condition host-or-ip))))))
 
 (defconstant *socket_sock_dgram* 2
   "Connectionless, unreliable datagrams of fixed maximum length.")
@@ -406,7 +412,7 @@
      (let ((hostname (host-to-hostname host))
            (stream))
        (setq stream
-             (with-mapped-conditions ()
+             (with-mapped-conditions (nil host)
                (comm:open-tcp-stream hostname port
                                      :element-type element-type
                                      #-(and lispworks4 (not lispworks4.4)) ; >= 4.4.5
@@ -435,12 +441,12 @@
     (:datagram
      (let ((usocket (make-datagram-socket
                      (if (and host port)
-                         (with-mapped-conditions ()
+                         (with-mapped-conditions (nil host)
                            (connect-to-udp-server (host-to-hostname host) port
                                                   :local-address (and local-host (host-to-hostname local-host))
                                                   :local-port local-port
                                                   :read-timeout timeout))
-                         (with-mapped-conditions ()
+                         (with-mapped-conditions (nil local-host)
                            (open-udp-socket       :local-address (and local-host (host-to-hostname local-host))
                                                   :local-port local-port
                                                   :read-timeout timeout)))
@@ -460,7 +466,7 @@
   (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
          (comm::*use_so_reuseaddr* reuseaddress)
          (hostname (host-to-hostname host))
-         (socket-res-list (with-mapped-conditions ()
+         (socket-res-list (with-mapped-conditions (nil host)
                             (multiple-value-list
                              #-lispworks4.1 (comm::create-tcp-socket-for-service
                                              port :address hostname :backlog backlog)
@@ -589,7 +595,7 @@
                      #+win32 (wsa-get-last-error)))
           (if (zerop errno)
               n
-            (raise-usock-err errno socket-fd)))))))
+            (raise-usock-err errno socket-fd host)))))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length &key timeout (max-buffer-size +max-datagram-packet-size+))
   "Receive message from socket, read-timeout is a float number in seconds.
@@ -699,9 +705,13 @@
     (hbo-to-vector-quad hbo)))
 
 (defun get-hosts-by-name (name)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil name)
      (mapcar #'lw-hbo-to-vector-quad
              (comm:get-host-entry name :fields '(:addresses)))))
+
+(defun get-host-by-address (address)
+  (with-mapped-conditions (nil address)
+    nil)) ;; TODO
 
 (defun os-socket-handle (usocket)
   (socket usocket))

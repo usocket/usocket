@@ -47,7 +47,7 @@
 	 :text)
 	(t :binary)))
 
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   (typecase condition
     ;;---*** TODO: Add additional conditions as appropriate
     (sys:connection-refused
@@ -57,7 +57,7 @@
     (sys:host-not-responding-during-connection
       (error 'timeout-error :socket socket))
     (sys:unknown-host-name
-      (error 'ns-host-not-found-error :host-or-ip nil))
+      (error 'ns-host-not-found-error :host-or-ip host-or-ip))
     (sys:network-error
       (error 'unknown-error :socket socket :real-error condition :errno -1))))
 
@@ -69,7 +69,7 @@
     (unsupported 'deadline 'socket-connect))
   (when (and nodelay-p (not (eq nodelay :if-supported)))
     (unsupported 'nodelay 'socket-connect))
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil host)
     (ecase protocol
       (:stream
 	(let* ((host-object (host-to-host-object host))
@@ -217,10 +217,10 @@
   (unsupported 'datagram 'socket-receive))
 
 (defun get-host-by-address (address)
-  )
+  ) ;; TODO
 
 (defun get-hosts-by-name (name)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil name)
     (let ((host-object (host-to-host-object name)))
       (loop for (network address) in (scl:send host-object :network-addresses)
 	    when (typep network 'tcp:internet-network)

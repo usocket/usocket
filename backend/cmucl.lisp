@@ -19,16 +19,22 @@
   (append +unix-errno-condition-map+
           +unix-errno-error-map+))
 
-(defun cmucl-map-socket-error (err &key condition socket)
-  (let ((usock-err
+(defun cmucl-map-socket-error (err &key condition socket host-or-ip)
+  (let ((usock-error
          (cdr (assoc err +cmucl-error-map+ :test #'member))))
-    (if usock-err
-        (if (subtypep usock-err 'error)
-            (error usock-err :socket socket)
-          (signal usock-err :socket socket))
-      (error 'unknown-error
-             :socket socket
-             :real-error condition))))
+    (if usock-error
+        (if (subtypep usock-error 'error)
+            (cond ((subtypep usock-error 'ns-error)
+                   (error usock-error :socket socket :host-or-ip host-or-ip))
+                  (t
+                   (error usock-error :socket socket)))
+            (cond ((subtypep usock-error 'ns-condition)
+                   (signal usock-error :socket socket :host-or-ip host-or-ip))
+                  (t
+                   (signal usock-error :socket socket))))
+        (error 'unknown-error
+               :socket socket
+               :real-error condition))))
 
 ;; CMUCL error handling is brain-dead: it doesn't preserve any
 ;; information other than the OS error string from which the
@@ -40,12 +46,13 @@
 ;;
 ;;
 ;; Just catch the errors and encapsulate them in an unknown-error
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
   (typecase condition
     (ext::socket-error (cmucl-map-socket-error (ext::socket-errno condition)
                                                :socket socket
-                                               :condition condition))))
+                                               :condition condition
+                                               :host-or-ip host-or-ip))))
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
@@ -72,7 +79,7 @@
 		 (nconc args (list :local-host (when local-host
 						 (host-to-hbo local-host))
 				   :local-port local-port)))
-	       (with-mapped-conditions (socket)
+	       (with-mapped-conditions (socket host)
 		 (apply #'ext:connect-to-inet-socket args))))
        (if socket
 	   (let* ((stream (sys:make-fd-stream socket :input t :output t
@@ -92,16 +99,16 @@
 		     (nconc args (list :local-host (when local-host
 						     (host-to-hbo local-host))
 				       :local-port local-port)))
-		   (with-mapped-conditions (socket)
+		   (with-mapped-conditions (socket (or host local-host))
 		     (apply #'ext:connect-to-inet-socket args)))
 		 (if (or local-host-p local-port-p)
-		     (with-mapped-conditions (socket)
+		     (with-mapped-conditions (socket (or host local-host))
 		       (apply #'ext:create-inet-listener
 			      (nconc (list (or local-port 0) protocol)
 				     (when (and local-host-p
 						(ip/= local-host *wildcard-host*))
 				       (list :host (host-to-hbo local-host))))))
-		     (with-mapped-conditions (socket)
+		     (with-mapped-conditions (socket (or host local-host))
 		       (ext:create-inet-socket protocol)))))
        (if socket
 	   (let ((usocket (make-datagram-socket socket :connected-p (and host port t))))
@@ -118,7 +125,7 @@
                            (element-type 'character))
  (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
         (server-sock
-         (with-mapped-conditions ()
+         (with-mapped-conditions (nil host)
            (apply #'ext:create-inet-listener
                   (nconc  (list port :stream
                                 :backlog backlog
@@ -177,7 +184,7 @@
 			&aux (real-buffer (if (zerop offset)
 					      buffer
 					      (subseq buffer offset (+ offset size)))))
-  (with-mapped-conditions (usocket)
+  (with-mapped-conditions (usocket host)
     (if (and host port)
 	(ext:inet-sendto (socket usocket) real-buffer size (host-to-hbo host) port)
 	#-unicode
@@ -245,13 +252,13 @@
 (defun get-host-by-address (address)
   (handler-case (ext:host-entry-name
                  (lookup-host-entry (host-byte-order address)))
-    (condition (condition) (handle-condition condition))))
+    (condition (condition) (handle-condition condition address))))
 
 (defun get-hosts-by-name (name)
   (handler-case (mapcar #'hbo-to-vector-quad
                         (ext:host-entry-addr-list
                          (lookup-host-entry name)))
-    (condition (condition) (handle-condition condition))))
+    (condition (condition) (handle-condition condition name))))
 
 (defun get-host-name ()
   (unix:unix-gethostname))

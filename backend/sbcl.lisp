@@ -327,7 +327,7 @@ happen. Use with care."
                                                 (or local (host-to-vector-quad *wildcard-host*)))
                                             (or local-port *auto-port*)))
 
-              (with-mapped-conditions (usocket)
+              (with-mapped-conditions (usocket host)
 		#+(and sbcl (not win32))
 		(labels ((connect ()
                            (sb-bsd-sockets:socket-connect socket remote port)))
@@ -397,7 +397,7 @@ happen. Use with care."
                               :type :stream
                               :protocol :tcp)))
     (handler-case
-        (with-mapped-conditions ()
+        (with-mapped-conditions (nil host)
           (setf (sb-bsd-sockets:sockopt-reuse-address sock) reuseaddress)
           (sb-bsd-sockets:socket-bind sock ip port)
           (sb-bsd-sockets:socket-listen sock backlog)
@@ -471,7 +471,7 @@ happen. Use with care."
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
   (let ((remote (when host
                   (car (get-hosts-by-name (host-to-hostname host))))))
-    (with-mapped-conditions (usocket)
+    (with-mapped-conditions (usocket host)
       (let* ((s (socket usocket))
              (dest (if (and host port) (list remote port) nil))
              (real-buffer (if (zerop offset)
@@ -479,15 +479,15 @@ happen. Use with care."
                               (subseq buffer offset (+ offset size)))))
         (sb-bsd-sockets:socket-send s real-buffer size :address dest)))))
 
-(defmethod socket-receive ((socket datagram-usocket) buffer length
+(defmethod socket-receive ((usocket datagram-usocket) buffer length
 			   &key (element-type '(unsigned-byte 8)))
   #+sbcl
   (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
 		   (integer 0)                          ; size
 		   (simple-array (unsigned-byte 8) (*)) ; host
 		   (unsigned-byte 16)))                 ; port
-  (with-mapped-conditions (socket)
-    (let ((s (socket socket)))
+  (with-mapped-conditions (usocket)
+    (let ((s (socket usocket)))
       (sb-bsd-sockets:socket-receive s buffer length :element-type element-type))))
 
 (defmethod get-local-name ((usocket usocket))

@@ -69,7 +69,7 @@
 
   (let ((socket))
     (setf socket
-          (with-mapped-conditions (socket)
+          (with-mapped-conditions (socket (or host local-host))
             (ecase protocol
               (:stream
 	       (labels ((make-socket ()
@@ -124,7 +124,7 @@
   ;; Allegro and OpenMCL socket interfaces bear very strong resemblence
   ;; whatever you change here, change it also for OpenMCL
   (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
-         (sock (with-mapped-conditions ()
+         (sock (with-mapped-conditions (nil host)
                  (apply #'socket:make-socket
                         (append (list :connect :passive
                                       :reuse-address reuseaddress
@@ -167,7 +167,7 @@
 
 #+allegro
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
-  (with-mapped-conditions (usocket)
+  (with-mapped-conditions (usocket host)
     (let ((s (socket usocket)))
       (socket:send-to s
 		      (if (zerop offset)
@@ -178,13 +178,13 @@
 		      :remote-port port))))
 
 #+allegro
-(defmethod socket-receive ((socket datagram-usocket) buffer length &key)
+(defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
   (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
 		   (integer 0)                          ; size
 		   (unsigned-byte 32)                   ; host
 		   (unsigned-byte 16)))                 ; port
-  (with-mapped-conditions (socket)
-    (let ((s (socket socket)))
+  (with-mapped-conditions (usocket)
+    (let ((s (socket usocket)))
       (socket:receive-from s length :buffer buffer :extract t))))
 
 (defun get-host-by-address (address)

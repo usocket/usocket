@@ -3,17 +3,20 @@
 
 (in-package :usocket)
 
-(defun handle-condition (condition &optional socket)
+(defun handle-condition (condition &optional socket (host-or-ip nil))
   ; incomplete, needs to handle additional conditions
-  (flet ((raise-error (&optional socket-condition)
+  (flet ((raise-error (&optional socket-condition host-or-ip)
            (if socket-condition
-           (error socket-condition :socket socket)
-           (error  'unknown-error :socket socket :real-error condition))))
+               (cond ((typep socket-condition ns-error)
+                      (error socket-condition :socket socket :host-or-ip host-or-ip))
+                     (t
+                      (error socket-condition :socket socket)))
+               (error 'unknown-error :socket socket :real-error condition))))
     (typecase condition
       (ccl:host-stopped-responding
-       (raise-error 'host-down-error))
+       (raise-error 'host-down-error host-or-ip))
       (ccl:host-not-responding
-       (raise-error 'host-unreachable-error))
+       (raise-error 'host-unreachable-error host-or-ip))
       (ccl:connection-reset 
        (raise-error 'connection-reset-error))
       (ccl:connection-timed-out
@@ -21,7 +24,7 @@
       (ccl:opentransport-protocol-error
        (raise-error 'protocol-not-supported-error))       
       (otherwise
-       (raise-error)))))
+       (raise-error condition host-or-ip)))))
 
 (defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay 
                             local-host local-port (protocol :stream))
@@ -29,7 +32,7 @@
     (setf nodelay t))
   (ecase protocol
     (:stream
-     (with-mapped-conditions ()
+     (with-mapped-conditions (nil host)
        (let* ((socket
                (make-instance 'active-socket
 		 :remote-host (when host (host-to-hostname host)) 
@@ -43,7 +46,7 @@
               (stream (socket-open-stream socket)))
          (make-stream-socket :socket socket :stream stream))))
     (:datagram
-     (with-mapped-conditions ()
+     (with-mapped-conditions (nil (or host local-host))
        (make-datagram-socket
 	 (ccl::open-udp-socket :local-address (and local-host (host-to-hbo local-host))
 			       :local-port local-port))))))
@@ -81,12 +84,12 @@
   (socket-close usocket))
 
 (defun get-hosts-by-name (name)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil name)
     (list (hbo-to-vector-quad (ccl::get-host-address
                                (host-to-hostname name))))))
 
 (defun get-host-by-address (address)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil address)
     (ccl::inet-host-name (host-to-hbo address))))
 
 (defmethod get-local-name ((usocket usocket))
@@ -108,7 +111,6 @@
 
 (defmethod get-peer-port ((usocket stream-usocket))
   (remote-port (socket usocket)))
-
 
 (defun %setup-wait-list (wait-list)
   (declare (ignore wait-list)))
@@ -254,7 +256,7 @@
 	  (ccl::make-TUnitData (ccl::ot-conn-endpoint socket)))))
 
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
-  (with-mapped-conditions (usocket)
+  (with-mapped-conditions (usocket host)
     (with-slots (socket send-buffer) usocket
       (unless (and host port)
 	(unsupported 'host 'socket-send))
