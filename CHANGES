@@ -1,5 +1,10 @@
 -*- Mode: Change-Log; Coding: utf-8 -*-
 
+0.8.2: (???)
+
+  * General: now the HOST-OR-IP slot of NS-CONDITION has been exported. (#46)
+  * Bugfix: USOCKET:NS-HOST-NOT-FOUND-ERROR condition has unbound host-or-ip slot (#46)
+
 0.8.1: (Feb 27, 2019)
 
 * New backend: clasp (patch from Christian Schafmeister, #45)
