@@ -246,7 +246,8 @@
 
 (defmethod (setf socket-option) (new-value (usocket datagram-usocket)
                                            (option (eql :broadcast)) &key)
-  (declare (type boolean new-value) (ignorable new-value option))
+  (declare (type boolean new-value)
+           (ignorable new-value option))
   (let ((socket (socket usocket)))
     (declare (ignorable socket))
     #+abcl
@@ -277,7 +278,7 @@
 
 (defmethod socket-option ((usocket stream-usocket)
                           (option (eql :tcp-no-delay)) &key)
-  (declare (ignore option))
+  (declare (ignorable option))
   (socket-option usocket :tcp-nodelay))
 
 (defmethod socket-option ((usocket stream-usocket)
@@ -310,12 +311,13 @@
 
 (defmethod (setf socket-option) (new-value (usocket stream-usocket)
                                            (option (eql :tcp-no-delay)) &key)
-  (declare (ignore option))
+  (declare (ignorable option))
   (setf (socket-option usocket :tcp-nodelay) new-value))
 
 (defmethod (setf socket-option) (new-value (usocket stream-usocket)
                                            (option (eql :tcp-nodelay)) &key)
-  (declare (type boolean new-value) (ignorable new-value option))
+  (declare (type boolean new-value)
+           (ignorable new-value option))
   (let ((socket (socket usocket)))
     (declare (ignorable socket))
     #+abcl

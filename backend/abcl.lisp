@@ -142,7 +142,7 @@
 (defparameter +abcl-nameserver-error-map+
   `(("java.net.UnknownHostException" . ns-host-not-found-error)))
 
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   (typecase condition
     (java-exception
      (let ((java-cause (java-exception-cause condition)))
@@ -154,7 +154,7 @@
 	      (nameserver-error (cdr (assoc (jclass-of java-cause) +abcl-nameserver-error-map+
 					    :test #'string=))))
 	 (if nameserver-error
-	     (error nameserver-error :host-or-ip nil)
+	     (error nameserver-error :socket socket :host-or-ip host-or-ip)
 	     (when usock-error
 	       (error usock-error :socket socket))))))))
 
@@ -178,14 +178,14 @@
           (t nil)))))) ; neither a IPv4 nor IPv6 address?!
 
 (defun get-hosts-by-name (name)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil name)
     (map 'list #'get-address (%get-all-by-name name))))
 
 ;;; GET-HOST-BY-ADDRESS
 
 (defun get-host-by-address (host)
   (let ((inet4 (host-to-inet4 host)))
-    (with-mapped-conditions ()
+    (with-mapped-conditions (nil host)
       (jcall $@getHostName/0 inet4))))
 
 ;;; SOCKET-CONNECT

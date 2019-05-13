@@ -67,7 +67,8 @@ been implemented yet."))
   (defun define-usocket-condition-class (class &rest parents)
     `(progn
        (define-condition ,class ,parents ())
-       (export ',class))))
+       (eval-when (:load-toplevel :execute)
+         (export ',class)))))
 
 (defmacro define-usocket-condition-classes (class-list parents)
   `(progn ,@(mapcar #'(lambda (x)

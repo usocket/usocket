@@ -34,19 +34,24 @@
     (:host-down . host-down-error)
     (:host-unreachable . host-unreachable-error)))
 
-(defun handle-condition (condition &optional (socket nil))
+;; TODO: what's the error class of Corman Lisp?
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
   (typecase condition
     #+allegro
     (excl:socket-error
-     (let ((usock-err
+     (let ((usock-error
             (cdr (assoc (excl:stream-error-identifier condition)
                         +allegro-identifier-error-map+))))
-       (if usock-err
-           (error usock-err :socket socket)
-         (error 'unknown-error
-                :real-error condition
-                :socket socket))))))
+       (declare (type symbol usock-error))
+       (if usock-error
+           (cond ((subtypep usock-error 'ns-error)
+                  (error usock-error :socket socket :host-or-ip host-or-ip))
+                 (t
+                  (error usock-error :socket socket)))
+           (error 'unknown-error
+                  :real-error condition
+                  :socket socket))))))
 
 (defun to-format (element-type)
   (if (subtypep element-type 'character)
@@ -183,14 +188,14 @@
       (socket:receive-from s length :buffer buffer :extract t))))
 
 (defun get-host-by-address (address)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil address)
     (socket:ipaddr-to-hostname (host-to-hbo address))))
 
 (defun get-hosts-by-name (name)
   ;;###FIXME: ACL has the acldns module which returns all A records
   ;; only problem: it doesn't fall back to tcp (from udp) if the returned
   ;; structure is too long.
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil name)
     (list (hbo-to-vector-quad (socket:lookup-hostname
                                (host-to-hostname name))))))
 
