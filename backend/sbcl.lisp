@@ -623,7 +623,7 @@ happen. Use with care."
                                               nil)))
         (ecase rv
           ((#.+wsa-wait-event-0+)
-           (update-ready-and-state-slots (wait-list-waiters wait-list)))
+           (update-ready-and-state-slots wait-list))
           ((#.+wsa-wait-timeout+)) ; do nothing here
           ((#.+wsa-wait-failed+)
            (maybe-wsa-error rv))))))
@@ -666,6 +666,11 @@ happen. Use with care."
       ws-event) ; return type only
 
   (sb-alien:define-alien-routine ("WSACloseEvent" wsa-event-close)
+      (boolean #.sb-vm::n-machine-word-bits)
+    (event-object ws-event))
+
+  ;; not used
+  (sb-alien:define-alien-routine ("WSAResetEvent" wsa-reset-event)
       (boolean #.sb-vm::n-machine-word-bits)
     (event-object ws-event))
 
@@ -718,13 +723,15 @@ happen. Use with care."
           (unless (zerop (ldb (byte 1 i) event-map)) ;;### could be faster with ash and logand?
             (funcall func (sb-alien:deref error-array i)))))))
 
-  (defun update-ready-and-state-slots (sockets)
-    (dolist (socket sockets)
+  (defun update-ready-and-state-slots (wait-list)
+    (loop with sockets = (wait-list-waiters wait-list)
+          for socket in sockets do
       (if (%ready-p socket)
           (progn
             (setf (state socket) :READ))
         (sb-alien:with-alien ((network-events (sb-alien:struct wsa-network-events)))
-          (let ((rv (wsa-enum-network-events (os-socket-handle socket) 0
+          (let ((rv (wsa-enum-network-events (os-socket-handle socket)
+                                             (wait-list-%wait wait-list)
                                              (sb-alien:addr network-events))))
             (if (zerop rv)
                 (map-network-events
@@ -848,8 +855,9 @@ happen. Use with care."
 	(setf (state socket) :read))
       nbytes))
 
-  (defun update-ready-and-state-slots (sockets)
-    (dolist (socket sockets)
+  (defun update-ready-and-state-slots (wait-list)
+    (loop with sockets = (wait-list-waiters wait-list)
+          for socket in sockets do
       (if (%ready-p socket)
           (setf (state socket) :READ)
         (let ((events (etypecase socket
@@ -860,6 +868,7 @@ happen. Use with care."
           (multiple-value-bind (valid-p ready-p)
               (ffi:c-inline ((socket-handle socket) events) (:fixnum :fixnum)
                                                             (values :bool :bool)
+                ;; TODO: replace 0 (2nd arg) with (wait-list-%wait wait-list)
                 "WSANETWORKEVENTS network_events;
                  int i, result;
                  result = WSAEnumNetworkEvents((SOCKET)#0, 0, &network_events);
