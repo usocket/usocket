@@ -846,6 +846,12 @@
     :result-type :int
     :module "ws2_32")
 
+  ;; not used
+  (fli:define-foreign-function (wsa-reset-event "WSAResetEvent" :source)
+      ((event-object win32-handle))
+    :result-type :int
+    :module "ws2_32")
+
   (fli:define-foreign-function (wsa-enum-network-events "WSAEnumNetworkEvents" :source)
       ((socket ws-socket)
        (event-object win32-handle)
@@ -908,8 +914,8 @@
     (when (waiting-required (wait-list-waiters wait-list))
       (system:wait-for-single-object (wait-list-%wait wait-list)
                                      "Waiting for socket activity" timeout))
-    (update-ready-and-state-slots (wait-list-waiters wait-list)))
-  
+    (update-ready-and-state-slots wait-list))
+
   (defun map-network-events (func network-events)
     (let ((event-map (fli:foreign-slot-value network-events 'network-events))
           (error-array (fli:foreign-slot-pointer network-events 'error-code)))
@@ -918,15 +924,18 @@
           (unless (zerop (ldb (byte 1 i) event-map)) ;;### could be faster with ash and logand?
             (funcall func (fli:foreign-aref error-array i)))))))
 
-  (defun update-ready-and-state-slots (sockets)
-    (dolist (socket sockets)
+  (defun update-ready-and-state-slots (wait-list)
+    (loop with sockets = (wait-list-waiters wait-list)
+          for socket in sockets do
       (if (or (and (stream-usocket-p socket)
                    (listen (socket-stream socket)))
               (%ready-p socket))
           (setf (state socket) :READ)
         (multiple-value-bind
             (rv network-events)
-            (wsa-enum-network-events (os-socket-handle socket) 0 t)
+            (wsa-enum-network-events (os-socket-handle socket)
+                                     (wait-list-%wait wait-list)
+                                     t)
           (if (zerop rv)
               (map-network-events #'(lambda (err-code)
                                       (if (zerop err-code)
