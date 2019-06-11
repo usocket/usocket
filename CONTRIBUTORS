@@ -1,6 +1,14 @@
 -*- Mode: outline -*-
 
-List of USOCKET Contributors (incomplete)
+List of major USOCKET contributors:
+
+* Erik Enge
+* Erik Huelsmann <ehuels@gmail.com>
+  - original authors
+
+* Chun Tian <binghe.lisp@gmail.com>
+* Hans Huebner <hans.huebner@gmail.com>
+  - current maintainers
 
 * Attila Lendvai <attila.lendvai@gmail.com>
   - better handling of unsupported Lisps
@@ -33,3 +41,7 @@ List of USOCKET Contributors (incomplete)
 
 * Terje Norderhaug <terje@in-progress.com>
   - MCL vendor code
+
+* @Hamayama <fkyo0985@gmail.com>
+
+  - Reporting/hints/testing of issue #50 (regression in 0.8.0, 0.8.1)
