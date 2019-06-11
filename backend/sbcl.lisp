@@ -731,7 +731,7 @@ happen. Use with care."
             (setf (state socket) :READ))
         (sb-alien:with-alien ((network-events (sb-alien:struct wsa-network-events)))
           (let ((rv (wsa-enum-network-events (os-socket-handle socket)
-                                             (wait-list-%wait wait-list)
+                                             (os-wait-list-%wait wait-list)
                                              (sb-alien:addr network-events))))
             (if (zerop rv)
                 (map-network-events
