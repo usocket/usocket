@@ -1,10 +1,8 @@
--*- Mode: Change-Log; Coding: utf-8 -*-
-
-0.8.2: (???)
+0.8.2: (June 11, 2019)
 
   * General: now the HOST-OR-IP slot of NS-CONDITION has been exported. (#46)
-  * Bugfix: USOCKET:NS-HOST-NOT-FOUND-ERROR condition has unbound host-or-ip slot (#46)	
-  * Bugfix: [SBCL/LW] usocket:wait-for-input waits only in the first call (when W-F-I is called with a single usocket, introduced in 0.8.0) (#50, thanks to @Hamayama for reporting/hints/testing this issue)
+  * Bugfix: NS-HOST-NOT-FOUND-ERROR condition has unbound HOST-OR-IP slot (#46)
+  * Bugfix: [SBCL/LW] WAIT-FOR-INPUT waits only in the first call (when W-F-I is called with a single usocket, introduced in 0.8.0) (#50, thanks to @Hamayama for reporting/hints/testing this issue)
 
 0.8.1: (Feb 27, 2019)
 
