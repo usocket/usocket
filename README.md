@@ -17,6 +17,7 @@ sockets access to the broadest of common lisp implementations as possible.
  - ECL
  - LispWorks (4.3 and up)
  - Digitool MCL and RMCL (5.0 and up)
+ - Mezzano
  - MOCL
  - SBCL
  - Scieneer CL
