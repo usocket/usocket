@@ -1,21 +1,27 @@
-# Introduction
+## USOCKET - Universal socket library for Common Lisp
+
+https://common-lisp.net/project/usocket/
 
 This is the usocket Common Lisp sockets library: a library to bring
 sockets access to the broadest of common lisp implementations as possible.
 
-# The library currently supports:
+## The library currently supports:
 
- - SBCL
- - CMUCL
- - ArmedBear Common Lisp
- - GNU CLISP
- - Allegro Common Lisp
- - LispWorks
+ - Allegro CL
+ - ABCL (ArmedBear)
+ - Clasp
  - Clozure CL
+ - Corman Lisp
+ - GNU CLISP
+ - CMUCL
  - ECL
- - Scieneer Common Lisp
- - Macintosh Common Lisp
+ - LispWorks (4.3 and up)
+ - Digitool MCL and RMCL (5.0 and up)
+ - Mezzano
  - MOCL
+ - SBCL
+ - Scieneer CL
+ - Symbolics Genera
 
 If your favorite common lisp misses in the list above, please contact
 usocket-devel@common-lisp.net and submit a request.  Please include
@@ -26,7 +32,7 @@ that you can tar up a checkout and use that to ASDF-INSTALL:INSTALL
 the package in your system package site.  (Or use your usual ASDF
 tricks to use the checkout directly.)
 
-# Remarks on licensing
+## Remarks on licensing
 
 Even though the source code has an MIT style license attached to it,
 when compiling this code with some of the supported lisp implementations
@@ -34,7 +40,7 @@ you may not end up with an MIT style binary version due to the licensing
 of the implementations themselves.  ECL is such an example and - when
 it will become supported - GCL is like that too.
 
-# Non-support of :external-format
+## Non-support of :external-format
 
 Because of its definition in the hyperspec, there's no common
 external-format between lisp implementations: every vendor has chosen
@@ -48,7 +54,7 @@ defeated.  So, for now, usocket doesn't support external-format.
 The workaround to get reasonably portable external-format support is to
 layer a flexi-stream (from flexi-streams) on top of a usocket stream.
 
-# API definition
+## API definition
 
  - usocket (class)
  - stream-usocket (class; usocket derivative)
@@ -75,7 +81,7 @@ layer a flexi-stream (from flexi-streams) on top of a usocket stream.
       the return value of which satisfies the normal stream interface
  - socket-shutdown
 
-## Errors:
+### Errors:
  - address-in-use-error
  - address-not-available-error
  - bad-file-descriptor-error
@@ -97,14 +103,14 @@ layer a flexi-stream (from flexi-streams) on top of a usocket stream.
  - timeout-error
  - unkown-error
 
-## Non-fatal conditions:
+### Non-fatal conditions:
  - interrupted-condition
  - unkown-condition
 
 (for a description of the API methods and functions see
   https://common-lisp.net/project/usocket/api-docs.shtml)
 
-# Test suite
+## Test suite
 
 The test suite unfortunately isn't mature enough yet to run without
 some manual configuration.  Several elements are required which are
@@ -118,7 +124,7 @@ running the tests, for these variables:
 - +common-lisp-net+: A vector with 4 integer elements which make up
      an IP address. This must be the IP "common-lisp.net" resolves to.
 
-# Known problems
+## Known problems
 
 - CMUCL error reporting wrt sockets raises only simple-errors
   meaning there's no way to tell different error conditions apart.

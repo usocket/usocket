@@ -5,9 +5,6 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 ;;; Java Classes ($*...)
 (defvar $*boolean (jclass "boolean"))
 (defvar $*byte (jclass "byte"))
@@ -145,7 +142,7 @@
 (defparameter +abcl-nameserver-error-map+
   `(("java.net.UnknownHostException" . ns-host-not-found-error)))
 
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   (typecase condition
     (java-exception
      (let ((java-cause (java-exception-cause condition)))
@@ -157,7 +154,7 @@
 	      (nameserver-error (cdr (assoc (jclass-of java-cause) +abcl-nameserver-error-map+
 					    :test #'string=))))
 	 (if nameserver-error
-	     (error nameserver-error :host-or-ip nil)
+	     (error nameserver-error :socket socket :host-or-ip host-or-ip)
 	     (when usock-error
 	       (error usock-error :socket socket))))))))
 
@@ -181,14 +178,14 @@
           (t nil)))))) ; neither a IPv4 nor IPv6 address?!
 
 (defun get-hosts-by-name (name)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil name)
     (map 'list #'get-address (%get-all-by-name name))))
 
 ;;; GET-HOST-BY-ADDRESS
 
 (defun get-host-by-address (host)
   (let ((inet4 (host-to-inet4 host)))
-    (with-mapped-conditions ()
+    (with-mapped-conditions (nil host)
       (jcall $@getHostName/0 inet4))))
 
 ;;; SOCKET-CONNECT
@@ -206,10 +203,10 @@
 	 ;; bind to local address if needed
 	 (when (or local-host local-port)
 	   (let ((local-address (jnew $%InetSocketAddress/2 (host-to-inet4 local-host) (or local-port 0))))
-	     (with-mapped-conditions ()
+	     (with-mapped-conditions (nil host)
 	       (jcall $@bind/Socket/1 socket local-address))))
 	 ;; connect to dest address
-	 (with-mapped-conditions ()
+	 (with-mapped-conditions (nil host)
 	   (jcall $@connect/SocketChannel/1 channel address))
 	 (setq stream (ext:get-socket-stream socket :element-type element-type)
 	       usocket (make-stream-socket :stream stream :socket socket))
@@ -224,12 +221,12 @@
 	 ;; bind to local address if needed
 	 (when (or local-host local-port)
 	   (let ((local-address (jnew $%InetSocketAddress/2 (host-to-inet4 local-host) (or local-port 0))))
-	     (with-mapped-conditions ()
+	     (with-mapped-conditions (nil local-host)
 	       (jcall $@bind/DatagramSocket/1 socket local-address))))
 	 ;; connect to dest address if needed
 	 (when (and host port)
 	   (let ((address (jnew $%InetSocketAddress/2 (host-to-inet4 host) port)))
-	     (with-mapped-conditions ()
+	     (with-mapped-conditions (nil host)
 	       (jcall $@connect/DatagramChannel/1 channel address))))
 	 (setq usocket (make-datagram-socket socket :connected-p (if (and host port) t nil)))
 	 (when timeout
@@ -248,7 +245,7 @@
 	 (socket (jcall $@socket/ServerSocketChannel/0 channel))
 	 (endpoint (jnew $%InetSocketAddress/2 (host-to-inet4 host) (or port 0))))
     (jcall $@setReuseAddress/1 socket (if reuseaddress java:+true+ java:+false+))
-    (with-mapped-conditions (socket)
+    (with-mapped-conditions (socket host)
       (if backlog-supplied-p
 	  (jcall $@bind/ServerSocket/2 socket endpoint backlog)
 	  (jcall $@bind/ServerSocket/1 socket endpoint)))
@@ -267,10 +264,6 @@
       (make-stream-socket :stream stream :socket client-socket))))
 
 ;;; SOCKET-CLOSE
-
-(defmethod socket-close :before ((usocket usocket))
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket)))
 
 (defmethod socket-close ((usocket stream-server-usocket))
   (with-mapped-conditions (usocket)
@@ -354,7 +347,7 @@
     ;; prepare sending data
     (loop for i from offset below (+ size offset)
        do (setf (jarray-ref byte-array i) (*->byte (aref buffer i))))
-    (with-mapped-conditions (usocket)
+    (with-mapped-conditions (usocket host)
       (jcall $@send/1 socket packet))))
 
 ;;; TODO: return-host and return-port cannot be get ...

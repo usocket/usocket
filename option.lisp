@@ -1,8 +1,12 @@
+;;;; -*- Mode: LISP; Base: 10; Syntax: ANSI-Common-lisp; Package: USOCKET -*-
 ;;;; SOCKET-OPTION, a high-level socket option get/set framework
 
 ;;;; See LICENSE for licensing information.
 
 (in-package :usocket)
+
+;; put here because option.lisp is for native backend only
+(defparameter *backend* :native)
 
 ;;; Interface definition
 
@@ -49,7 +53,7 @@
     (ccl:stream-input-timeout socket)
     #+cmu
     (lisp::fd-stream-timeout (socket-stream usocket))
-    #+ecl
+    #+(or ecl clasp)
     (sb-bsd-sockets:sockopt-receive-timeout socket)
     #+lispworks
     (get-socket-receive-timeout socket)
@@ -79,7 +83,7 @@
     #+cmu
     (setf (lisp::fd-stream-timeout (socket-stream usocket))
           (coerce timeout 'integer))
-    #+ecl
+    #+(or ecl clasp)
     (setf (sb-bsd-sockets:sockopt-receive-timeout socket) timeout)
     #+lispworks
     (set-socket-receive-timeout socket timeout)
@@ -111,7 +115,7 @@
     (ccl:stream-output-timeout socket)
     #+cmu
     (lisp::fd-stream-timeout (socket-stream usocket))
-    #+ecl
+    #+(or ecl clasp)
     (sb-bsd-sockets:sockopt-send-timeout socket)
     #+lispworks
     (get-socket-send-timeout socket)
@@ -141,7 +145,7 @@
     #+cmu
     (setf (lisp::fd-stream-timeout (socket-stream usocket))
           (coerce timeout 'integer))
-    #+ecl
+    #+(or ecl clasp)
     (setf (sb-bsd-sockets:sockopt-send-timeout socket) timeout)
     #+lispworks
     (set-socket-send-timeout socket timeout)
@@ -179,7 +183,7 @@
     () ; TODO
     #+mocl
     () ; unknown
-    #+(or ecl sbcl)
+    #+(or ecl sbcl clasp)
     (sb-bsd-sockets:sockopt-reuse-address socket)
     #+scl
     ())) ; TODO
@@ -205,7 +209,7 @@
     () ; TODO
     #+mocl
     () ; unknown
-    #+(or ecl sbcl)
+    #+(or ecl sbcl clasp)
     (setf (sb-bsd-sockets:sockopt-reuse-address socket) new-value)
     #+scl
     () ; TODO
@@ -228,7 +232,7 @@
     (int->bool (get-socket-option-broadcast socket))
     #+cmu
     () ; TODO
-    #+ecl
+    #+(or ecl clasp)
     () ; TODO
     #+lispworks
     () ; TODO
@@ -243,7 +247,8 @@
 
 (defmethod (setf socket-option) (new-value (usocket datagram-usocket)
                                            (option (eql :broadcast)) &key)
-  (declare (type boolean new-value) (ignorable new-value option))
+  (declare (type boolean new-value)
+           (ignorable new-value option))
   (let ((socket (socket usocket)))
     (declare (ignorable socket))
     #+abcl
@@ -256,7 +261,7 @@
     (set-socket-option-broadcast socket (bool->int new-value))
     #+cmu
     () ; TODO
-    #+ecl
+    #+(or ecl clasp)
     () ; TODO
     #+lispworks
     () ; TODO
@@ -274,7 +279,7 @@
 
 (defmethod socket-option ((usocket stream-usocket)
                           (option (eql :tcp-no-delay)) &key)
-  (declare (ignore option))
+  (declare (ignorable option))
   (socket-option usocket :tcp-nodelay))
 
 (defmethod socket-option ((usocket stream-usocket)
@@ -292,7 +297,7 @@
     (int->bool (get-socket-option-tcp-nodelay socket))
     #+cmu
     ()
-    #+ecl
+    #+(or ecl clasp)
     (sb-bsd-sockets::sockopt-tcp-nodelay socket)
     #+lispworks
     (int->bool (get-socket-tcp-nodelay socket))
@@ -307,12 +312,13 @@
 
 (defmethod (setf socket-option) (new-value (usocket stream-usocket)
                                            (option (eql :tcp-no-delay)) &key)
-  (declare (ignore option))
+  (declare (ignorable option))
   (setf (socket-option usocket :tcp-nodelay) new-value))
 
 (defmethod (setf socket-option) (new-value (usocket stream-usocket)
                                            (option (eql :tcp-nodelay)) &key)
-  (declare (type boolean new-value) (ignorable new-value option))
+  (declare (type boolean new-value)
+           (ignorable new-value option))
   (let ((socket (socket usocket)))
     (declare (ignorable socket))
     #+abcl
@@ -325,7 +331,7 @@
     (set-socket-option-tcp-nodelay socket (bool->int new-value))
     #+cmu
     ()
-    #+ecl
+    #+(or ecl clasp)
     (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) new-value)
     #+lispworks
     (progn
@@ -342,3 +348,6 @@
     #+scl
     () ; TODO
     new-value))
+
+(eval-when (:load-toplevel :execute)
+  (export 'socket-option))

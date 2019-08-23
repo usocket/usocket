@@ -2,14 +2,11 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require "comm")
 
   #+lispworks3
-  (error "LispWorks 3 is not supported by USOCKET any more."))
+  (error "LispWorks 3 is not supported"))
 
 ;;; ---------------------------------------------------------------------------
 ;;;  Warn if multiprocessing is not running on Lispworks
@@ -59,25 +56,31 @@
   (append +unix-errno-condition-map+
           +unix-errno-error-map+))
 
-(defun raise-usock-err (errno socket &optional condition)
-  (let ((usock-err
+(defun raise-usock-err (errno socket &optional condition (host-or-ip nil))
+  (let ((usock-error
          (cdr (assoc errno +lispworks-error-map+ :test #'member))))
-    (if usock-err
-        (if (subtypep usock-err 'error)
-            (error usock-err :socket socket)
-          (signal usock-err))
+    (if usock-error
+        (if (subtypep usock-error 'error)
+            (cond ((subtypep usock-error 'ns-error)
+                   (error usock-error :socket socket :host-or-ip host-or-ip))
+                  (t
+                   (error usock-error :socket socket)))
+            (cond ((subtypep usock-error 'ns-condition)
+                   (signal usock-error :socket socket :host-or-ip host-or-ip))
+                  (t
+                   (signal usock-error :socket socket))))
       (error 'unknown-error
              :socket socket
              :real-error condition
              :errno errno))))
 
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
   (typecase condition
     (condition (let ((errno #-win32 (lw:errno-value)
                             #+win32 (wsa-get-last-error)))
                  (unless (zerop errno)
-                   (raise-usock-err errno socket condition))))))
+                   (raise-usock-err errno socket condition host-or-ip))))))
 
 (defconstant *socket_sock_dgram* 2
   "Connectionless, unreliable datagrams of fixed maximum length.")
@@ -409,7 +412,7 @@
      (let ((hostname (host-to-hostname host))
            (stream))
        (setq stream
-             (with-mapped-conditions ()
+             (with-mapped-conditions (nil host)
                (comm:open-tcp-stream hostname port
                                      :element-type element-type
                                      #-(and lispworks4 (not lispworks4.4)) ; >= 4.4.5
@@ -438,12 +441,12 @@
     (:datagram
      (let ((usocket (make-datagram-socket
                      (if (and host port)
-                         (with-mapped-conditions ()
+                         (with-mapped-conditions (nil host)
                            (connect-to-udp-server (host-to-hostname host) port
                                                   :local-address (and local-host (host-to-hostname local-host))
                                                   :local-port local-port
                                                   :read-timeout timeout))
-                         (with-mapped-conditions ()
+                         (with-mapped-conditions (nil local-host)
                            (open-udp-socket       :local-address (and local-host (host-to-hostname local-host))
                                                   :local-port local-port
                                                   :read-timeout timeout)))
@@ -463,7 +466,7 @@
   (let* ((reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
          (comm::*use_so_reuseaddr* reuseaddress)
          (hostname (host-to-hostname host))
-         (socket-res-list (with-mapped-conditions ()
+         (socket-res-list (with-mapped-conditions (nil host)
                             (multiple-value-list
                              #-lispworks4.1 (comm::create-tcp-socket-for-service
                                              port :address hostname :backlog backlog)
@@ -502,13 +505,9 @@
 ;; are correctly flushed and the socket closed.
 (defmethod socket-close ((usocket stream-usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (close (socket-stream usocket)))
 
 (defmethod socket-close ((usocket usocket))
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
      (comm::close-socket (socket usocket))))
 
@@ -596,7 +595,7 @@
                      #+win32 (wsa-get-last-error)))
           (if (zerop errno)
               n
-            (raise-usock-err errno socket-fd)))))))
+            (raise-usock-err errno socket-fd host)))))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length &key timeout (max-buffer-size +max-datagram-packet-size+))
   "Receive message from socket, read-timeout is a float number in seconds.
@@ -686,6 +685,17 @@
 (defmethod get-peer-port ((usocket stream-usocket))
   (nth-value 1 (get-peer-name usocket)))
 
+#-(or lispworks4 lispworks5 lispworks6.0) ; version>= 6.1
+(defun ipv6-address-p (hostname)
+  (when (stringp hostname)
+    (setq hostname (comm:string-ip-address hostname))
+    (unless hostname
+      (let ((resolved-hostname (comm:get-host-entry hostname :fields '(:address))))
+	(unless resolved-hostname
+	  (return-from ipv6-address-p nil))
+	(setq hostname resolved-hostname))))
+  (comm:ipv6-address-p hostname))
+
 (defun lw-hbo-to-vector-quad (hbo)
   #+(or lispworks4 lispworks5 lispworks6.0)
   (hbo-to-vector-quad hbo)
@@ -695,9 +705,13 @@
     (hbo-to-vector-quad hbo)))
 
 (defun get-hosts-by-name (name)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil name)
      (mapcar #'lw-hbo-to-vector-quad
              (comm:get-host-entry name :fields '(:addresses)))))
+
+(defun get-host-by-address (address)
+  (with-mapped-conditions (nil address)
+    nil)) ;; TODO
 
 (defun os-socket-handle (usocket)
   (socket usocket))
@@ -832,6 +846,12 @@
     :result-type :int
     :module "ws2_32")
 
+  ;; not used
+  (fli:define-foreign-function (wsa-reset-event "WSAResetEvent" :source)
+      ((event-object win32-handle))
+    :result-type :int
+    :module "ws2_32")
+
   (fli:define-foreign-function (wsa-enum-network-events "WSAEnumNetworkEvents" :source)
       ((socket ws-socket)
        (event-object win32-handle)
@@ -894,8 +914,8 @@
     (when (waiting-required (wait-list-waiters wait-list))
       (system:wait-for-single-object (wait-list-%wait wait-list)
                                      "Waiting for socket activity" timeout))
-    (update-ready-and-state-slots (wait-list-waiters wait-list)))
-  
+    (update-ready-and-state-slots wait-list))
+
   (defun map-network-events (func network-events)
     (let ((event-map (fli:foreign-slot-value network-events 'network-events))
           (error-array (fli:foreign-slot-pointer network-events 'error-code)))
@@ -904,15 +924,18 @@
           (unless (zerop (ldb (byte 1 i) event-map)) ;;### could be faster with ash and logand?
             (funcall func (fli:foreign-aref error-array i)))))))
 
-  (defun update-ready-and-state-slots (sockets)
-    (dolist (socket sockets)
+  (defun update-ready-and-state-slots (wait-list)
+    (loop with sockets = (wait-list-waiters wait-list)
+          for socket in sockets do
       (if (or (and (stream-usocket-p socket)
                    (listen (socket-stream socket)))
               (%ready-p socket))
           (setf (state socket) :READ)
         (multiple-value-bind
             (rv network-events)
-            (wsa-enum-network-events (os-socket-handle socket) 0 t)
+            (wsa-enum-network-events (os-socket-handle socket)
+                                     (wait-list-%wait wait-list)
+                                     t)
           (if (zerop rv)
               (map-network-events #'(lambda (err-code)
                                       (if (zerop err-code)

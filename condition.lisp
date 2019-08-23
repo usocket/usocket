@@ -1,3 +1,4 @@
+;;;; -*- Mode: LISP; Base: 10; Syntax: ANSI-Common-lisp; Package: USOCKET -*-
 ;;;; See LICENSE for licensing information.
 
 (in-package :usocket)
@@ -67,7 +68,8 @@ been implemented yet."))
   (defun define-usocket-condition-class (class &rest parents)
     `(progn
        (define-condition ,class ,parents ())
-       (export ',class))))
+       (eval-when (:load-toplevel :execute)
+         (export ',class)))))
 
 (defmacro define-usocket-condition-classes (class-list parents)
   `(progn ,@(mapcar #'(lambda (x)
@@ -168,9 +170,10 @@ condition available."))
   (:documentation "Error raised when there's no other - more applicable -
 error available."))
 
-(defmacro with-mapped-conditions ((&optional socket) &body body)
-  `(handler-bind ((condition #'(lambda (c) (handle-condition c ,socket))))
-    ,@body))
+(defmacro with-mapped-conditions ((&optional socket host-or-ip) &body body)
+  `(handler-bind ((condition
+                   #'(lambda (c) (handle-condition c ,socket ,host-or-ip))))
+     ,@body))
 
 (defparameter +unix-errno-condition-map+
   `(((11) . ns-try-again-condition) ;; EAGAIN
@@ -225,7 +228,6 @@ error available."))
 
 (defmacro unimplemented (feature context)
   `(signal 'unimplemented :feature ,feature :context ,context))
-
 
 ;;; People may want to ignore all unsupported warnings, here it is.
 (defmacro ignore-unsupported-warnings (&body body)

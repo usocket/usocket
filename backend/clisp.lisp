@@ -2,9 +2,6 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   #-ffi
   (warn "This image doesn't contain FFI package, GET-HOST-NAME won't work.")
@@ -34,12 +31,12 @@
   "localhost")
 
 (defun get-host-by-address (address)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil address)
     (let ((hostent (posix:resolve-host-ipaddr (host-to-hostname address))))
       (posix:hostent-name hostent))))
 
 (defun get-hosts-by-name (name)
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil name)
     (let ((hostent (posix:resolve-host-ipaddr name)))
       (mapcar #'host-to-vector-quad
               (posix:hostent-addr-list hostent)))))
@@ -105,7 +102,7 @@
           (let ((*package* (find-package "KEYWORD")))
             (car (read-from-string s t nil :start pos1 :end (1+ pos2)))))))))
 
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch a usocket condition instead of a CLISP specific one, if we can."
   (let ((errno
           (cond
@@ -117,11 +114,17 @@
              (car (simple-condition-format-arguments condition))))))
     (when errno
       (let ((error-keyword (if (keywordp errno) errno #+ffi(os:errno errno))))
-        (let ((usocket-error (cdr (assoc error-keyword +clisp-error-map+))))
-          (when usocket-error
-            (if (subtypep usocket-error 'error)
-              (error  usocket-error :socket socket)
-              (signal usocket-error :socket socket))))))))
+        (let ((usock-error (cdr (assoc error-keyword +clisp-error-map+))))
+          (when usock-error
+            (if (subtypep usock-error 'error)
+                (cond ((subtypep usock-error 'ns-error)
+                       (error usock-error :socket socket :host-or-ip host-or-ip))
+                      (t
+                       (error usock-error :socket socket)))
+                (cond ((subtypep usock-error 'ns-condition)
+                       (signal usock-error :socket socket :host-or-ip host-or-ip))
+                      (t
+                       (signal usock-error :socket socket))))))))))
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
@@ -135,7 +138,7 @@
     (:stream
      (let ((socket)
 	   (hostname (host-to-hostname host)))
-       (with-mapped-conditions (socket)
+       (with-mapped-conditions (socket host)
 	 (setf socket
 	       (if timeout
 		   (socket:socket-connect port hostname
@@ -149,10 +152,11 @@
 			   :stream socket))) ;; the socket is a stream too
     (:datagram
      #+(or rawsock ffi)
-     (socket-create-datagram (or local-port *auto-port*)
-			     :local-host (or local-host *wildcard-host*)
-			     :remote-host (and host (host-to-vector-quad host))
-			     :remote-port port)
+     (with-mapped-conditions (nil (or host local-host))
+       (socket-create-datagram (or local-port *auto-port*)
+                               :local-host (or local-host *wildcard-host*)
+                               :remote-host (and host (host-to-vector-quad host))
+                               :remote-port port))
      #-(or rawsock ffi)
      (unsupported '(protocol :datagram) 'socket-connect))))
 
@@ -169,7 +173,7 @@
                                    :backlog backlog)
                              (when (ip/= host *wildcard-host*)
                                (list :interface host))))))
-    (with-mapped-conditions ()
+    (with-mapped-conditions (nil host)
         (make-stream-server-socket sock :element-type element-type))))
 
 (defmethod socket-accept ((socket stream-server-usocket) &key element-type)
@@ -186,14 +190,10 @@
 ;; are the same object
 (defmethod socket-close ((usocket usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket usocket))))
 
 (defmethod socket-close ((usocket stream-server-usocket))
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (socket:socket-server-close (socket usocket)))
 
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
@@ -349,8 +349,6 @@ and the address of the sender as values."
       rv))
 
   (defmethod socket-close ((usocket datagram-usocket))
-    (when (wait-list usocket)
-       (remove-waiter (wait-list usocket) usocket))
     (rawsock:sock-close (socket usocket)))
 
   (declaim (inline get-socket-name))
@@ -609,8 +607,6 @@ and the address of the sender as values."
     (ext:finalize usocket 'finalize-datagram-usocket))
 
   (defmethod socket-close ((usocket datagram-usocket))
-    (when (wait-list usocket)
-      (remove-waiter (wait-list usocket) usocket))
     (with-slots (recv-buffer socket) usocket
       (ffi:foreign-free recv-buffer)
       (zerop (%close socket))))

@@ -1,10 +1,12 @@
+;;;; -*- Mode: LISP; Base: 10; Syntax: ANSI-Common-lisp; Package: CL-USER -*-
 ;;;; See the LICENSE file for licensing information.
 
-(unless (find-package :usocket) ; do not redefine packages
 (defpackage :usocket
-  (:use :common-lisp :split-sequence #+abcl :java)
+  (:use #-genera :common-lisp
+        #+genera :future-common-lisp
+	#+abcl :java
+	:split-sequence)
   (:export   #:*version*
-             #:*backend*
              #:*wildcard-host*
              #:*auto-port*
 
@@ -24,7 +26,6 @@
 
              #:socket-send    ; udp function (send)
              #:socket-receive ; udp function (receive)
-             #:socket-option  ; 0.6.x
 
              #:wait-for-input ; waiting for input-ready state (select() like)
              #:make-wait-list
@@ -88,5 +89,38 @@
 
              #:socket-server
              #:*remote-host*
-             #:*remote-port*))
-) ; unless
+             #:*remote-port*
+
+             ;; added in 0.7.1
+             #:get-host-by-name
+             #:get-hosts-by-name
+             #:get-random-host-by-name
+             #:ns-host-not-found-error
+             #:ns-no-recovery-error
+             #:ns-try-again-condition
+             #:default-udp-handler
+             #:default-tcp-handler
+             #:echo-tcp-handler ;; server handlers
+
+             ;; added in 0.8.0
+             #:*backend*
+             #:*default-event-base*
+             #:host-to-hostname
+
+             ;; these're socket-related conditions from IOlib
+             #:ADDRESS-NOT-AVAILABLE-ERROR #:HOST-DOWN-ERROR
+             #:OPERATION-NOT-SUPPORTED-ERROR #:SOCKET-OPTION
+             #:NETWORK-DOWN-ERROR #:INVALID-SOCKET-ERROR
+             #:SOCKET-TYPE-NOT-SUPPORTED-ERROR #:DEADLINE-TIMEOUT-ERROR
+             #:SHUTDOWN-ERROR #:HOST-UNREACHABLE-ERROR
+             #:NETWORK-UNREACHABLE-ERROR #:CONNECTION-ABORTED-ERROR
+             #:BAD-FILE-DESCRIPTOR-ERROR #:PROTOCOL-NOT-SUPPORTED-ERROR
+             #:CONNECTION-RESET-ERROR #:TIMEOUT-ERROR
+             #:ADDRESS-IN-USE-ERROR #:NO-BUFFERS-ERROR
+             #:INVALID-SOCKET-STREAM-ERROR #:INTERRUPTED-CONDITION
+             #:INVALID-ARGUMENT-ERROR #:OPERATION-NOT-PERMITTED-ERROR
+             #:NETWORK-RESET-ERROR #:CONNECTION-REFUSED-ERROR
+
+             ;; added in 0.8.2
+             #:host-or-ip
+             ))

@@ -2,9 +2,6 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
 (defparameter +scl-error-map+
   (append +unix-errno-condition-map+
           +unix-errno-error-map+))
@@ -20,7 +17,7 @@
           :socket socket
           :real-error condition)))))
 
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
   (typecase condition
     (ext::socket-error
@@ -121,15 +118,11 @@
 ;; are flushed and the socket is closed correctly afterwards.
 (defmethod socket-close ((usocket usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (ext:close-socket (socket usocket))))
 
 (defmethod socket-close ((usocket stream-usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (with-mapped-conditions (usocket)
     (close (socket-stream usocket))))
 

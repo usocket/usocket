@@ -1,6 +1,4 @@
 ;;;; -*- Mode: Lisp -*-
-;;;; $Id: usocket-test.asd 46 2006-02-06 20:50:07Z ehuelsmann $
-;;;; $URL: svn+ssh://common-lisp.net/project/usocket/svn/usocket/trunk/test/usocket-test.asd $
 
 ;;;; See the LICENSE file for licensing information.
 
@@ -8,11 +6,11 @@
     :name "usocket test"
     :author "Erik Enge"
     :maintainer "Chun Tian (binghe)"
-    :version "0.2.0"
+    :version (:read-file-form "version.sexp")
     :licence "MIT"
     :description "Tests for usocket"
     :depends-on (:usocket-server
-                 :rt)
+		 :rt)
     :components ((:module "test"
 		  :serial t
 		  :components ((:file "package")

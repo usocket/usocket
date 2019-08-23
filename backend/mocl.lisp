@@ -2,10 +2,7 @@
 
 (in-package :usocket)
 
-(eval-when (:load-toplevel :execute)
-  (setq *backend* :native))
-
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
   (declare (ignore socket))
   (signal condition))
@@ -51,15 +48,11 @@
 ;; are flushed and the socket is closed correctly afterwards.
 (defmethod socket-close ((usocket usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (rt::socket-shutdown usocket)
   (rt::c-fclose usocket))
 
 (defmethod socket-close ((usocket stream-usocket))
   "Close socket."
-  (when (wait-list usocket)
-     (remove-waiter (wait-list usocket) usocket))
   (close (socket-stream usocket)))
 
 ;; (defmethod socket-close :after ((socket datagram-usocket))

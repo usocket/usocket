@@ -10,7 +10,7 @@
                                    local-host local-port)
   (when (eq nodelay :if-supported)
     (setf nodelay t))
-  (with-mapped-conditions ()
+  (with-mapped-conditions (nil host)
     (let* ((remote (when (and host port)
 		     (openmcl-socket:resolve-address :host (host-to-hostname host)
 						     :port port
@@ -48,7 +48,7 @@
                         (element-type 'character))
   (let ((local-address (openmcl-socket:resolve-address :host (host-to-hostname host)
 						       :port port :connect :passive)))
-    (with-mapped-conditions ()
+    (with-mapped-conditions (nil host)
       (make-stream-server-socket
         (openmcl-socket:make-socket :connect :passive
 				    :address-family (openmcl-socket:socket-address-family local-address)
@@ -62,7 +62,7 @@
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
   (let* ((ccl-socket (socket usocket))
 	 (socket-keys (ccl::socket-keys ccl-socket)))
-    (with-mapped-conditions (usocket)
+    (with-mapped-conditions (usocket host)
       (if (and host port)
 	  (openmcl-socket:send-to ccl-socket buffer size
 				  :remote-host (host-to-hostname host)

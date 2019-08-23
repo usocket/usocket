@@ -1,4 +1,4 @@
-;;;; -*- Mode: Lisp -*-
+;;;; -*- Mode: LISP; Base: 10; Syntax: ANSI-Common-lisp; -*-
 ;;;;
 ;;;; See the LICENSE file for licensing information.
 
@@ -10,15 +10,16 @@
 #+sample
 (pushnew :usocket-iolib *features*)
 
-(defsystem #:usocket
+(defsystem usocket
     :name "usocket (client, with server symbols)"
     :author "Erik Enge & Erik Huelsmann"
     :maintainer "Chun Tian (binghe) & Hans Huebner"
-    :version "0.8.0"
+    :version (:read-file-form "version.sexp")
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (:split-sequence
-		 #+(and (or sbcl ecl) (not usocket-iolib)) :sb-bsd-sockets
+		 #+(and (or sbcl ecl)
+			(not usocket-iolib)) :sb-bsd-sockets
 		 #+usocket-iolib :iolib)
     :components ((:file "package")
 		 (:module "vendor" :depends-on ("package")
@@ -36,23 +37,22 @@
 						(:file "openmcl")
 			       #+clozure	(:file "clozure" :depends-on ("openmcl"))
 			       #+cmu		(:file "cmucl")
-			       #+(or sbcl ecl)	(:file "sbcl")
+			       #+(or sbcl ecl clasp)
+                                                (:file "sbcl")
 			       #+ecl		(:file "ecl" :depends-on ("sbcl"))
+			       #+clasp		(:file "clasp" :depends-on ("sbcl"))
 			       #+lispworks	(:file "lispworks")
 			       #+mcl		(:file "mcl")
 			       #+mocl		(:file "mocl")
 			       #+scl		(:file "scl")
 			       #+genera		(:file "genera")
-			       #+usocket-iolib  (:file "iolib")))
+			       #+mezzano	(:file "mezzano")))
 		 #-usocket-iolib
 		 (:file "option" :depends-on ("backend"))
 		 #+usocket-iolib
 		 (:module "backend" :depends-on ("condition")
-		  :components ((:file "iolib" :depends-on ("iolib-sockopt"))
-			       (:file "iolib-sockopt")))
-		 ))
+		  :components ((:file "iolib")))))
 
 (defmethod perform ((op test-op) (c (eql (find-system :usocket))))
-  (oos 'load-op :usocket-server)
-  (oos 'load-op :usocket-test)
-  (oos 'test-op :usocket-test))
+  (oos 'load-op ':usocket-test)
+  (oos 'test-op ':usocket-test))
