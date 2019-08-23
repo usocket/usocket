@@ -1,4 +1,4 @@
-;;;; -*- Mode: Lisp -*-
+;;;; -*- Mode: LISP; Base: 10; Syntax: ANSI-Common-lisp; -*-
 ;;;;
 ;;;; See the LICENSE file for licensing information.
 

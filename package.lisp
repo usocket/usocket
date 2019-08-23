@@ -1,3 +1,4 @@
+;;;; -*- Mode: LISP; Base: 10; Syntax: ANSI-Common-lisp; Package: CL-USER -*-
 ;;;; See the LICENSE file for licensing information.
 
 (defpackage :usocket

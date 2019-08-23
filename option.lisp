@@ -1,3 +1,4 @@
+;;;; -*- Mode: LISP; Base: 10; Syntax: ANSI-Common-lisp; Package: USOCKET -*-
 ;;;; SOCKET-OPTION, a high-level socket option get/set framework
 
 ;;;; See LICENSE for licensing information.
