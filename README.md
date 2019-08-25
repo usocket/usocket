@@ -7,21 +7,21 @@ sockets access to the broadest of common lisp implementations as possible.
 
 ## The library currently supports:
 
- - Allegro CL
- - ABCL (ArmedBear)
- - Clasp
- - Clozure CL
- - Corman Lisp
- - GNU CLISP
- - CMUCL
- - ECL
- - LispWorks (4.3 and up)
- - Digitool MCL and RMCL (5.0 and up)
- - Mezzano
- - MOCL
- - SBCL
- - Scieneer CL
- - Symbolics Genera
+1. Allegro CL
+2. ABCL (ArmedBear)
+3. Clasp
+4. Clozure CL
+5. Corman Lisp
+6. GNU CLISP
+7. CMUCL
+8. ECL
+9. LispWorks (4.3 and up)
+10. Digitool MCL and RMCL (5.0 and up)
+11. Mezzano
+12. MOCL
+13. SBCL
+14. Scieneer CL
+15. Symbolics Lisp Machine (Genera)
 
 If your favorite common lisp misses in the list above, please contact
 usocket-devel@common-lisp.net and submit a request.  Please include
