@@ -1,3 +1,7 @@
+0.8.3:
+
+  * New backend: Mezzano (contributed by Bruno Cichon, #51)
+
 0.8.2: (June 11, 2019)
 
   * General: now the HOST-OR-IP slot of NS-CONDITION has been exported. (#46)
