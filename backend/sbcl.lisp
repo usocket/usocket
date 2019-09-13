@@ -122,16 +122,37 @@
       "
           int count;
           struct timeval tv;
+          struct timeval tvs;
+          struct timeval tve;
+          unsigned long elapsed;
+          unsigned long remaining;
           int retval = -1;
 
           if (#0 != Cnil) {
             tv.tv_sec = fixnnint(#0);
             tv.tv_usec = #1;
           }
+          remaining = ((tv.tv_sec*1000000) + tv.tv_usec);
 
           do {
+              (void)gettimeofday(&tvs, NULL);   // start time
+
               retval = select(#3 + 1, (fd_set*)#2, NULL, NULL,
                            (#0 != Cnil) ? &tv : NULL);
+
+              if ( (retval < 0) && (errno == EINTR) && (#0 != Cnil) ) {
+                  (void)gettimeofday(&tve, NULL);            // end time
+                  elapsed = (tve.tv_sec - tvs.tv_sec)*1000000 + (tve.tv_usec - tvs.tv_usec);
+                  remaining = remaining - elapsed;
+                  if ( remaining < 0 ) {                     // already past timeout, just exit
+                      retval = 0;
+                      break;
+                  }
+
+                  tv.tv_sec = remaining / 1000000;
+                  tv.tv_usec = remaining - (tv.tv_sec * 1000000);
+              }
+
           } while ((retval < 0) && (errno == EINTR));
 
           @(return) = retval;
@@ -140,7 +161,7 @@
           ((= 0 count)
            (values nil nil))
           ((< count 0)
-           ;; check for EINTR and EAGAIN; these should not err
+           ;; check for EAGAIN; these should not err
            (values nil (cerrno)))
           (t
            (dolist (sock sockets)
