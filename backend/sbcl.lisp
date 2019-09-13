@@ -122,13 +122,19 @@
       "
           int count;
           struct timeval tv;
+          int retval = -1;
 
           if (#0 != Cnil) {
             tv.tv_sec = fixnnint(#0);
             tv.tv_usec = #1;
           }
-        @(return) = select(#3 + 1, (fd_set*)#2, NULL, NULL,
+
+          do {
+              retval = select(#3 + 1, (fd_set*)#2, NULL, NULL,
                            (#0 != Cnil) ? &tv : NULL);
+          } while ((retval < 0) && (errno == EINTR));
+
+          @(return) = retval;
 " :one-liner nil)))
         (cond
           ((= 0 count)
