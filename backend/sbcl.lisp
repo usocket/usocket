@@ -575,7 +575,7 @@ happen. Use with care."
                   (sb-alien:addr rfds) nil nil
                   (when timeout secs) (when timeout musecs))))
              (if (null count) ; something wrong in #'sb-unix:unix-fast-select
-                 (unless (= err sb-unix:EINTR)
+                 (unless (= err sb-unix:eintr)
                    (error (map-errno-error err)))
                  (when (< 0 count) ; do nothing if count = 0
                    ;; process the result...

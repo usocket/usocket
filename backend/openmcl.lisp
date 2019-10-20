@@ -31,7 +31,7 @@
 ;; wait for more than one socket-or-fd
 
 (defun input-available-p (sockets &optional ticks-to-wait)
-  (ccl::rletZ ((tv :timeval))
+  (ccl::rletz ((tv :timeval))
     (ccl::ticks-to-timeval ticks-to-wait tv)
     ;;### The trickery below can be moved to the wait-list now...
     (ccl::%stack-block ((infds ccl::*fd-set-size*))
