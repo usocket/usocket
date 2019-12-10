@@ -14,7 +14,7 @@
 (defparameter *auto-port* 0
   "Port number to pass when an auto-assigned port number is wanted.")
 
-(defparameter *version* #.(asdf:component-version (asdf:find-system :usocket))
+(defparameter *version* "0.8.2"
   "usocket version string")
 
 (defconstant +max-datagram-packet-size+ 65507
