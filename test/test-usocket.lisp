@@ -1,3 +1,4 @@
+;;;; -*- Mode: LISP; Base: 10; Syntax: ANSI-Common-lisp; Package: USOCKET-TEST -*-
 ;;;; See LICENSE for licensing information.
 
 ;;;; Usage: (usoct:run-usocket-tests) or (usoct:do-tests)
