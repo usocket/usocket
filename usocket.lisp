@@ -316,7 +316,8 @@ The `body' is an implied progn form."
   (clrhash (wait-list-map wait-list)))
 
 (defun wait-for-input (socket-or-sockets &key timeout ready-only
-                                         &aux (single-socket-p (atom socket-or-sockets)))
+                                         &aux (single-socket-p
+                                               (usocket-p socket-or-sockets)))
   "Waits for one or more streams to become ready for reading from
 the socket.  When `timeout' (a non-negative real number) is
 specified, wait `timeout' seconds, or wait indefinitely when
@@ -348,12 +349,12 @@ the values documented in usocket.lisp in the usocket class."
   (unless (wait-list-p socket-or-sockets)
     ;; OPTIMIZATION: in case socket-or-sockets is an atom, create the wait-list
     ;; only once and store it into the usocket itself.   
-    (let ((wl (if (and single-socket-p (wait-list socket-or-sockets))
-                  (wait-list socket-or-sockets) ; reuse the wait-list
+    (let ((wl (if (and single-socket-p
+                       (wait-list socket-or-sockets))
+                  (wait-list socket-or-sockets) ; reuse the per-usocket wait-list
                 (make-wait-list (if (listp socket-or-sockets)
                                     socket-or-sockets (list socket-or-sockets))))))
-      (multiple-value-bind
-            (sockets to-result)
+      (multiple-value-bind (sockets to-result)
           (wait-for-input wl :timeout timeout :ready-only ready-only)
         ;; in case of single socket, keep the wait-list
         (unless single-socket-p
