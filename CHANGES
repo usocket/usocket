@@ -1,6 +1,10 @@
 0.8.3:
 
-  * New backend: Mezzano (contributed by Bruno Cichon, #51)
+  * New experimental backend: Mezzano (contributed by Bruno Cichon, #51)
+  * Bugfix: WAIT-FOR-INPUT fails to honor :ready-only t (#57, thanks to @Reepca for reporting this issue)
+  * Bugfix: [ECL] Fix read-select in backend/sbcl.lisp to loop if interrupted (#54, #55, thanks to @thijs)
+  * [CCL] Fix compiling with (readtable-case readtable-case) of :invert. (#56, patch from @genworks)
+  * [Genera] added file attibutes (to all USOCKET lisp files) for Genera.
 
 0.8.2: (June 11, 2019)
 
