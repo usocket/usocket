@@ -80,11 +80,13 @@
 (defun to-format (element-type protocol)
   (cond ((null element-type)
 	 (ecase protocol ; default value of different protocol
-	   (:stream :text)
+	   (:stream ;;:text
+	     :bivalent)
 	   (:datagram :binary)))
 	((subtypep element-type 'character)
 	 :text)
-	(t :binary)))
+	(t ;; :binary
+	 :bivalent)))
 
 #-ipv6
 (defun socket-connect (host port &key (protocol :stream) element-type
