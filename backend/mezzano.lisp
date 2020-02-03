@@ -45,6 +45,9 @@
 (defun get-host-by-address (address)
   (declare (ignore address)))
 
+(defmethod mezzano.sync:get-object-event ((object usocket))
+  (mezzano.sync:get-object-event (socket object)))
+
 (defun %setup-wait-list (wait-list)
   (declare (ignore wait-list)))
 
@@ -55,7 +58,9 @@
   (declare (ignore wait-list waiter)))
 
 (defun wait-for-input-internal (wait-list &key timeout)
-  (declare (ignore wait-list timeout)))
+  (dolist (waiter (apply #'mezzano.sync:wait-for-objects-with-timeout timeout (wait-list-waiters wait-list)))
+    (setf (state waiter) :read))
+  wait-list)
 
 (defmethod socket-close ((usocket stream-usocket))
   (with-mapped-conditions ()
