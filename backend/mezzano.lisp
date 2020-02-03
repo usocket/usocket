@@ -4,7 +4,7 @@
 
 (in-package :usocket)
 
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   (typecase condition
     ;; TODO: Add additional conditions as appropriate
     (mezzano.network.tcp:connection-timed-out
@@ -71,9 +71,8 @@
     (mezzano.network.tcp:close-tcp-listener (socket usocket))))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
-  (declare (ignore element-type))
   (with-mapped-conditions (usocket)
-    (let ((s (mezzano.network.tcp:tcp-accept (socket usocket))))
+    (let ((s (mezzano.network.tcp:tcp-accept (socket usocket) :element-type element-type)))
       (make-stream-socket :socket s
                           :stream s))))
 
