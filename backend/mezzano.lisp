@@ -4,7 +4,7 @@
 
 (in-package :usocket)
 
-(defun handle-condition (condition &optional (socket nil))
+(defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   (typecase condition
     ;; TODO: Add additional conditions as appropriate
     (mezzano.network.tcp:connection-timed-out
@@ -45,6 +45,9 @@
 (defun get-host-by-address (address)
   (declare (ignore address)))
 
+(defmethod mezzano.sync:get-object-event ((object usocket))
+  (mezzano.sync:get-object-event (socket object)))
+
 (defun %setup-wait-list (wait-list)
   (declare (ignore wait-list)))
 
@@ -55,7 +58,9 @@
   (declare (ignore wait-list waiter)))
 
 (defun wait-for-input-internal (wait-list &key timeout)
-  (declare (ignore wait-list timeout)))
+  (dolist (waiter (apply #'mezzano.sync:wait-for-objects-with-timeout timeout (wait-list-waiters wait-list)))
+    (setf (state waiter) :read))
+  wait-list)
 
 (defmethod socket-close ((usocket stream-usocket))
   (with-mapped-conditions ()
@@ -66,9 +71,8 @@
     (mezzano.network.tcp:close-tcp-listener (socket usocket))))
 
 (defmethod socket-accept ((usocket stream-server-usocket) &key element-type)
-  (declare (ignore element-type))
   (with-mapped-conditions (usocket)
-    (let ((s (mezzano.network.tcp:tcp-accept (socket usocket))))
+    (let ((s (mezzano.network.tcp:tcp-accept (socket usocket) :element-type element-type)))
       (make-stream-socket :socket s
                           :stream s))))
 
