@@ -545,8 +545,8 @@
   (unless (member direction '(:input :output :io))
     (error 'invalid-argument-error))
   (with-mapped-conditions (usocket)
-    #-(or lispworks4 lispworks5 lispworks6)
-    (comm:socket-stream-shutdown (socket usocket) direction)
+    #-(or lispworks4 lispworks5 lispworks6) ; lispworks 7+
+    (comm:socket-stream-shutdown (socket-stream usocket) direction)
     #+(or lispworks4 lispworks5 lispworks6)
     (let ((what (case direction
 		  (:input +shutdown-read+)
