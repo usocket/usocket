@@ -3,8 +3,8 @@
 
 (in-package :usocket-test)
 
-(defvar *echo-server*)
-(defvar *echo-server-port*)
+(defvar *echo-server*      nil)
+(defvar *echo-server-port* nil)
 
 (defun start-server ()
   (multiple-value-bind (thread socket)
