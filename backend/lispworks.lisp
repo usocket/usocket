@@ -598,9 +598,9 @@
           n
         (let ((errno #-win32 (lw:errno-value)
                      #+win32 (wsa-get-last-error)))
-          (if (zerop errno)
-              n
-            (raise-usock-err errno socket-fd host)))))))
+          (unless (zerop errno)
+            (raise-usock-err errno socket-fd host))
+	  0)))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length &key timeout (max-buffer-size +max-datagram-packet-size+))
   "Receive message from socket, read-timeout is a float number in seconds.
@@ -662,9 +662,9 @@
                                                            :copy-foreign-object nil)))
             (let ((errno #-win32 (lw:errno-value)
                          #+win32 (wsa-get-last-error)))
-              (if (zerop errno)
-                  (values nil n 0 0)
-                (raise-usock-err errno socket-fd)))))))))
+              (unless (zerop errno)
+                (raise-usock-err errno socket-fd))
+	      (values nil n 0 0))))))))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind
