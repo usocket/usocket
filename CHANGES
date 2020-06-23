@@ -1,4 +1,8 @@
-0.8.3:
+0.8.4:
+
+  * [LW] SOCKET-ACCEPT now raises CONNECTION-ABPRTED-ERROR instead of INVALID-SOCKET-ERROR if the underlying socket got from comm::accept-connection-to-socket or comm::get-fd-from-socket is NIL. (#63)
+
+0.8.3: (Dec 23, 2019)
 
   * New experimental backend: Mezzano (contributed by Bruno Cichon, #51)
   * Bugfix: WAIT-FOR-INPUT fails to honor :ready-only t (#57, thanks to @Reepca for reporting this issue)

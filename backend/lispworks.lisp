@@ -477,8 +477,8 @@
                    (error 'address-in-use-error)))))
     (make-stream-server-socket sock :element-type element-type)))
 
-;; Note: COMM::GET-FD-FROM-SOCKET contains addition socket wait operations, which
-;; should NOT be applied on socket FDs who have already been called on W-F-I,
+;; Note: COMM::GET-FD-FROM-SOCKET contains additional socket-wait operations, which
+;; should NOT be applied to socket FDs which has already been called on W-F-I,
 ;; so we have to check the %READY-P slot to decide if this waiting is necessary,
 ;; or SOCKET-ACCEPT will just hang. -- Chun Tian (binghe), May 1, 2011
 
@@ -490,15 +490,22 @@
                      (comm::get-fd-from-socket (socket usocket)))
                    #-win32
                    (comm::get-fd-from-socket (socket usocket))))
-         (stream (make-instance 'comm:socket-stream
-                                :socket socket
-                                :direction :io
-                                :element-type (or element-type
-                                                  (element-type usocket)))))
+         (stream (when socket
+		   (make-instance 'comm:socket-stream
+				  :socket socket
+				  :direction :io
+				  :element-type (or element-type
+						    (element-type usocket))))))
     #+win32
     (when socket
       (setf (%ready-p usocket) nil))
-    (make-stream-socket :socket socket :stream stream)))
+
+    ;; It is possible that socket is NIL. Previously the call of make-stream-socket
+    ;; raised a usocket:invalid-socket-error, now we let it raise
+    ;; connection-aborted-error instead. (#63)
+    (if socket
+	(make-stream-socket :socket socket :stream stream)
+      (error 'connection-aborted-error))))
 
 ;; Sockets and their streams are different objects
 ;; close the stream in order to make sure buffers
@@ -509,7 +516,7 @@
 
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)
-     (comm::close-socket (socket usocket))))
+    (comm::close-socket (socket usocket))))
 
 (defmethod socket-close :after ((socket datagram-usocket))
   "Additional socket-close method for datagram-usocket"

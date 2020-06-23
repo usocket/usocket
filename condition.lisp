@@ -88,7 +88,6 @@ been implemented yet."))
   (:documentation "Condition raised when there's no other - more applicable -
 condition available."))
 
-
 ;; Mass define and export our errors
 (define-usocket-condition-classes
   (address-in-use-error
