@@ -491,21 +491,19 @@
                    #-win32
                    (comm::get-fd-from-socket (socket usocket))))
          (stream (when socket
-		   (make-instance 'comm:socket-stream
-				  :socket socket
-				  :direction :io
-				  :element-type (or element-type
-						    (element-type usocket))))))
+                  (make-instance 'comm:socket-stream
+                                  :socket socket
+                                  :direction :io
+                                  :element-type (or element-type
+                                                    (element-type usocket))))))
     #+win32
     (when socket
       (setf (%ready-p usocket) nil))
 
     ;; It is possible that socket is NIL. Previously the call of make-stream-socket
-    ;; raised a usocket:invalid-socket-error, now we let it raise
-    ;; connection-aborted-error instead. (#63)
-    (if socket
-	(make-stream-socket :socket socket :stream stream)
-      (error 'connection-aborted-error))))
+    ;; raised a usocket:invalid-socket-error
+    (when socket
+      (make-stream-socket :socket socket :stream stream))))
 
 ;; Sockets and their streams are different objects
 ;; close the stream in order to make sure buffers
