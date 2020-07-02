@@ -153,7 +153,7 @@
 ;; by the same object.
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)
-    (close (socket usocket))))
+    (close (socket usocket) :abort t))) ; see "sbcl.lisp" for (:abort t)
 
 (defmethod socket-shutdown ((usocket usocket) direction)
   (with-mapped-conditions (usocket)

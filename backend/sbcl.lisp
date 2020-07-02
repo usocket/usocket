@@ -467,9 +467,18 @@ happen. Use with care."
   (with-mapped-conditions (usocket)
     (sb-bsd-sockets:socket-close (socket usocket))))
 
+;; usocket leaks file descriptors on sb-int:broken-pipe conditions (#64)
+;;
+;; "If abort is true, an attempt is made to clean up any side effects of having
+;;  created stream. If stream performs output to a file that was created when
+;;  the stream was created, the file is deleted and any previously existing file
+;;  is not superseded. ... If abort is true and the stream is an output file stream,
+;;  its associated file might be deleted." (ANSI)
+;;
+;; adding (:abort t) fixes the potential leaks of socket fds.
 (defmethod socket-close ((usocket stream-usocket))
   (with-mapped-conditions (usocket)
-    (close (socket-stream usocket))))
+    (close (socket-stream usocket) :abort t)))
 
 #+sbcl
 (defmethod socket-shutdown ((usocket stream-usocket) direction)

@@ -510,7 +510,7 @@
 ;; are correctly flushed and the socket closed.
 (defmethod socket-close ((usocket stream-usocket))
   "Close socket."
-  (close (socket-stream usocket)))
+  (close (socket-stream usocket) :abort t)) ; see "sbcl.lisp" for (:abort t)
 
 (defmethod socket-close ((usocket usocket))
   (with-mapped-conditions (usocket)

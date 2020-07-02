@@ -150,7 +150,7 @@
 (defmethod socket-close ((usocket stream-usocket))
   "Close socket."
   (with-mapped-conditions (usocket)
-    (close (socket-stream usocket))))
+    (close (socket-stream usocket) :abort t))) ; see "sbcl.lisp" for (:abort t)
 
 (defmethod socket-close ((usocket usocket))
   "Close socket."

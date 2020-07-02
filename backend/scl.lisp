@@ -124,7 +124,7 @@
 (defmethod socket-close ((usocket stream-usocket))
   "Close socket."
   (with-mapped-conditions (usocket)
-    (close (socket-stream usocket))))
+    (close (socket-stream usocket) :abort t)))
 
 (defmethod socket-close :after ((socket datagram-usocket))
   (setf (%open-p socket) nil))

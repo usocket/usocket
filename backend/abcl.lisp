@@ -271,7 +271,7 @@
 
 (defmethod socket-close ((usocket stream-usocket))
   (with-mapped-conditions (usocket)
-    (close (socket-stream usocket))
+    (close (socket-stream usocket) :abort t) ; see "sbcl.lisp" for (:abort t)
     (jcall $@close/Socket/0 (socket usocket))))
 
 (defmethod socket-close ((usocket datagram-usocket))
