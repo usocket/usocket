@@ -1,3 +1,7 @@
+0.8.4:
+
+  * Bugfix: "usocket leaks file descriptors on sb-int:broken-pipe conditions" (#64) (thanks to Jesse Off)
+
 0.8.3: (Dec 23, 2019)
 
   * New experimental backend: Mezzano (contributed by Bruno Cichon, #51)
