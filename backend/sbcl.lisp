@@ -198,8 +198,8 @@
     (sb-bsd-sockets:operation-timeout-error . timeout-error)
     #-(or ecl clasp)
     (sb-sys:io-timeout . timeout-error)
-    #+sbcl
-    (sb-ext:timeout . timeout-error)
+    #+sbcl (sb-ext:timeout . timeout-error)
+    #+sbcl (sb-int:broken-pipe . connection-aborted-error)
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
 
     ;; Nameservice errors: mapped to unknown-error
