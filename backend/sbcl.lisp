@@ -174,7 +174,9 @@
   (map-errno-error (sb-bsd-sockets::socket-error-errno sock-err)))
 
 (defparameter +sbcl-condition-map+
-  '((interrupted-error . interrupted-condition)))
+  '((interrupted-error . interrupted-condition)
+    #+(or ecl clasp)
+    (sb-bsd-sockets::host-not-found-error . ns-host-not-found-error)))
 
 (defparameter +sbcl-error-map+
   `((sb-bsd-sockets:address-in-use-error . address-in-use-error)

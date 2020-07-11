@@ -5,7 +5,9 @@
 
 (in-package :usocket-test)
 
-(defparameter +non-existing-host+ "1.2.3.4")
+(defparameter +non-existing-host+ "1.2.3.4"
+  "The stringified IP address of a host on the same subnet. No physical host may be present.")
+
 (defparameter +unused-local-port+ 15213)
 
 (defparameter *fake-usocket*
@@ -72,7 +74,7 @@
   nil)
 
 (deftest socket-failure.1
-  (with-caught-conditions (timeout-error nil)
+  (with-caught-conditions (#+(or :darwin :os-macosx) connection-refused-error #-(or :darwin :os-macosx) timeout-error nil)
     (socket-connect 2130706433 +unused-local-port+ :timeout 1) ;; == #(127 0 0 1)
     :unreach)
   nil)
