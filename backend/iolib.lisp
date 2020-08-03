@@ -227,8 +227,17 @@
       (iolib/streams:hangup ()
 	(funcall disconnector :close)))))
 
+#||
+Too few arguments in call to #<Compiled-function (:internal usocket::make-usocket-error-handler) (Non-Global)  #x3020018C678F>:
+2 arguments provided, at least 3 required.
+
+Backtrace:
+  0: ((:internal usocket::make-usocket-error-handler) 17511955605035 2)
+  1: (iolib/multiplex::%handle-one-fd #<event base, 1 FDs monitored, using: #<epoll(4) multiplexer> #x3020018C963D> (8 (:error :read :write)) 54337.518855526D0 nil 0.0D0)
+||#
+
 (defun make-usocket-error-handler (usocket disconnector)
-  (lambda (fd event exception)
+  (lambda (fd event &optional exception)
     (declare (ignore fd event exception))
     (handler-case
 	(setf (state usocket) nil)
