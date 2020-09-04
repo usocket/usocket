@@ -4,9 +4,7 @@
 
 (defparameter *backend* :iolib)
 
-(eval-when (:load-toplevel :execute)
-  (shadowing-import 'iolib/sockets:socket-option)
-  (export 'socket-option))
+(export 'socket-option)
 
 (defparameter +iolib-error-map+
  `((iolib/sockets:socket-address-in-use-error        . address-in-use-error)
@@ -297,3 +295,10 @@ Backtrace:
     ;; close the event-base after use
     (unless (eq event-base *event-base*)
       (close event-base))))
+
+(defmethod socket-option ((socket usocket) option)
+  (iolib/sockets:socket-option (socket-stream socket) option))
+
+(defmethod (setf socket-option) (new-value (socket usocket) option)
+  (let ((form `(setf (iolib/sockets:socket-option ,(socket-stream socket) ,option) ,new-value)))
+    (eval (macroexpand-1 form))))
