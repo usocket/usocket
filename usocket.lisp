@@ -3,6 +3,8 @@
 
 (in-package :usocket)
 
+(defvar *ipv6-only-p* nil)
+
 (defparameter *wildcard-host* #(0 0 0 0)
   "Hostname to pass when all interfaces in the current system are to
   be bound.  If this variable is passed to socket-listen, IPv6 capable

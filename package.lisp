@@ -107,7 +107,7 @@
              #:*default-event-base*
              #:host-to-hostname
 
-             ;; these're socket-related conditions from IOlib
+             ;; socket-related conditions from IOlib
              #:ADDRESS-NOT-AVAILABLE-ERROR #:HOST-DOWN-ERROR
              #:OPERATION-NOT-SUPPORTED-ERROR #:SOCKET-OPTION
              #:NETWORK-DOWN-ERROR #:INVALID-SOCKET-ERROR
@@ -123,4 +123,7 @@
 
              ;; added in 0.8.2
              #:host-or-ip
+
+	     ;; added in 0.9.0
+	     #:*ipv6-only-p*
              ))
