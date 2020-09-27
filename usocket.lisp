@@ -3,7 +3,8 @@
 
 (in-package :usocket)
 
-(defvar *ipv6-only-p* nil)
+(defvar *ipv6-only-p* nil
+  "When enabled, all USOCKET functions assume IPv6 addresses only.")
 
 (defparameter *wildcard-host* #(0 0 0 0)
   "Hostname to pass when all interfaces in the current system are to
@@ -590,7 +591,8 @@ stringified hostname."
          (array (unsigned-byte 8) (16)))
      (vector-to-ipv6-host host))
     (integer (hbo-to-dotted-quad host)) ; integer input is IPv4 only
-    (null "0.0.0.0")))                  ; null is IPv4
+    (null
+     (if *ipv6-only-p* "::" "0.0.0.0")))) ;; "::" is the IPv6 wildcard address
 
 (defun ip= (ip1 ip2) ; exported
   (etypecase ip1
@@ -612,20 +614,24 @@ stringified hostname."
 ;;
 
 (defun get-host-by-name (name)
-  "0.7.1+: if there're IPv4 addresses, return the first IPv4 address."
+  "0.7.1+: if there're IPv4 addresses, return the first IPv4 address.
+(unless in IPv6-only mode)"
   (let* ((hosts (get-hosts-by-name name))
-         (pos (position-if #'(lambda (ip) (= 4 (length ip))) hosts)))
-    (if pos (elt hosts pos)
-      (car hosts))))
+         (ipv4-hosts (remove-if-not #'(lambda (ip) (= 4 (length ip))) hosts))
+	 (ipv6-hosts (remove-if #'(lambda (ip) (= 4 (length ip))) hosts)))
+    (cond (*ipv6-only-p* (car ipv6-hosts))
+	  (ipv4-hosts    (car ipv4-hosts))
+	  (t             (car hosts)))))
 
 (defun get-random-host-by-name (name)
-  "0.7.1+: if there're IPv4 addresses, only return a random IPv4 address."
+  "0.7.1+: if there're IPv4 addresses, only return a random IPv4 address.
+(unless in IPv6-only mode)"
   (let* ((hosts (get-hosts-by-name name))
-         (ipv4-hosts (remove-if-not #'(lambda (ip) (= 4 (length ip))) hosts)))
-    (cond (ipv4-hosts
-           (elt ipv4-hosts (random (length ipv4-hosts))))
-          (hosts
-           (elt hosts (random (length hosts)))))))
+         (ipv4-hosts (remove-if-not #'(lambda (ip) (= 4 (length ip))) hosts))
+	 (ipv6-hosts (remove-if #'(lambda (ip) (= 4 (length ip))) hosts)))
+    (cond (*ipv6-only-p* (elt ipv6-hosts (random (length ipv6-hosts))))
+	  (ipv4-hosts    (elt ipv4-hosts (random (length ipv4-hosts))))
+          (hosts         (elt hosts      (random (length hosts)))))))
 
 (defun host-to-vector-quad (host) ; internal
   "Translate a host specification (vector quad, dotted quad or domain name)
