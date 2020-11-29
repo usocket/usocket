@@ -20,6 +20,7 @@
 #+sample
 (pushnew :usocket-iolib *features*)
 
+
 (mk:defsystem :usocket
   :source-pathname *usocket-source-dir*
   :binary-pathname *usocket-binary-dir*
@@ -27,6 +28,7 @@
     :depends-on (:split-sequence
 		 #+(and (or sbcl ecl)
 			(not usocket-iolib)) :sb-bsd-sockets
+		 #+(and mkcl (not usocket-iolib)) :sockets
 		 #+usocket-iolib :iolib)
   :components ((:file "package")
 		 (:module "vendor" :depends-on ("package")
@@ -44,9 +46,9 @@
 						(:file "openmcl")
 			       #+clozure	(:file "clozure" :depends-on ("openmcl"))
 			       #+cmu		(:file "cmucl")
-			       #+(or sbcl ecl clasp)
+			       #+(or sbcl ecl clasp mkcl)
                                                 (:file "sbcl")
-			       #+ecl		(:file "ecl" :depends-on ("sbcl"))
+			       #+(or ecl mkcl)	(:file "ecl" :depends-on ("sbcl"))
 			       #+clasp		(:file "clasp" :depends-on ("sbcl"))
 			       #+lispworks	(:file "lispworks")
 			       #+mcl		(:file "mcl")
@@ -76,7 +78,7 @@
      #+clisp		(:file "clisp")
      #+cmu		(:file "cmucl")
      #+scl		(:file "scl")
-     #+(or sbcl ecl)	(:file "sbcl")
+     #+(or sbcl ecl mkcl)	(:file "sbcl")
      #+lispworks	(:file "lispworks")
      #+mcl		(:file "mcl")
      #+openmcl	(:file "openmcl")

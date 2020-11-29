@@ -25,7 +25,7 @@
          (when (= result 0)
            (sb-alien:cast buf sb-alien:c-string))))))
 
-#+(and ecl (not ecl-bytecmp))
+#+(or mkcl (and ecl (not ecl-bytecmp)))
 (progn
   #-:wsock
   (ffi:clines
@@ -62,9 +62,14 @@
     (ffi:c-inline () () :fixnum
      "FD_SETSIZE" :one-liner t))
 
+  #+ecl
   (defun fdset-alloc ()
     (ffi:c-inline () () :pointer-void
      "ecl_alloc_atomic(sizeof(fd_set))" :one-liner t))
+  #+mkcl
+  (defun fdset-alloc ()
+    (ffi:c-inline () () :pointer-void
+     "mkcl_alloc_atomic(MKCL_ENV(), sizeof(fd_set))" :one-liner t))
 
   (defun fdset-zero (fdset)
     (ffi:c-inline (fdset) (:pointer-void) :void
@@ -90,6 +95,7 @@
                    fdset-clr
                    fdset-fd-isset))
 
+  #+ecl
   (defun get-host-name ()
     (ffi:c-inline
      () () :object
@@ -99,6 +105,18 @@
           @(return) = make_simple_base_string(buf);
         else
           @(return) = Cnil;
+      }" :one-liner nil :side-effects nil))
+
+  #+mkcl
+  (defun get-host-name ()
+    (ffi:c-inline
+     () () :object
+     "{ char *buf = (char *) mkcl_alloc_atomic(MKCL_ENV(),257);
+
+        if (gethostname(buf,256) == 0)
+          @(return) = mkcl_cstring_to_base_string(MKCL_ENV(), (buf));
+        else
+          @(return) = mk_cl_Cnil;
       }" :one-liner nil :side-effects nil))
 
   (defun read-select (wl to-secs &optional (to-musecs 0))
@@ -119,6 +137,7 @@
              (ffi:c-inline (to-secs to-musecs rfds max-fd)
                            (t :unsigned-int :pointer-void :int)
                            :int
+#+ecl
       "
           int count;
           struct timeval tv;
@@ -156,7 +175,50 @@
           } while ((retval < 0) && (errno == EINTR));
 
           @(return) = retval;
-" :one-liner nil)))
+"
+#+mkcl
+      "
+          int count;
+          struct timeval tv;
+          struct timeval tvs;
+          struct timeval tve;
+          unsigned long elapsed;
+          unsigned long remaining;
+          int retval = -1;
+
+          if (#0 != mk_cl_Cnil) {
+            tv.tv_sec = mkcl_integer_to_word(MKCL_ENV(), #0);
+            tv.tv_usec = #1;
+          }
+          remaining = ((tv.tv_sec*1000000) + tv.tv_usec);
+
+          do {
+              (void)gettimeofday(&tvs, NULL);   // start time
+
+              retval = select(#3 + 1, (fd_set*)#2, NULL, NULL,
+                           (#0 != mk_cl_Cnil) ? &tv : NULL);
+
+              if ( (retval < 0) && (errno == EINTR) && (#0 != mk_cl_Cnil) ) {
+                  (void)gettimeofday(&tve, NULL);            // end time
+                  elapsed = (tve.tv_sec - tvs.tv_sec)*1000000 + (tve.tv_usec - tvs.tv_usec);
+                  remaining = remaining - elapsed;
+                  if ( remaining < 0 ) {                     // already past timeout, just exit
+                      retval = 0;
+                      break;
+                  }
+
+                  tv.tv_sec = remaining / 1000000;
+                  tv.tv_usec = remaining - (tv.tv_sec * 1000000);
+              }
+
+          } while ((retval < 0) && (errno == EINTR));
+
+          @(return) = retval;
+"
+
+
+
+ :one-liner nil)))
         (cond
           ((= 0 count)
            (values nil nil))
@@ -175,7 +237,7 @@
 
 (defparameter +sbcl-condition-map+
   '((interrupted-error . interrupted-condition)
-    #+(or ecl clasp)
+    #+(or ecl mkcl clasp)
     (sb-bsd-sockets::host-not-found-error . ns-host-not-found-error)))
 
 (defparameter +sbcl-error-map+
@@ -191,25 +253,25 @@
      . operation-not-permitted-error)
     (sb-bsd-sockets:protocol-not-supported-error
      . protocol-not-supported-error)
-    #-(or ecl clasp)
+    #-(or ecl mkcl clasp)
     (sb-bsd-sockets:unknown-protocol
      . protocol-not-supported-error)
     (sb-bsd-sockets:socket-type-not-supported-error
      . socket-type-not-supported-error)
     (sb-bsd-sockets:network-unreachable-error . network-unreachable-error)
     (sb-bsd-sockets:operation-timeout-error . timeout-error)
-    #-(or ecl clasp)
+    #-(or ecl mkcl clasp)
     (sb-sys:io-timeout . timeout-error)
     #+sbcl (sb-ext:timeout . timeout-error)
     #+sbcl (sb-int:broken-pipe . connection-aborted-error)
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
 
     ;; Nameservice errors: mapped to unknown-error
-    #-(or ecl clasp)
+    #-(or ecl mkcl clasp)
     (sb-bsd-sockets:no-recovery-error . ns-no-recovery-error)
-    #-(or ecl clasp)
+    #-(or ecl mkcl clasp)
     (sb-bsd-sockets:try-again-error . ns-try-again-condition)
-    #-(or ecl clasp)
+    #-(or ecl mkcl clasp)
     (sb-bsd-sockets:host-not-found-error . ns-host-not-found-error)))
 
 ;; this function servers as a general template for other backends
@@ -307,7 +369,7 @@ happen. Use with care."
 		       (sockopt-tcp-nodelay-p
 			(fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
   (when deadline (unsupported 'deadline 'socket-connect))
-  #+(or ecl clasp)
+  #+(or ecl mkcl clasp)
   (when timeout (unsupported 'timeout 'socket-connect))
   (when (and nodelay-specified
              ;; 20080802: ECL added this function to its sockets
@@ -329,7 +391,7 @@ happen. Use with care."
          (socket (make-instance #+sbcl (if ipv6
                                            'sb-bsd-sockets::inet6-socket
                                            'sb-bsd-sockets:inet-socket)
-                                #+(or ecl clasp) 'sb-bsd-sockets:inet-socket
+                                #+(or ecl mkcl clasp) 'sb-bsd-sockets:inet-socket
                                 :type protocol
                                 :protocol (case protocol
                                             (:stream :tcp)
@@ -363,7 +425,7 @@ happen. Use with care."
 		  (if timeout
 		      (%with-timeout (timeout (error 'sb-ext:timeout)) (connect))
 		      (connect)))
-		#+(or ecl clasp (and sbcl win32))
+		#+(or ecl mkcl clasp (and sbcl win32))
 		(sb-bsd-sockets:socket-connect socket remote port)
                 ;; Now that we're connected make the stream.
                 (setf (socket-stream usocket)
@@ -418,11 +480,11 @@ happen. Use with care."
          (ip #+sbcl (if (and local (not (eq host *wildcard-host*)))
                         local
                         (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any))
-             #+(or ecl clasp) (host-to-vector-quad host))
+             #+(or ecl mkcl clasp) (host-to-vector-quad host))
          (sock (make-instance #+sbcl (if ipv6
                                          'sb-bsd-sockets::inet6-socket
                                          'sb-bsd-sockets:inet-socket)
-                              #+(or ecl clasp) 'sb-bsd-sockets:inet-socket
+                              #+(or ecl mkcl clasp) 'sb-bsd-sockets:inet-socket
                               :type :stream
                               :protocol :tcp)))
     (handler-case
@@ -487,7 +549,7 @@ happen. Use with care."
   (with-mapped-conditions (usocket)
     (sb-bsd-sockets::socket-shutdown (socket usocket) :direction direction)))
 
-#+ecl
+#+(or ecl mkcl)
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
   (let ((sock-fd (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
         (direction-flag (ecase direction
@@ -819,7 +881,7 @@ happen. Use with care."
 
 ) ; progn
 
-#+(and (or ecl clasp) (not win32))
+#+(and (or ecl mkcl clasp) (not win32))
 (progn
   (defun wait-for-input-internal (wl &key timeout)
     (with-mapped-conditions ()
@@ -842,7 +904,7 @@ happen. Use with care."
     (declare (ignore wl w)))
 ) ; progn
 
-#+(and (or ecl clasp) win32 (not ecl-bytecmp))
+#+(and (or ecl mkcl clasp) win32 (not ecl-bytecmp))
 (progn
   (defun maybe-wsa-error (rv &optional syscall)
     (unless (zerop rv)
