@@ -414,7 +414,7 @@
 	(when (string= hostname "255.255.255.255")
 	  ;; LispWorks fails on connect if the broadcast option for broadcast
 	  ;; address is not set in advance
-	  (usocket::set-socket-broadcast socket-fd 1))
+	  (set-socket-broadcast socket-fd 1))
         (if socket-fd
             (if (comm::connect socket-fd server-addr server-addr-length)
                 ;; success, return socket fd
