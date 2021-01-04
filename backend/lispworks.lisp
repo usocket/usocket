@@ -399,7 +399,7 @@
       (error "cannot create socket"))))
 
 (defun connect-to-udp-server (hostname service
-                                       &key local-address local-port read-timeout)
+                                       &key local-address local-port read-timeout broadcast)
   "Something like CONNECT-TO-TCP-SERVER"
   (fli:with-dynamic-foreign-objects ()
     (multiple-value-bind (error address-family server-addr server-addr-length)
@@ -411,6 +411,7 @@
                                         :local-port local-port
                                         :read-timeout read-timeout
                                         :address-family address-family)))
+	(usocket::set-socket-broadcast socket-fd (bool->int broadcast))
         (if socket-fd
             (if (comm::connect socket-fd server-addr server-addr-length)
                 ;; success, return socket fd
@@ -423,7 +424,7 @@
 
 (defun socket-connect (host port &key (protocol :stream) (element-type 'base-char)
                        timeout deadline (nodelay t)
-                       local-host local-port)
+                       local-host local-port broadcast)
   ;; What's the meaning of this keyword?
   (when deadline
     (unimplemented 'deadline 'socket-connect))
@@ -477,6 +478,7 @@
                            (connect-to-udp-server (host-to-hostname host) port
                                                   :local-address (and local-host (host-to-hostname local-host))
                                                   :local-port local-port
+						  :broadcast broadcast
                                                   :read-timeout timeout))
                          (with-mapped-conditions (nil local-host)
                            (open-udp-socket       :local-address (and local-host (host-to-hostname local-host))
