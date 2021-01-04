@@ -101,6 +101,11 @@
   (tv-sec :long)
   (tv-usec :long))
 
+(defconstant *sockopt_so_broadcast*
+  #-linux #x0020
+  #+linux 6
+  "Socket broadcast")
+
 ;;; ssize_t
 ;;; recvfrom(int socket, void *restrict buffer, size_t length, int flags,
 ;;;          struct sockaddr *restrict address, socklen_t *restrict address_len);
