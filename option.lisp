@@ -235,7 +235,7 @@
     #+(or ecl clasp)
     () ; TODO
     #+lispworks
-    () ; TODO
+    (int->bool (get-socket-tcp-nodelay socket))
     #+mcl
     () ; TODO
     #+mocl
@@ -264,7 +264,7 @@
     #+(or ecl clasp)
     () ; TODO
     #+lispworks
-    () ; TODO
+    (set-socket-broadcast socket (bool->int new-value))
     #+mcl
     () ; TODO
     #+mocl
