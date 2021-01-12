@@ -101,6 +101,11 @@
   (tv-sec :long)
   (tv-usec :long))
 
+(defconstant *sockopt_so_broadcast*
+  #-linux #x0020
+  #+linux 6
+  "Socket broadcast")
+
 ;;; ssize_t
 ;;; recvfrom(int socket, void *restrict buffer, size_t length, int flags,
 ;;;          struct sockaddr *restrict address, socklen_t *restrict address_len);
@@ -285,6 +290,33 @@
                                  len))
         zero-or-one 0))) ; on error, return 0
 
+(defun get-socket-broadcast (socket-fd)
+  "Get socket option: SO_BROADCAST, return value is a fixnum (0 or 1)"
+  (declare (type integer socket-fd))
+  (fli:with-dynamic-foreign-objects ((zero-or-one :int)
+                                     (len :int))
+    (if (zerop (comm::getsockopt socket-fd
+                                 comm::*sockopt_sol_socket*
+				 *sockopt_so_broadcast*
+                                 (fli:copy-pointer zero-or-one
+                                                   :type '(:pointer #+win32 :char #-win32 :void))
+                                 len))
+        zero-or-one 0)))
+
+(defun set-socket-broadcast (socket-fd new-value)
+  "Set socket option: SO_BROADCAST, argument is a fixnum (0 or 1)"
+  (declare (type integer socket-fd)
+           (type (integer 0 1) new-value))
+  (fli:with-dynamic-foreign-objects ((zero-or-one :int))
+    (setf (fli:dereference zero-or-one) new-value)
+    (when (zerop (comm::setsockopt socket-fd
+                                   comm::*sockopt_sol_socket*
+                                   *sockopt_so_broadcast*
+                                   (fli:copy-pointer zero-or-one
+                                                     :type '(:pointer #+win32 :char #-win32 :void))
+                                   (fli:size-of :int)))
+        new-value)))
+
 (defun initialize-dynamic-sockaddr (hostname service protocol &aux (original-hostname hostname))
   (declare (ignorable original-hostname))
   #+(or lispworks4 lispworks5 lispworks6.0)
@@ -379,6 +411,10 @@
                                         :local-port local-port
                                         :read-timeout read-timeout
                                         :address-family address-family)))
+	(when (string= hostname "255.255.255.255")
+	  ;; LispWorks fails on connect if the broadcast option for broadcast
+	  ;; address is not set in advance
+	  (set-socket-broadcast socket-fd 1))
         (if socket-fd
             (if (comm::connect socket-fd server-addr server-addr-length)
                 ;; success, return socket fd
