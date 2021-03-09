@@ -458,7 +458,7 @@ parse-integer) on each of the string elements."
         (second (ldb (byte 8 16) integer))
         (third (ldb (byte 8 8) integer))
         (fourth (ldb (byte 8 0) integer)))
-    (format nil "~A.~A.~A.~A" first second third fourth)))
+    (format nil "~D.~D.~D.~D" first second third fourth)))
 
 (defun hbo-to-vector-quad (integer) ; exported
   "Host-byte-order integer to dotted-quad string conversion utility."
@@ -469,7 +469,7 @@ parse-integer) on each of the string elements."
     (vector first second third fourth)))
 
 (defun vector-quad-to-dotted-quad (vector) ; exported
-  (format nil "~A.~A.~A.~A"
+  (format nil "~D.~D.~D.~D"
           (aref vector 0)
           (aref vector 1)
           (aref vector 2)
