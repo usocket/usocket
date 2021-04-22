@@ -297,7 +297,7 @@
                                      (len :int))
     (if (zerop (comm::getsockopt socket-fd
                                  comm::*sockopt_sol_socket*
-				 *sockopt_so_broadcast*
+                                 *sockopt_so_broadcast*
                                  (fli:copy-pointer zero-or-one
                                                    :type '(:pointer #+win32 :char #-win32 :void))
                                  len))
@@ -353,8 +353,8 @@
                     server-addr
                     (if (eql family comm::*socket_af_inet*)
                         (fli:size-of '(:struct comm::sockaddr_in))
-			(fli:size-of '(:struct comm::sockaddr_in6))))))
-	:bad-host)))
+                        (fli:size-of '(:struct comm::sockaddr_in6))))))
+        :bad-host)))
 
 (defun open-udp-socket (&key local-address local-port read-timeout
                              (address-family comm::*socket_af_inet*))
@@ -395,7 +395,7 @@
                       (progn
                         (comm::close-socket socket-fd)
                         (error "cannot bind"))))))
-	    socket-fd))
+            socket-fd))
       (error "cannot create socket"))))
 
 (defun connect-to-udp-server (hostname service
@@ -411,10 +411,10 @@
                                         :local-port local-port
                                         :read-timeout read-timeout
                                         :address-family address-family)))
-	(when (string= hostname "255.255.255.255")
-	  ;; LispWorks fails on connect if the broadcast option for broadcast
-	  ;; address is not set in advance
-	  (set-socket-broadcast socket-fd 1))
+        (when (string= hostname "255.255.255.255")
+          ;; LispWorks fails on connect if the broadcast option for broadcast
+          ;; address is not set in advance
+          (set-socket-broadcast socket-fd 1))
         (if socket-fd
             (if (comm::connect socket-fd server-addr server-addr-length)
                 ;; success, return socket fd
@@ -573,9 +573,9 @@
   (unless (member direction '(:input :output :io))
     (error 'invalid-argument-error))
   (let ((what (case direction
-		(:input +shutdown-read+)
-		(:output +shutdown-write+)
-		(:io +shutdown-read-write+))))
+                (:input +shutdown-read+)
+                (:output +shutdown-write+)
+                (:io +shutdown-read-write+))))
     (with-mapped-conditions (usocket)
       #-(or lispworks4 lispworks5 lispworks6) ; lispworks 7.0+
       (comm::shutdown (socket usocket) what)
@@ -590,9 +590,9 @@
     (comm:socket-stream-shutdown (socket-stream usocket) direction)
     #+(or lispworks4 lispworks5 lispworks6)
     (let ((what (case direction
-		  (:input +shutdown-read+)
-		  (:output +shutdown-write+)
-		  (:io +shutdown-read-write+))))
+                  (:input +shutdown-read+)
+                  (:output +shutdown-write+)
+                  (:io +shutdown-read-write+))))
       (= 0 (%shutdown (comm:socket-stream-socket (socket usocket)) what)))))
 
 (defmethod initialize-instance :after ((socket datagram-usocket) &key)
@@ -636,7 +636,7 @@
                      #+win32 (wsa-get-last-error)))
           (unless (zerop errno)
             (raise-usock-err errno socket-fd host))
-	  0)))))
+          0)))))
 
 (defmethod socket-receive ((socket datagram-usocket) buffer length &key timeout (max-buffer-size +max-datagram-packet-size+))
   "Receive message from socket, read-timeout is a float number in seconds.
@@ -650,7 +650,7 @@
                    (integer 0)                          ; size
                    (unsigned-byte 32)                   ; host
                    (unsigned-byte 16))                  ; port
-	   (type sequence buffer))
+           (type sequence buffer))
   (let ((socket-fd (socket socket))
         (message (slot-value socket 'recv-buffer)) ; TODO: how multiple threads do this in parallel?
         (read-timeout timeout)
@@ -700,7 +700,7 @@
                          #+win32 (wsa-get-last-error)))
               (unless (zerop errno)
                 (raise-usock-err errno socket-fd))
-	      (values nil n 0 0))))))))
+              (values nil n 0 0))))))))
 
 (defmethod get-local-name ((usocket usocket))
   (multiple-value-bind
@@ -732,9 +732,9 @@
     (setq hostname (comm:string-ip-address hostname))
     (unless hostname
       (let ((resolved-hostname (comm:get-host-entry hostname :fields '(:address))))
-	(unless resolved-hostname
-	  (return-from ipv6-address-p nil))
-	(setq hostname resolved-hostname))))
+        (unless resolved-hostname
+          (return-from ipv6-address-p nil))
+        (setq hostname resolved-hostname))))
   (comm:ipv6-address-p hostname))
 
 (defun lw-hbo-to-vector-quad (hbo)
@@ -790,19 +790,19 @@
       (dolist (x (wait-list-waiters wait-list))
         (mp:notice-fd (os-socket-handle x)))
       (labels ((wait-function (socks)
-		 (let (rv)
-		   (dolist (x socks rv)
-		     (when (usocket-listen x)
-		       (setf (state x) :READ
-			     rv t))))))
-	(if timeout
-	    (mp:process-wait-with-timeout "Waiting for a socket to become active"
-					(truncate timeout)
-					#'wait-function
-					(wait-list-waiters wait-list))
-	    (mp:process-wait "Waiting for a socket to become active"
-			     #'wait-function
-			     (wait-list-waiters wait-list))))
+                 (let (rv)
+                   (dolist (x socks rv)
+                     (when (usocket-listen x)
+                       (setf (state x) :READ
+                             rv t))))))
+        (if timeout
+            (mp:process-wait-with-timeout "Waiting for a socket to become active"
+                                        (truncate timeout)
+                                        #'wait-function
+                                        (wait-list-waiters wait-list))
+            (mp:process-wait "Waiting for a socket to become active"
+                             #'wait-function
+                             (wait-list-waiters wait-list))))
       (dolist (x (wait-list-waiters wait-list))
         (mp:unnotice-fd (os-socket-handle x)))
       wait-list))
