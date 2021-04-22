@@ -372,7 +372,7 @@
     #+cmu
     ()
     #+(or ecl clasp)
-    () ; TODO
+    (sb-bsd-sockets::sockopt-keep-alive socket)
     #+lispworks
     (int->bool (get-socket-keepalive socket))
     #+mcl
@@ -380,7 +380,7 @@
     #+mocl
     () ; unknown
     #+sbcl
-    () ;TODO
+    (sb-bsd-sockets:sockopt-keep-alive socket)
     #+scl
     ())) ; TODO
 
@@ -402,11 +402,11 @@
     #+clisp
     () ; TODO
     #+clozure
-    () ; TODO
+    (ccl::set-socket-options socket :keepalive new-value)
     #+cmu
     ()
     #+(or ecl clasp)
-    () ; TODO
+    (setf (sb-bsd-sockets::sockopt-keep-alive socket) new-value)
     #+lispworks
     (set-socket-keepalive socket (bool->int new-value))
     #+mcl
@@ -414,7 +414,7 @@
     #+mocl
     () ; unknown
     #+sbcl
-    () ; TODO
+    (setf (sb-bsd-sockets:sockopt-keep-alive socket) new-value)
     #+scl
     () ; TODO
     new-value))
