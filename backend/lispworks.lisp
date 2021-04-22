@@ -106,6 +106,11 @@
   #+linux 6
   "Socket broadcast")
 
+(defconstant *sockopt_so_keepalive*
+  #-linux #x0008
+  #+linux 9
+  "Socket keepalive")
+
 ;;; ssize_t
 ;;; recvfrom(int socket, void *restrict buffer, size_t length, int flags,
 ;;;          struct sockaddr *restrict address, socklen_t *restrict address_len);
@@ -312,6 +317,33 @@
     (when (zerop (comm::setsockopt socket-fd
                                    comm::*sockopt_sol_socket*
                                    *sockopt_so_broadcast*
+                                   (fli:copy-pointer zero-or-one
+                                                     :type '(:pointer #+win32 :char #-win32 :void))
+                                   (fli:size-of :int)))
+        new-value)))
+
+(defun get-socket-keepalive (socket-fd)
+  "Get socket option: SO_KEEPALIVE, return value is a fixnum (0 or 1)"
+  (declare (type integer socket-fd))
+  (fli:with-dynamic-foreign-objects ((zero-or-one :int)
+                                     (len :int))
+    (if (zerop (comm::getsockopt socket-fd
+                                 comm::*sockopt_sol_socket*
+				 *sockopt_so_keepalive*
+                                 (fli:copy-pointer zero-or-one
+                                                   :type '(:pointer #+win32 :char #-win32 :void))
+                                 len))
+        zero-or-one 0)))
+
+(defun set-socket-keepalive (socket-fd new-value)
+  "Set socket option: SO_KEEPALIVE, argument is a fixnum (0 or 1)"
+  (declare (type integer socket-fd)
+           (type (integer 0 1) new-value))
+  (fli:with-dynamic-foreign-objects ((zero-or-one :int))
+    (setf (fli:dereference zero-or-one) new-value)
+    (when (zerop (comm::setsockopt socket-fd
+                                   comm::*sockopt_sol_socket*
+                                   *sockopt_so_keepalive*
                                    (fli:copy-pointer zero-or-one
                                                      :type '(:pointer #+win32 :char #-win32 :void))
                                    (fli:size-of :int)))
