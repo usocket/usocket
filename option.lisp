@@ -349,5 +349,75 @@
     () ; TODO
     new-value))
 
+;;; Socket option: TCP-KEEPALIVE (SO_KEEPALIVE)
+
+(defmethod socket-option ((usocket stream-usocket)
+                          (option (eql :tcp-keepalive)) &key)
+  (declare (ignorable option))
+  (socket-option usocket :tcp-keepalive))
+
+(defmethod socket-option ((usocket stream-usocket)
+                          (option (eql :tcp-keepalive)) &key)
+  (declare (ignorable option))
+  (let ((socket (socket usocket)))
+    (declare (ignorable socket))
+    #+abcl
+    () ; TODO
+    #+allegro
+    () ; TODO
+    #+clisp
+    () ; TODO
+    #+clozure
+    () ; TODO
+    #+cmu
+    ()
+    #+(or ecl clasp)
+    (sb-bsd-sockets::sockopt-keep-alive socket)
+    #+lispworks
+    (int->bool (get-socket-keepalive socket))
+    #+mcl
+    () ; TODO
+    #+mocl
+    () ; unknown
+    #+sbcl
+    (sb-bsd-sockets:sockopt-keep-alive socket)
+    #+scl
+    ())) ; TODO
+
+(defmethod (setf socket-option) (new-value (usocket stream-usocket)
+                                           (option (eql :tcp-keepalive)) &key)
+  (declare (ignorable option))
+  (setf (socket-option usocket :tcp-keepalive) new-value))
+
+(defmethod (setf socket-option) (new-value (usocket stream-usocket)
+                                           (option (eql :tcp-keepalive)) &key)
+  (declare (type boolean new-value)
+           (ignorable new-value option))
+  (let ((socket (socket usocket)))
+    (declare (ignorable socket))
+    #+abcl
+    () ; TODO
+    #+allegro
+    () ; TODO
+    #+clisp
+    () ; TODO
+    #+clozure
+    (ccl::set-socket-options socket :keepalive new-value)
+    #+cmu
+    ()
+    #+(or ecl clasp)
+    (setf (sb-bsd-sockets::sockopt-keep-alive socket) new-value)
+    #+lispworks
+    (set-socket-keepalive socket (bool->int new-value))
+    #+mcl
+    () ; TODO
+    #+mocl
+    () ; unknown
+    #+sbcl
+    (setf (sb-bsd-sockets:sockopt-keep-alive socket) new-value)
+    #+scl
+    () ; TODO
+    new-value))
+
 (eval-when (:load-toplevel :execute)
   (export 'socket-option))
