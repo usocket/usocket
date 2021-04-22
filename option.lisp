@@ -354,11 +354,6 @@
 (defmethod socket-option ((usocket stream-usocket)
                           (option (eql :tcp-keepalive)) &key)
   (declare (ignorable option))
-  (socket-option usocket :tcp-keepalive))
-
-(defmethod socket-option ((usocket stream-usocket)
-                          (option (eql :tcp-keepalive)) &key)
-  (declare (ignorable option))
   (let ((socket (socket usocket)))
     (declare (ignorable socket))
     #+abcl
@@ -383,11 +378,6 @@
     (sb-bsd-sockets:sockopt-keep-alive socket)
     #+scl
     ())) ; TODO
-
-(defmethod (setf socket-option) (new-value (usocket stream-usocket)
-                                           (option (eql :tcp-keepalive)) &key)
-  (declare (ignorable option))
-  (setf (socket-option usocket :tcp-keepalive) new-value))
 
 (defmethod (setf socket-option) (new-value (usocket stream-usocket)
                                            (option (eql :tcp-keepalive)) &key)
