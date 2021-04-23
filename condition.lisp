@@ -94,6 +94,7 @@ condition available."))
 (define-usocket-condition-classes
   (address-in-use-error
    address-not-available-error
+   already-shutdown-error
    bad-file-descriptor-error
    connection-refused-error
    connection-aborted-error
@@ -109,6 +110,7 @@ condition available."))
    network-reset-error
    host-down-error
    host-unreachable-error
+   out-of-memory-error
    shutdown-error
    timeout-error
    deadline-timeout-error
