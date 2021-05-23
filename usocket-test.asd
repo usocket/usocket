@@ -17,7 +17,5 @@
 			       (:file "test-usocket")
 			       (:file "test-condition")
 			       (:file "test-datagram")
-			       (:file "wait-for-input")))))
-
-(defmethod perform ((op test-op) (c (eql (find-system :usocket-test))))
-  (funcall (intern "DO-TESTS" "USOCKET-TEST")))
+			       (:file "wait-for-input"))))
+    :perform (test-op (o c) (symbol-call :usocket-test :do-tests)))
