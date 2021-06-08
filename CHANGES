@@ -1,5 +1,6 @@
 0.8.4:
 
+  * New feature: new socket options (TCP keepalive, UDP broadcast) (#70, #73) (thanks to Eugene Zaikonnikov)
   * Bugfix: "usocket leaks file descriptors on sb-int:broken-pipe conditions" (#64) (thanks to Jesse Off)
 
 0.8.3: (Dec 23, 2019)

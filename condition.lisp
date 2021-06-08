@@ -24,11 +24,11 @@ to continue.
             :documentation "Indicates the minimal version of the
 implementation required to support the requested feature."))
   (:report (lambda (c stream)
-	     (format stream "~A in ~A is unsupported."
-		     (feature c) (context c))
-	     (when (minimum c)
-	       (format stream " Minimum version (~A) is required."
-		       (minimum c)))))
+             (format stream "~A in ~A is unsupported."
+                     (feature c) (context c))
+             (when (minimum c)
+               (format stream " Minimum version (~A) is required."
+                       (minimum c)))))
   (:documentation "Signalled when the underlying implementation
 doesn't allow supporting the requested feature.
 
@@ -37,8 +37,8 @@ When you see this error, go bug your vendor/implementation developer!"))
 (define-condition unimplemented (insufficient-implementation)
   ()
   (:report (lambda (c stream)
-	     (format stream "~A in ~A is unimplemented."
-		     (feature c) (context c))))
+             (format stream "~A in ~A is unimplemented."
+                     (feature c) (context c))))
   (:documentation "Signalled if a certain feature might be implemented,
 based on the features of the underlying implementation, but hasn't
 been implemented yet."))
@@ -94,6 +94,7 @@ condition available."))
 (define-usocket-condition-classes
   (address-in-use-error
    address-not-available-error
+   already-shutdown-error
    bad-file-descriptor-error
    connection-refused-error
    connection-aborted-error
@@ -109,6 +110,7 @@ condition available."))
    network-reset-error
    host-down-error
    host-unreachable-error
+   out-of-memory-error
    shutdown-error
    timeout-error
    deadline-timeout-error
@@ -138,7 +140,7 @@ error available."))
 
 (define-usocket-condition-classes
   (ns-try-again-condition)
-  (ns-condition))
+  (socket-condition))
 
 (define-condition ns-unknown-condition (ns-condition)
   ((real-condition :initarg :real-condition
@@ -223,9 +225,9 @@ error available."))
 
 (defmacro unsupported (feature context &key minimum)
   `(cerror "Ignore it and continue" 'unsupported
-	   :feature ,feature
-	   :context ,context
-	   :minimum ,minimum))
+           :feature ,feature
+           :context ,context
+           :minimum ,minimum))
 
 (defmacro unimplemented (feature context)
   `(signal 'unimplemented :feature ,feature :context ,context))

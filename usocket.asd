@@ -51,8 +51,5 @@
 		 (:file "option" :depends-on ("backend"))
 		 #+usocket-iolib
 		 (:module "backend" :depends-on ("condition")
-		  :components ((:file "iolib")))))
-
-(defmethod perform ((op test-op) (c (eql (find-system :usocket))))
-  (oos 'load-op ':usocket-test)
-  (oos 'test-op ':usocket-test))
+		  :components ((:file "iolib"))))
+    :in-order-to ((test-op (test-op :usocket-test))))
