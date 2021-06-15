@@ -63,6 +63,9 @@
     (openmcl-socket:socket-error
        (raise-error-from-id (openmcl-socket:socket-error-identifier condition)
                             socket condition))
+    #+ccl-1.12
+    (ccl::stream-is-closed-error
+       (error 'invalid-socket-stream-error :socket socket))
     (ccl:input-timeout
        (error 'timeout-error :socket socket))
     (ccl:communication-deadline-expired
