@@ -77,6 +77,7 @@
 (defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
   (typecase condition
+    (comm:socket-error (error 'socket-error :socket socket))
     (conditions:stream-closed-error (error 'invalid-socket-stream-error :socket socket))
     (condition (let ((errno #-win32 (lw:errno-value)
                             #+win32 (wsa-get-last-error)))
