@@ -554,7 +554,8 @@ happen. Use with care."
   (let ((sock-fd (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
         (direction-flag (ecase direction
                           (:input 0)
-                          (:output 1))))
+                          (:output 1)
+                          (:io 2))))
     (unless (zerop (ffi:c-inline (sock-fd direction-flag) (:int :int) :int
                                "shutdown(#0, #1)" :one-liner t))
       (error (map-errno-error (cerrno))))))
@@ -564,7 +565,8 @@ happen. Use with care."
   (let ((sock-fd (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
         (direction-flag (ecase direction
                           (:input 0)
-                          (:output 1))))
+                          (:output 1)
+                          (:io 2))))
     (unless (zerop (sockets-internal:shutdown sock-fd direction-flag))
       (error (map-errno-error (cerrno))))))
 

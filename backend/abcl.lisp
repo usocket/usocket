@@ -284,6 +284,9 @@
       (:input
        (jcall $@shutdownInput/Socket/0 (socket usocket)))
       (:output
+       (jcall $@shutdownOutput/Socket/0 (socket usocket)))
+      (:io
+       (jcall $@shutdownInput/Socket/0 (socket usocket))
        (jcall $@shutdownOutput/Socket/0 (socket usocket))))))
 
 ;;; GET-LOCAL/PEER-NAME/ADDRESS/PORT
