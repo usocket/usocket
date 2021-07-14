@@ -114,7 +114,11 @@
 
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
   (with-mapped-conditions (usocket)
-    (socket:shutdown (socket usocket) :direction direction)))
+    (if (eq :io direction)
+        (progn
+          (socket:shutdown (socket usocket) :direction :input)
+          (socket:shutdown (socket usocket) :direction :output))
+        (socket:shutdown (socket usocket) :direction direction))))
 
 (defun socket-listen (host port
                            &key reuseaddress

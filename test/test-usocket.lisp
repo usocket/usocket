@@ -177,5 +177,15 @@
         t))
   t)
 
+(deftest socket-shutdown.3
+    (with-caught-conditions (nil nil)
+      (let ((sock (socket-connect *common-lisp-net* 80)))
+        (unwind-protect
+             (usocket::ignore-unsupported-warnings
+               (socket-shutdown sock :io))
+          (socket-close sock))
+        t))
+  t)
+
 (defun run-usocket-tests ()
   (do-tests))

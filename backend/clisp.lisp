@@ -198,7 +198,11 @@
 
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
   (with-mapped-conditions (usocket)
-    (socket:socket-stream-shutdown (socket usocket) direction)))
+    (if (eq :io direction)
+        (progn
+          (socket:socket-stream-shutdown (socket usocket) :input)
+          (socket:socket-stream-shutdown (socket usocket) :output))
+        (socket:socket-stream-shutdown (socket usocket) direction))))
 
 (defmethod get-local-name ((usocket stream-usocket))
   (multiple-value-bind
