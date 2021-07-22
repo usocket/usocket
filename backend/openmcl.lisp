@@ -158,8 +158,19 @@
     (close (socket usocket) :abort t))) ; see "sbcl.lisp" for (:abort t)
 
 (defmethod socket-shutdown ((usocket usocket) direction)
-  (with-mapped-conditions (usocket)
-    (openmcl-socket:shutdown (socket usocket) :direction direction)))
+  (let ((ccl-direction (case direction
+                         (:io :both)
+                         (otherwise direction))))
+    (with-mapped-conditions (usocket)
+      (if (and (eq ccl-direction :both)
+               ;; The :BOTH support was introduced in CCL 1.11.5,
+               ;; and CCL's *FEATURES* allow to distignguish only major version,
+               ;; so we use it starting with 1.12.
+               (not (member :ccl-1.12 *features*)))
+          (progn
+            (openmcl-socket:shutdown (socket usocket) :direction :input)
+            (openmcl-socket:shutdown (socket usocket) :direction :output))
+          (openmcl-socket:shutdown (socket usocket) :direction ccl-direction)))))
 
 #-ipv6
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
