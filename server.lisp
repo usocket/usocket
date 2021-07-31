@@ -98,7 +98,9 @@
     (unwind-protect
         (loop do
           (let* ((client-socket (apply #'socket-accept
-                                       `(,socket ,@(when element-type `(:element-type ,element-type)))))
+                                       socket
+                                       (when element-type
+                                         (list :element-type element-type))))
                  (client-stream (socket-stream client-socket)))
             (if multi-threading
                 (bt:make-thread (lambda () (apply real-function client-socket arguments))
