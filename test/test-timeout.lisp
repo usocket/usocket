@@ -85,12 +85,15 @@
   (progn
     (start-tcp-echo-server)
     (with-client-socket (s stream "127.0.0.1" *tcp-echo-port* :element-type '(unsigned-byte 8))
-      ;; Our write timeout is 1s.
-      (setf (socket-option s :send-timeout) 1)
       (with-caught-conditions (usocket:timeout-error :got-timeout)
         (with-mapped-conditions (s)
           ;; Server will unblock after 5s.
           (send-tcp-echo-command s +cmd-setdelay+ #(5))
-          ;; So this write should fail.
-          (send-tcp-echo-command s +cmd-read+ #(1 2 3 4))))))
+          ;; Our write timeout is 1s.
+          (setf (socket-option s :send-timeout) 1)
+          ;; So this write should fail. Actually, a single write won't
+          ;; fail because the socket is buffering, but it should fail
+          ;; eventually, so write ~50MB.
+          (dotimes (i 200000)
+            (send-tcp-echo-command s +cmd-read+ #(1 2 3 4)))))))
   :got-timeout)
