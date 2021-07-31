@@ -10,12 +10,13 @@
     :licence "MIT"
     :description "Tests for usocket"
     :depends-on (:usocket-server
-		 :rt)
+         :rt)
     :components ((:module "test"
-		  :serial t
-		  :components ((:file "package")
-			       (:file "test-usocket")
-			       (:file "test-condition")
-			       (:file "test-datagram")
-			       (:file "wait-for-input"))))
+                  :serial t
+                  :components ((:file "package")
+                               (:file "test-usocket")
+                               (:file "test-condition")
+                               (:file "test-datagram")
+                               (:file "test-timeout")
+                               (:file "wait-for-input"))))
     :perform (test-op (o c) (symbol-call :usocket-test :do-tests)))
