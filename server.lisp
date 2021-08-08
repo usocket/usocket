@@ -33,10 +33,10 @@
                                   :timeout timeout
                                   :max-buffer-size max-buffer-size)))))
       (if in-new-thread
-	  (values (bt:make-thread #'real-call :name (or name "USOCKET Server")) socket)
-	(progn
-	  (setq *server* socket)
-	  (real-call))))))
+          (values (bt:make-thread #'real-call :name (or name "USOCKET Server")) socket)
+          (progn
+            (setq *server* socket)
+            (real-call))))))
 
 (defvar *remote-host*)
 (defvar *remote-port*)
@@ -83,8 +83,8 @@
   (loop
      (when (listen stream)
        (let ((line (read-line stream nil)))
-	 (write-line line stream)
-	 (force-output stream)))))
+     (write-line line stream)
+     (force-output stream)))))
 
 (defun tcp-event-loop (socket function &optional arguments
                        &key element-type multi-threading)
@@ -98,7 +98,9 @@
     (unwind-protect
         (loop do
           (let* ((client-socket (apply #'socket-accept
-                                       `(,socket ,@(when element-type `(:element-type ,element-type)))))
+                                       socket
+                                       (when element-type
+                                         (list :element-type element-type))))
                  (client-stream (socket-stream client-socket)))
             (if multi-threading
                 (bt:make-thread (lambda () (apply real-function client-socket arguments))
