@@ -139,7 +139,7 @@ condition available."))
 error available."))
 
 (define-usocket-condition-classes
-  (ns-try-again-condition)
+  (ns-try-again-condition) ; obsoleted
   (socket-condition))
 
 (define-condition ns-unknown-condition (ns-condition)
@@ -155,7 +155,8 @@ condition available."))
   ;; with lisp, we just return NIL (indicating no data) instead of
   ;; raising an exception...
   (ns-host-not-found-error
-   ns-no-recovery-error)
+   ns-no-recovery-error
+   ns-try-again-error)
   (ns-error))
 
 (define-condition ns-unknown-error (ns-error)
@@ -179,8 +180,8 @@ error available."))
      ,@body))
 
 (defparameter +unix-errno-condition-map+
-  `(((11) . ns-try-again-condition) ;; EAGAIN
-    ((35) . ns-try-again-condition) ;; EDEADLCK
+  `(((11) . ns-try-again-error)     ;; EAGAIN
+    ((35) . ns-try-again-error)     ;; EDEADLCK
     ((4) . interrupted-condition))) ;; EINTR
 
 (defparameter +unix-errno-error-map+
@@ -220,7 +221,7 @@ error available."))
 
 (defparameter +unix-ns-error-map+
   `((1 . ns-host-not-found-error)
-    (2 . ns-try-again-condition)
+    (2 . ns-try-again-error)
     (3 . ns-no-recovery-error)))
 
 (defmacro unsupported (feature context &key minimum)

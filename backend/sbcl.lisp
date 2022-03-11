@@ -270,7 +270,7 @@
     #-(or ecl mkcl clasp)
     (sb-bsd-sockets:no-recovery-error . ns-no-recovery-error)
     #-(or ecl mkcl clasp)
-    (sb-bsd-sockets:try-again-error . ns-try-again-condition)
+    (sb-bsd-sockets:try-again-error . ns-try-again-error)
     #-(or ecl mkcl clasp)
     (sb-bsd-sockets:host-not-found-error . ns-host-not-found-error)))
 

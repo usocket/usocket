@@ -36,7 +36,7 @@
    ;; Nameservice errors (src/sockets/dns/conditions.lisp)
    (iolib/sockets:resolver-error                     . ns-error)
    (iolib/sockets:resolver-fail-error                . ns-host-not-found-error)
-   (iolib/sockets:resolver-again-error               . ns-try-again-condition)
+   (iolib/sockets:resolver-again-error               . ns-try-again-error)
    (iolib/sockets:resolver-no-name-error             . ns-no-recovery-error)
    (iolib/sockets:resolver-unknown-error             . ns-unknown-error)
    ))

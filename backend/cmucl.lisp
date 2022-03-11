@@ -245,7 +245,7 @@
                             '((1 ns-host-not-found-error)     ;; HOST_NOT_FOUND
                               (2 ns-no-recovery-error)        ;; NO_DATA
                               (3 ns-no-recovery-error)        ;; NO_RECOVERY
-                              (4 ns-try-again-condition)))))) ;; TRY_AGAIN
+                              (4 ns-try-again-error))))))     ;; TRY_AGAIN
         (when exception
           (error exception))))))
 

@@ -97,7 +97,8 @@
              #:get-random-host-by-name
              #:ns-host-not-found-error
              #:ns-no-recovery-error
-             #:ns-try-again-condition
+             #:ns-try-again-condition ; obsoleted
+             #:ns-try-again-error
              #:default-udp-handler
              #:default-tcp-handler
              #:echo-tcp-handler ;; server handlers

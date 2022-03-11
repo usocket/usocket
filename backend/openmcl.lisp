@@ -24,7 +24,7 @@
 
 (defparameter +openmcl-nameserver-error-map+
   '((:no-recovery . ns-no-recovery-error)
-    (:try-again . ns-try-again-condition)
+    (:try-again . ns-try-again-error)
     (:host-not-found . ns-host-not-found-error)))
 
 ;; we need something which the openmcl implementors 'forgot' to do:
