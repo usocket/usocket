@@ -9,9 +9,8 @@
     :version (:read-file-form "version.sexp")
     :licence "MIT"
     :description "Tests for usocket"
-    :depends-on (:usocket-server
-         :rt)
-    :components ((:module "test"
+    :depends-on (:usocket-server :rt)
+    :components ((:module "tests"
                   :serial t
                   :components ((:file "package")
                                (:file "test-usocket")
