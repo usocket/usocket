@@ -96,19 +96,28 @@
                              (socket-close client-socket)
                              nil))))
     (unwind-protect
-        (loop do
-          (let* ((client-socket (apply #'socket-accept
-                                       socket
-                                       (when element-type
-                                         (list :element-type element-type))))
-                 (client-stream (socket-stream client-socket)))
-            (if multi-threading
-                (bt:make-thread (lambda () (apply real-function client-socket arguments))
-                                :name "USOCKET Client")
-              (prog1 (apply real-function client-socket arguments)
-                (close client-stream)
-                (socket-close client-socket)))
-            #+scl (when thread:*quitting-lisp* (return))
-            #+(and cmu mp) (mp:process-yield)))
+         (loop do
+           (block continue
+             (let* ((client-socket (apply #'socket-accept
+                                          socket
+                                          (when element-type
+                                            (list :element-type element-type))))
+                    (client-stream (socket-stream client-socket)))
+                    (if multi-threading
+                        (bt:make-thread
+                         (lambda ()
+                           (handler-case (apply real-function client-socket arguments)
+                             #+sbcl
+                             (sb-bsd-sockets:invalid-argument-error ())))
+                         :name "USOCKET Client")
+                        (unwind-protect
+                             (handler-case (apply real-function client-socket arguments)
+                               #+sbcl
+                               (sb-bsd-sockets:invalid-argument-error ()
+                                 (return-from continue)))
+                          (close client-stream)
+                          (socket-close client-socket)))
+                    #+scl (when thread:*quitting-lisp* (return))
+                    #+(and cmu mp) (mp:process-yield))))
       (socket-close socket)
       (values))))
