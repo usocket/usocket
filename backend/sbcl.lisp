@@ -263,7 +263,12 @@
     #-(or ecl mkcl clasp)
     (sb-sys:io-timeout . timeout-error)
     #+sbcl (sb-ext:timeout . timeout-error)
-    #+sbcl (sb-int:broken-pipe . connection-aborted-error)
+
+    ;; learnt from fiveam (suggested by Anton Vodonosov) for early SBCL versions
+    #+#.(cl:if (cl:ignore-errors (cl:find-symbol "BROKEN-PIPE" "SB-INT"))
+               '(and) '(or))
+    (sb-int:broken-pipe . connection-aborted-error)
+
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
 
     ;; Nameservice errors: mapped to unknown-error
