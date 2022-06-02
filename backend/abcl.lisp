@@ -351,7 +351,8 @@
     (loop for i from offset below (+ size offset)
        do (setf (jarray-ref byte-array i) (*->byte (aref buffer i))))
     (with-mapped-conditions (usocket host)
-      (jcall $@send/1 socket packet))))
+      (jcall $@send/1 socket packet)
+      size)))
 
 ;;; TODO: return-host and return-port cannot be get ...
 (defmethod socket-receive ((usocket datagram-usocket) buffer length
