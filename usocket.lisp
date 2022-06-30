@@ -351,7 +351,7 @@ the values documented in usocket.lisp in the usocket class."
   ;; create a new wait-list if it's not created by the caller.
   (unless (wait-list-p socket-or-sockets)
     ;; OPTIMIZATION: in case socket-or-sockets is an atom, create the wait-list
-    ;; only once and store it into the usocket itself.   
+    ;; only once and store it into the usocket itself.
     (let ((wl (if (and single-socket-p
                        (wait-list socket-or-sockets))
                   (wait-list socket-or-sockets) ; reuse the per-usocket wait-list
@@ -525,10 +525,10 @@ such as 3232235777."
 
 (defun split-ipv6-address (string)
   (let ((pos 0)
-        word
-        double-colon-seen-p
-        words-before-double-colon
-        words-after-double-colon)
+        (word nil)
+        (double-colon-seen-p nil)
+        (words-before-double-colon nil)
+        (words-after-double-colon nil))
     (loop
       (multiple-value-setq (word pos) (parse-integer string :radix 16 :junk-allowed t :start pos))
       (labels ((at-end-p ()
