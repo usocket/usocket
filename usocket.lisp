@@ -637,7 +637,7 @@ stringified hostname."
   "Translate a host specification (vector quad, dotted quad or domain name)
 to a vector quad."
   (etypecase host
-    (string (let* ((ip (when (ip-address-string-p host)
+    (string (let ((ip (when (ip-address-string-p host)
                          (dotted-quad-to-vector-quad host))))
               (if (and ip (= 4 (length ip)))
                   ;; valid IP dotted quad? not sure
