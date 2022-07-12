@@ -592,7 +592,8 @@ happen. Use with care."
   (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
 		   (integer 0)                          ; size
 		   (simple-array (unsigned-byte 8) (*)) ; host
-		   (unsigned-byte 16)))                 ; port
+		   (unsigned-byte 16)                   ; port
+                   &optional))
   (with-mapped-conditions (usocket)
     (let ((s (socket usocket)))
       (sb-bsd-sockets:socket-receive s buffer length :element-type element-type))))
