@@ -5,9 +5,9 @@
 (in-package :usocket)
 
 #+ipv6
-(defun socket-connect (host port &key (protocol :stream) element-type
-                                   timeout deadline nodelay
-                                   local-host local-port)
+(defun socket-connect (host port &key
+                       (protocol :stream) element-type
+                       timeout deadline nodelay local-host local-port)
   (when (eq nodelay :if-supported)
     (setf nodelay t))
   (with-mapped-conditions (nil host)
@@ -15,36 +15,40 @@
       (loop
         :for address-family :in '(:internet6 :internet)
         :do (tagbody
-               (setf remote  (when (and host port)
-                                       (openmcl-socket:resolve-address :host (host-to-hostname host)
-                                                                                       :port port
-                                                                                       :socket-type protocol
-                                                               :address-family address-family))
-                     local   (when (and local-host local-port)
-                                       (openmcl-socket:resolve-address :host (host-to-hostname local-host)
-                                                                                       :port local-port
-                                                                                       :socket-type protocol
-                                                               :address-family address-family))
-                     mcl-sock (handler-bind
-                                  ((ccl:socket-creation-error
-                                     (lambda (err)
-                                       (if (eq address-family :internet6) ; the first try, let's ignore the error
-                                           (go :continue))
-                                       (signal err))))
-                                (apply #'openmcl-socket:make-socket
-                                       `(:type ,protocol
-                                               ,@(when (or remote local)
-                                                   `(:address-family ,(openmcl-socket:socket-address-family (or remote local))))
-                                               ,@(when remote
-                                                   `(:remote-address ,remote))
-                                               ,@(when local
-                                                   `(:local-address ,local))
-                                               :format ,(to-format element-type protocol)
-                                               :external-format ,ccl:*default-external-format*
-                                               :deadline ,deadline
-                                               :nodelay ,nodelay
-                                               :connect-timeout ,timeout
-                                               :input-timeout ,timeout))))
+               (setq remote
+                     (when (and host port)
+                       (openmcl-socket:resolve-address :host (host-to-hostname host)
+                                                       :port port
+                                                       :socket-type protocol
+                                                       :address-family address-family))
+                     local
+                     (when (and local-host local-port)
+                       (openmcl-socket:resolve-address :host (host-to-hostname local-host)
+                                                       :port local-port
+                                                       :socket-type protocol
+                                                       :address-family address-family))
+                     mcl-sock
+                     (handler-bind
+                         ((ccl:socket-creation-error
+                           (lambda (err)
+                             (if (eq address-family :internet6) ; the first try, let's ignore the error
+                                 (go :continue))
+                             (signal err))))
+                       (apply #'openmcl-socket:make-socket
+                              `(:type ,protocol
+                                      ,@(when (or remote local)
+                                          `(:address-family
+                                            ,(openmcl-socket:socket-address-family (or remote local))))
+                                      ,@(when remote
+                                          `(:remote-address ,remote))
+                                      ,@(when local
+                                          `(:local-address ,local))
+                                      :format ,(to-format element-type protocol)
+                                      :external-format ,ccl:*default-external-format*
+                                      :deadline ,deadline
+                                      :nodelay ,nodelay
+                                      :connect-timeout ,timeout
+                                      :input-timeout ,timeout))))
                (loop-finish)
              :continue))
       (ecase protocol
@@ -54,12 +58,11 @@
          (make-datagram-socket mcl-sock :connected-p (and remote t)))))))
 
 #+ipv6
-(defun socket-listen (host port
-                      &key
-                        (reuse-address nil reuse-address-supplied-p)
-                        (reuseaddress (when reuse-address-supplied-p reuse-address))
-                        (backlog 5)
-                        (element-type 'character))
+(defun socket-listen (host port &key
+                      (reuse-address nil reuse-address-supplied-p)
+                      (reuseaddress (when reuse-address-supplied-p reuse-address))
+                      (backlog 5)
+                      (element-type 'character))
   (let ((local-address (openmcl-socket:resolve-address :host (host-to-hostname host)
                                                        :port port :connect :passive)))
     (with-mapped-conditions (nil host)
