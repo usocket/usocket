@@ -187,5 +187,31 @@
         t))
   t)
 
+;; Listening to localhost and connecting to localhost (by Pascal J. Bourguignon)
+(deftest socket-listen.1
+    (with-caught-conditions (nil nil)
+      (usocket:with-socket-listener
+          (listen  "localhost" 9999 :element-type '(unsigned-byte 8) :reuseaddress t :backlog 1)
+        (usocket:with-client-socket (client client-stream
+                                            "localhost" 9999 :element-type '(unsigned-byte 8))
+          (usocket:with-server-socket (server (usocket:socket-accept listen))
+            (write-byte 42  client-stream)
+            (force-output client-stream)
+            (read-byte  (usocket:socket server))))))
+  42)
+
+;; Listening on all the IPv4 addresses, and connecting to localhost (by Pascal J. Bourguignon)
+(deftest socket-listen.2
+    (with-caught-conditions (nil nil)
+      (usocket:with-socket-listener
+          (listen "0.0.0.0" 9999 :element-type '(unsigned-byte 8) :reuseaddress t :backlog 1)
+        (usocket:with-client-socket (client client-stream
+                                            "localhost" 9999 :element-type '(unsigned-byte 8))
+          (usocket:with-server-socket (server (usocket:socket-accept listen))
+            (write-byte 42  client-stream)
+            (force-output client-stream)
+            (read-byte  (usocket:socket server))))))
+  42)
+
 (defun run-usocket-tests ()
   (do-tests))
