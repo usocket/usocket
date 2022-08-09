@@ -763,7 +763,9 @@ happen. Use with care."
   (sb-alien:define-alien-type ws-socket sb-alien:signed)
 
   (sb-alien:define-alien-type ws-dword sb-alien:unsigned-long)
-  (sb-alien:define-alien-type ws-event sb-alien::hinstance)
+  
+  ;; WS-EVENT was formerly defined as [internal, now removed] SB-ALIEN::HINSTANCE (synonym for SIGNED)
+  (sb-alien:define-alien-type ws-event sb-alien:signed) 
 
   (sb-alien:define-alien-type nil
     (sb-alien:struct wsa-network-events
