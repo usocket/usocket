@@ -1,3 +1,11 @@
+0.8.5: (Sep 14, 2022)
+
+  * Bugfix: [SBCL] Fix for sbcl 2.2.7+ (internal SB-ALIEN::HINSTANCE got removed) (thanks to @MrDispatch on GitHub)
+  * Bugfix: [SBCL] Fix Build failure on some SBCL versions due to sb-int:broken-pipe (#81)
+  * Bugfix: [CCL] When #+ipv6 also try to resolve an IPv4 address if the connection cannot be established with the IPv6 address. #75 (patch by Pascal J. Bourguignon)
+  * Bugfix: [ABCL] Fix "socket-send returns NIL on ABCL" (Issue #82, patch from Kasper Galkowski)
+  * Bugfix: [server/SBCL] Ignore invalid argument error for system call on sbcl (#80), by @charJe
+
 0.8.4: (Mar 13, 2022)
 
   * New experimental backend: MKCL (support via sb-bsd-sockets) (thanks to @Madhu)
