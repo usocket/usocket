@@ -345,7 +345,6 @@ happen. Use with care."
 		   ,@body))
 	    (declare (dynamic-extent #',exec #',unwind))
 	    (let ((,timer (sb-ext:make-timer #',unwind)))
-	      (declare (dynamic-extent ,timer))
 	      (sb-sys:without-interrupts
 		  (unwind-protect
 		       (progn
