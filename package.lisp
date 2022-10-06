@@ -81,6 +81,8 @@
              #:ns-unknown-condition
              #:unknown-error
              #:ns-unknown-error
+	     #:already-shutdown-error
+	     #:out-of-memory-error
              #:socket-warning ; warnings (udp)
 
              #:insufficient-implementation ; conditions regarding usocket support level
