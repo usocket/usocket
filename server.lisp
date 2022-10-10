@@ -58,7 +58,7 @@
               (multiple-value-bind (recv n *remote-host* *remote-port*)
                   (socket-receive socket buffer max-buffer-size)
                 (declare (ignore recv))
-                (if (plusp n)
+                (if (<= 0 n)
                     (progn
                       (let ((reply
                              (apply function (subseq buffer 0 n) arguments)))
