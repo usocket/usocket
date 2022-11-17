@@ -15,25 +15,25 @@
       (loop
         :for address-family :in '(:internet6 :internet)
         :do (tagbody
-               (setq remote
-                     (when (and host port)
-                       (openmcl-socket:resolve-address :host (host-to-hostname host)
-                                                       :port port
-                                                       :socket-type protocol
-                                                       :address-family address-family))
-                     local
-                     (when (and local-host local-port)
-                       (openmcl-socket:resolve-address :host (host-to-hostname local-host)
-                                                       :port local-port
-                                                       :socket-type protocol
-                                                       :address-family address-family))
-                     mcl-sock
-                     (handler-bind
-                         ((ccl:socket-creation-error
-                           (lambda (err)
-                             (if (eq address-family :internet6) ; the first try, let's ignore the error
-                                 (go :continue))
-                             (signal err))))
+               (handler-bind
+                   ((ccl:socket-creation-error
+                      (lambda (err)
+                        (if (eq address-family :internet6) ; the first try, let's ignore the error
+                            (go :continue))
+                        (signal err))))
+                 (setq remote
+                       (when (and host port)
+                         (openmcl-socket:resolve-address :host (host-to-hostname host)
+                                                         :port port
+                                                         :socket-type protocol
+                                                         :address-family address-family))
+                       local
+                       (when (and local-host local-port)
+                         (openmcl-socket:resolve-address :host (host-to-hostname local-host)
+                                                         :port local-port
+                                                         :socket-type protocol
+                                                         :address-family address-family))
+                       mcl-sock
                        (apply #'openmcl-socket:make-socket
                               `(:type ,protocol
                                       ,@(when (or remote local)
@@ -50,7 +50,7 @@
                                       :connect-timeout ,timeout
                                       :input-timeout ,timeout))))
                (loop-finish)
-             :continue))
+             :continue)) 
       (ecase protocol
         (:stream
          (make-stream-socket :stream mcl-sock :socket mcl-sock))
