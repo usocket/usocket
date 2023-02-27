@@ -1,6 +1,9 @@
 0.8.6:
 
-  * Bugfix: [SBCL, LW, etc] with-mapped-conditions no more throw unknown-error so that user can correctly capture their own conditions (#97, reported by Anton Vodonosov)
+  * Bugfix: [SBCL/ECL] improved SOCKET-CONNECT timeout handling based on non-blocking sockets (#92, patch from @jetmonk)
+  * Bugfix: [CCL] capture SOCKET-CREATION-ERROR exception in RESOLVE-ADDRESS when calling SOCKET-CONNECT (#96, patch from @jetmonk)
+  * Bugfix: [SBCL, LW, etc] with-mapped-conditions no more throw unknown-error so that user can correctly capture their own conditions (#97, reported by @avodonosov (Anton Vodonosov))
+  * Bugfix: [server] Permit 0-length UDP data payloads (#93, patch from @rabuf (Jared Summers))
 
 0.8.5: (Sep 14, 2022)
 
