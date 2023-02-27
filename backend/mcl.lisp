@@ -22,9 +22,7 @@
       (ccl:connection-timed-out
        (raise-error 'timeout-error))
       (ccl:opentransport-protocol-error
-       (raise-error 'protocol-not-supported-error))       
-      (otherwise
-       (raise-error condition host-or-ip)))))
+       (raise-error 'protocol-not-supported-error)))))
 
 (defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay 
                             local-host local-port (protocol :stream))

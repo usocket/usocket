@@ -64,19 +64,16 @@
 	 (usock-error (if (functionp usock-error)
 			  (funcall usock-error condition)
                           usock-error)))
-    (if usock-error
-        (if (typep usock-error 'socket-error)
-            (cond ((subtypep usock-error 'ns-error)
-                  (error usock-error :socket socket :host-or-ip host-or-ip))
-                 (t
-                  (error usock-error :socket socket)))
-            (cond ((subtypep usock-error 'ns-condition)
-                  (signal usock-error :socket socket :host-or-ip host-or-ip))
-                 (t
-                  (signal usock-error :socket socket))))
-        (error 'unknown-error
-               :real-error condition
-               :socket socket))))
+    (when usock-error
+      (if (typep usock-error 'socket-error)
+          (cond ((subtypep usock-error 'ns-error)
+                 (error usock-error :socket socket :host-or-ip host-or-ip))
+                (t
+                 (error usock-error :socket socket)))
+          (cond ((subtypep usock-error 'ns-condition)
+                 (signal usock-error :socket socket :host-or-ip host-or-ip))
+                (t
+                 (signal usock-error :socket socket)))))))
 
 (defun ipv6-address-p (host)
   (iolib/sockets:ipv6-address-p (iolib/sockets:ensure-hostname host)))

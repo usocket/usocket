@@ -44,14 +44,11 @@
             (cdr (assoc (excl:stream-error-identifier condition)
                         +allegro-identifier-error-map+))))
        (declare (type symbol usock-error))
-       (if usock-error
-           (cond ((subtypep usock-error 'ns-error)
-                  (error usock-error :socket socket :host-or-ip host-or-ip))
-                 (t
-                  (error usock-error :socket socket)))
-           (error 'unknown-error
-                  :real-error condition
-                  :socket socket))))))
+       (when usock-error
+         (cond ((subtypep usock-error 'ns-error)
+                (error usock-error :socket socket :host-or-ip host-or-ip))
+               (t
+                (error usock-error :socket socket))))))))
 
 (defun to-format (element-type)
   (if (subtypep element-type 'character)

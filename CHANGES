@@ -1,3 +1,7 @@
+0.8.6:
+
+  * Bugfix: [SBCL, LW, etc] with-mapped-conditions no more throw unknown-error so that user can correctly capture their own conditions (#97, reported by Anton Vodonosov)
+
 0.8.5: (Sep 14, 2022)
 
   * Bugfix: [SBCL] Fix for sbcl 2.2.7+ (internal SB-ALIEN::HINSTANCE got removed) (thanks to @MrDispatch on GitHub)

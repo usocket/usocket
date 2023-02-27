@@ -289,27 +289,21 @@
                              (funcall usock-error condition)
                              usock-error)))
        (declare (type symbol usock-error))
-       (if usock-error
-           (cond ((subtypep usock-error 'ns-error)
-                  (error usock-error :socket socket :host-or-ip host-or-ip))
-                 (t
-                  (error usock-error :socket socket)))
-           (error 'unknown-error
-                  :real-error condition
-                  :socket socket))))
+       (when usock-error
+         (cond ((subtypep usock-error 'ns-error)
+                (error usock-error :socket socket :host-or-ip host-or-ip))
+               (t
+                (error usock-error :socket socket))))))
     (condition
      (let* ((usock-cond (cdr (assoc (type-of condition) +sbcl-condition-map+)))
             (usock-cond (if (functionp usock-cond)
                             (funcall usock-cond condition)
                             usock-cond)))
-       (if usock-cond
-           (cond ((subtypep usock-cond 'ns-condition)
-                  (signal usock-cond :socket socket :host-or-ip host-or-ip))
-                 (t
-                  (signal usock-cond :socket socket)))
-           (signal 'unknown-condition
-                   :real-condition condition
-                   :socket socket))))))
+       (when usock-cond
+         (cond ((subtypep usock-cond 'ns-condition)
+                (signal usock-cond :socket socket :host-or-ip host-or-ip))
+               (t
+                (signal usock-cond :socket socket))))))))
 
 ;;; "The socket stream ends up with a bogus name as it is created before
 ;;; the socket is connected, making things harder to debug than they need
