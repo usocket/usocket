@@ -127,6 +127,6 @@
              ;; added in 0.8.2
              #:host-or-ip
 
-	     ;; added in 0.9.0
+	     ;; added in 0.8.4
 	     #:*ipv6-only-p*
              ))

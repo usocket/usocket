@@ -1,4 +1,4 @@
-0.8.6:
+0.8.6: (Mar 1, 2023)
 
   * Bugfix: [SBCL/ECL] improved SOCKET-CONNECT timeout handling based on non-blocking sockets (#92, patch from @jetmonk)
   * Bugfix: [CCL] capture SOCKET-CREATION-ERROR exception in RESOLVE-ADDRESS when calling SOCKET-CONNECT (#96, patch from @jetmonk)
