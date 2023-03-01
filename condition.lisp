@@ -118,6 +118,25 @@ condition available."))
    invalid-socket-stream-error)
   (socket-error))
 
+;; This is obsolated. USOCKET no more raises it inside HANDLE-CONDITION (from backends),
+;; so that code patterns like below becomes possible: (previously on SBCL, my-error was
+;; captured by HANDLE-CONDITION and was packed into UNKNOWN-ERROR whose :real-error is
+;; that my-error instance. See also https://github.com/usocket/usocket/issues/97
+#|
+(ql:quickload "usocket")
+
+(define-condition my-error (error) ())
+
+(handler-case
+    (usocket:with-client-socket (socket stream "google.com" 443
+                                        :element-type '(unsigned-byte 8))
+      ;; some my code
+      ;; ...
+      (error 'my-error ))
+  (my-error (c)
+    ;; handle my error
+             ))
+|#
 (define-condition unknown-error (socket-error)
   ((real-error :initarg :real-error
                :accessor usocket-real-error
