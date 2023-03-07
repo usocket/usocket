@@ -6,12 +6,10 @@
 (defun handle-condition (condition &optional socket (host-or-ip nil))
   ; incomplete, needs to handle additional conditions
   (flet ((raise-error (&optional socket-condition host-or-ip)
-           (if socket-condition
-               (cond ((typep socket-condition ns-error)
-                      (error socket-condition :socket socket :host-or-ip host-or-ip))
-                     (t
-                      (error socket-condition :socket socket)))
-               (error 'unknown-error :socket socket :real-error condition))))
+           (cond ((typep socket-condition ns-error)
+                  (error socket-condition :socket socket :host-or-ip host-or-ip))
+                 (t
+                  (error socket-condition :socket socket)))))
     (typecase condition
       (ccl:host-stopped-responding
        (raise-error 'host-down-error host-or-ip))
