@@ -4,7 +4,8 @@
 
 
 
-<concept id = "id183II900U3B"><title>Introduction</title>
-<shortdesc></shortdesc>
-<prolog><author>Chun Tian</author></prolog>
-<conbody><p></p></conbody></concept>
+<concept id = "id183II900U3B"
+    xmlns:ditaarch = "http://dita.oasis-open.org/architecture/2005/">
+<title>Introduction</title>
+<conbody><p></p></conbody>
+<related-links></related-links></concept>
