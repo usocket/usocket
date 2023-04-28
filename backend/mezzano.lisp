@@ -30,10 +30,10 @@
        ;; TODO:
        (unsupported 'datagram 'socket-connect)))))
 
-(defun socket-listen (host port &key reuseaddress
-                                     (reuse-address nil reuse-address-supplied-p)
-                                     (backlog 5)
-                                     (element-type 'character))
+(defun socket-listen-internal (host port &key reuseaddress
+                               (reuse-address nil reuse-address-supplied-p)
+                               (backlog 5)
+                               (element-type 'character))
   (declare (ignore reuseaddress reuse-address reuse-address-supplied-p))
   (let ((ip (mezzano.network.ip:make-ipv4-address host)))
     (make-stream-server-socket (mezzano.network.tcp:tcp-listen ip port :backlog backlog)

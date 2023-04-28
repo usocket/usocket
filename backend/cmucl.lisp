@@ -118,7 +118,8 @@
 	   (let ((err (unix:unix-errno)))
 	     (when err (cmucl-map-socket-error err))))))))
 
-(defun socket-listen (host port
+(defun socket-listen-internal
+                          (host port
                            &key reuseaddress
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)

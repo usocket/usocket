@@ -124,7 +124,8 @@
       (t ; :io by default
        (iolib/sockets:shutdown (socket usocket) :read t :write t)))))
 
-(defun socket-listen (host port
+(defun socket-listen-internal
+                          (host port
                            &key reuseaddress reuse-address
                            (backlog 5)
                            (element-type 'character))

@@ -235,7 +235,8 @@
 
 ;;; SOCKET-LISTEN
 
-(defun socket-listen (host port &key reuseaddress
+(defun socket-listen-internal
+                     (host port &key reuseaddress
                       (reuse-address nil reuse-address-supplied-p)
 		      (backlog 5 backlog-supplied-p)
 		      (element-type 'character))

@@ -58,7 +58,8 @@
          (make-datagram-socket mcl-sock :connected-p (and remote t)))))))
 
 #+ipv6
-(defun socket-listen (host port &key
+(defun socket-listen-internal
+                     (host port &key
                       (reuse-address nil reuse-address-supplied-p)
                       (reuseaddress (when reuse-address-supplied-p reuse-address))
                       (backlog 5)

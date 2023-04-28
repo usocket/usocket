@@ -733,3 +733,31 @@ backward compatibility (but deprecated); when both `reuseaddress' and
 
 (defun bool->int (bool) (if bool 1 0))
 (defun int->bool (int) (= 1 int))
+
+;; The new socket-listen with the restarts. It calls socket-listen-internal,
+;; implemented by each backends.
+;;
+;; This function is contributed by Mariano Montone (https://github.com/mmontone)
+;;
+(defun socket-listen (host port  &rest args)
+  (let ((socket-host host)
+	(socket-port port))
+    (loop 
+      (restart-case (return
+                     (apply #'socket-listen-internal socket-host socket-port args))
+	(use-other-port (new-port) 
+          :report "Use a different port." 
+          :interactive 
+          (lambda ()
+	    (format *query-io* "Port: ")
+            (list (parse-integer (read-line *query-io*))))
+	  (setq socket-port new-port))
+	(use-other-host (new-host) 
+          :report "Use a different host." 
+          :interactive 
+          (lambda ()
+	    (format *query-io* "Host: ")
+            (list (read-line *query-io*)))
+	  (setq socket-host new-host))
+        (retry ()
+	  :report "Retry socket connection.")))))

@@ -47,7 +47,8 @@
 	 (ccl::open-udp-socket :local-address (and local-host (host-to-hbo local-host))
 			       :local-port local-port))))))
 
-(defun socket-listen (host port
+(defun socket-listen-internal
+                          (host port
                            &key reuseaddress
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)

@@ -117,7 +117,8 @@
           (socket:shutdown (socket usocket) :direction :output))
         (socket:shutdown (socket usocket) :direction direction))))
 
-(defun socket-listen (host port
+(defun socket-listen-internal
+                          (host port
                            &key reuseaddress
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)

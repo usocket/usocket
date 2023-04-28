@@ -129,4 +129,9 @@
 
 	     ;; added in 0.8.4
 	     #:*ipv6-only-p*
+
+             ;; restarts of SOCKET-LISTEN (added in 0.8.6)
+             #:use-other-host
+             #:use-other-port
+             #:retry
              ))
