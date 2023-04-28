@@ -5,7 +5,7 @@
 (in-package :usocket)
 
 #+ipv6
-(defun socket-connect (host port &key
+(defun socket-connect-internal (host port &key
                        (protocol :stream) element-type
                        timeout deadline nodelay local-host local-port)
   (when (eq nodelay :if-supported)

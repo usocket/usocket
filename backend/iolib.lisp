@@ -78,7 +78,7 @@
 (defun ipv6-address-p (host)
   (iolib/sockets:ipv6-address-p (iolib/sockets:ensure-hostname host)))
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
+(defun socket-connect-internal (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline
                        (nodelay t) ;; nodelay == t is the ACL default
                        local-host local-port)

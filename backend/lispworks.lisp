@@ -454,7 +454,7 @@
                 (error "cannot connect")))
           (error "cannot create socket"))))))
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'base-char)
+(defun socket-connect-internal (host port &key (protocol :stream) (element-type 'base-char)
                        timeout deadline (nodelay t)
                        local-host local-port)
   ;; What's the meaning of this keyword?
