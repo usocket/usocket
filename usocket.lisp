@@ -761,3 +761,10 @@ backward compatibility (but deprecated); when both `reuseaddress' and
 	  (setq socket-host new-host))
         (retry ()
 	  :report "Retry socket connection.")))))
+
+;; This convenient macro is contributed by Jay Mellor (https://github.com/JayMellor)
+;;
+(defmacro with-accepted-connection ((conn &rest socket-accept-args)
+                                    &body body)
+  `(with-server-socket (,conn (socket-accept ,@socket-accept-args))
+     ,@body))
