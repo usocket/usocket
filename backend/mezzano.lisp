@@ -10,7 +10,7 @@
     (mezzano.network.tcp:connection-timed-out
      (error 'timeout-error :socket socket))))
 
-(defun socket-connect (host port &key (protocol :stream) element-type
+(defun socket-connect-internal (host port &key (protocol :stream) element-type
                                       timeout deadline (nodelay nil nodelay-p)
                                       local-host local-port)
   (declare (ignore local-host local-port))

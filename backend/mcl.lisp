@@ -22,7 +22,7 @@
       (ccl:opentransport-protocol-error
        (raise-error 'protocol-not-supported-error)))))
 
-(defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay 
+(defun socket-connect-internal (host port &key (element-type 'character) timeout deadline nodelay 
                             local-host local-port (protocol :stream))
   (when (eq nodelay :if-supported)
     (setf nodelay t))

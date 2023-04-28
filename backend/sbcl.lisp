@@ -405,7 +405,7 @@ happen. Use with care."
         (and (or ecl mkcl) (not (or darwin linux openbsd freebsd netbsd bsd))))
   nil)
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
+(defun socket-connect-internal (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port
                        &aux

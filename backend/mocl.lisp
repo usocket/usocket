@@ -7,7 +7,7 @@
   (declare (ignore socket))
   (signal condition))
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
+(defun socket-connect-internal (host port &key (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
 		       (local-host nil local-host-p)
 		       (local-port nil local-port-p))
