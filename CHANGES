@@ -1,3 +1,7 @@
+0.8.7 (???):
+
+  * Bugfix: [SBCL] *socket-connect-nonblock-wait* (non-blocking sockets) doesn't work on Windows, disabled by default (#106)
+
 0.8.6: (Mar 1, 2023)
 
   * Bugfix: [SBCL/ECL] improved SOCKET-CONNECT timeout handling based on non-blocking sockets (#92, patch from @jetmonk)

@@ -394,7 +394,10 @@ happen. Use with care."
 ;; enable the new non-blocking socket method
 (defparameter *socket-connect-nonblock-wait*
   ;; trust SBCL errno to be handled correctly in SB-BSD-SOCKETS on all platforms
-  #+sbcl
+  ;; ..except Windows: "EINTR (A non-blocking socket operation could not be completed immediately.)" (#106)
+  #+(and sbcl windows)
+  nil
+  #+(and sbcl (not windows))
   t
   ;; trust that errno is done correctly above - how are BSD flavors marked in *features*?
   #+(and (or ecl mkcl) (or darwin linux openbsd freebsd netbsd bsd))
