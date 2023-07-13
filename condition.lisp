@@ -47,8 +47,8 @@ been implemented yet."))
 
 (define-condition socket-condition (condition)
   ((socket :initarg :socket
-           :accessor usocket-socket))
-  ;;###FIXME: no slots (yet); should at least be the affected usocket...
+           :accessor usocket-socket
+           :documentation "Socket that raised the condition"))
   (:documentation "Parent condition for all socket related conditions."))
 
 (define-condition socket-error (socket-condition error)
@@ -194,6 +194,9 @@ condition available."))
 error available."))
 
 (defmacro with-mapped-conditions ((&optional socket host-or-ip) &body body)
+  "Run `body', handling implementation-specific conditions by re-raising them as usocket conditions.
+
+When `socket' or `host-or-ip' are specified, their values will be passed as arguments to the corresponding usocket conditions."
   `(handler-bind ((condition
                    #'(lambda (c) (handle-condition c ,socket ,host-or-ip))))
      ,@body))

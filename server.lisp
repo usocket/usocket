@@ -11,6 +11,26 @@
                            ;; for tcp
                            element-type (reuse-address t) multi-threading
                            name)
+  "Create a simple TCP or UDP socket server.
+
+`host' and `port' name the local interface and port the server will listen on.
+`function' is the handler function. It must take at least one argument: a stream
+for a TCP server, or a buffer for a UDP server. For the UDP server, the handler
+must also return a buffer.
+`arguments' is a list of additional arguments to pass to the handler function,
+after the first.
+If `in-new-thread' is true, the server will be spawned on a new thread and this
+function will return immediately. Otherwise, this function will run
+indefinitely. `name' specifies the name of the thread.
+`protocol' can be :stream for a TCP server (the default) or :datagram for a UDP server.
+For UDP servers:
+`timeout' specifies a read timeout, 1 second by default.
+`max-buffer-size' specifies the maximum size a UDP packet can take up, `+max-datagram-packet-size+' by default.
+For TCP servers:
+`element-type' specifies the stream's element type.
+If `reuse-address' is true, wildcard hosts and more specific hosts can share a port.
+If `multi-threading' is true, each connection will be launched in a new thread,
+allowing the server to handle multiple connections in parallel."
   (let* ((real-host (or host *wildcard-host*))
          (socket (ecase protocol
                    (:stream
@@ -38,10 +58,13 @@
             (setq *server* socket)
             (real-call))))))
 
-(defvar *remote-host*)
-(defvar *remote-port*)
+(defvar *remote-host* nil
+  "The remote host of a TCP or UDP event. This variable is dynamically bound in the context of a `socket-server', specifically the handler function.")
+(defvar *remote-port* nil
+  "The remote port of a TCP or UDP event. This variable is dynamically bound in the context of a `socket-server', specifically the handler function.")
 
 (defun default-udp-handler (buffer) ; echo
+  "Example handler for a UDP socket-server. Returns datagrams to sender."
   (declare (type (simple-array (unsigned-byte 8) *) buffer))
   buffer)
 
@@ -76,10 +99,12 @@
       (values))))
 
 (defun default-tcp-handler (stream) ; null
+  "Example handler for a TCP socket-server. Sends client 'Hello, world!' then closes the stream."
   (declare (type stream stream))
   (format stream "Hello world!~%"))
 
 (defun echo-tcp-handler (stream)
+  "Example handler for a TCP socket-server, being an echo server."
   (loop
      (when (listen stream)
        (let ((line (read-line stream nil)))
