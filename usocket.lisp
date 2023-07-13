@@ -30,6 +30,9 @@ sizeof(struct udphdr) = 8,  /* netinet/udp.h */
 
 (But for UDP broadcast, the maximum message size is limited by the MTU size of the underlying link)")
 
+(setf (documentation '*backend* 'variable)
+      "The backend that usocket uses. Can be either :native or :iolib")
+
 (defclass usocket ()
   ((socket
     :initarg :socket
@@ -67,9 +70,9 @@ to be internal only.
 
 Note: Accessed, but not used for 'stream-usocket'.
 "
-   ))
+    ))
   (:documentation
-"The main socket class.
+   "The main socket class.
 
 Sockets should be closed using the `socket-close' method."))
 
@@ -129,15 +132,19 @@ for GC on implementions operate on raw socket fd.")
   (:documentation "UDP (inet-datagram) socket"))
 
 (defun usocket-p (socket)
+  "Return t if `socket' is a usocket instance"
   (typep socket 'usocket))
 
 (defun stream-usocket-p (socket)
+  "Return t if `socket' is a `stream-usocket' instance."
   (typep socket 'stream-usocket))
 
 (defun stream-server-usocket-p (socket)
+  "Return t if `socket' is a `stream-server-usocket' instance."
   (typep socket 'stream-server-usocket))
 
 (defun datagram-usocket-p (socket)
+  "Return t if `socket' is a `datagram-usocket' instance."
   (typep socket 'datagram-usocket))
 
 (defun make-socket (&key socket)
@@ -206,19 +213,24 @@ can be performed on the `usocket'.
 DIRECTION should be either :INPUT or :OUTPUT or :IO"))
 
 (defgeneric socket-send (usocket buffer length &key host port)
-  (:documentation "Send packets through a previously opend `usocket'."))
+  (:documentation "Send `length' bytes of `buffer' through a datagram `usocket', returning the number of bytes sent.
+`host' and `port', when specified, will send the datagram to a different address than the socket was created with."))
 
 (defgeneric socket-receive (usocket buffer length &key)
-  (:documentation "Receive packets from a previously opend `usocket'.
+  (:documentation "Receive a packet from `usocket', writing up to `length' bytes into `buffer', a (simple-array (unsigned-byte 8) (*)).
 
-Returns 4 values: (values buffer size host port)"))
+Returns 4 values: return-buffer, return-length, remote-host, and remote-port
+`return-buffer': the buffer the packet was written to
+`length': the number of bytes in the packet
+`remote-host': the host that sent the datagram
+`remote-port': the port the datagram was sent from"))
 
 (defgeneric get-local-address (socket)
-  (:documentation "Returns the IP address of the socket."))
+  (:documentation "Returns the IP address of the socket as a byte vector."))
 
 (defgeneric get-peer-address (socket)
   (:documentation
-   "Returns the IP address of the peer the socket is connected to."))
+   "Returns the IP address of the peer the socket is connected to as a byte vector."))
 
 (defgeneric get-local-port (socket)
   (:documentation "Returns the IP port of the socket.
@@ -282,7 +294,8 @@ The `body' is an implied progn form."
      ,@body))
 
 (defstruct (wait-list (:constructor %make-wait-list))
-  %wait     ;; implementation specific
+  "A list of sockets for use with `wait-for-input'"
+  %wait   ;; implementation specific
   waiters ;; the list of all usockets
   map)  ;; maps implementation sockets to usockets
 
@@ -293,6 +306,7 @@ The `body' is an implied progn form."
 ;;  %remove-waiter
 
 (defun make-wait-list (waiters)
+  "Make a wait-list from `waiters', a list of usocket instances."
   (let ((wl (%make-wait-list)))
     (setf (wait-list-map wl) (make-hash-table))
     (%setup-wait-list wl)
@@ -300,12 +314,14 @@ The `body' is an implied progn form."
       (add-waiter wl x))))
 
 (defun add-waiter (wait-list input)
+  "Add `input', a usocket instance, to `wait-list'."
   (setf (gethash (socket input) (wait-list-map wait-list)) input
         (wait-list input) wait-list)
   (pushnew input (wait-list-waiters wait-list))
   (%add-waiter wait-list input))
 
 (defun remove-waiter (wait-list input)
+  "Remove `input', a usocket instance, from `wait-list'."
   (%remove-waiter wait-list input)
   (setf (wait-list-waiters wait-list)
         (remove input (wait-list-waiters wait-list))
@@ -313,6 +329,7 @@ The `body' is an implied progn form."
   (remhash (socket input) (wait-list-map wait-list)))
 
 (defun remove-all-waiters (wait-list)
+  "Clear all sockets in `wait-list', emptying the wait list."
   (dolist (waiter (wait-list-waiters wait-list))
     (%remove-waiter wait-list waiter))
   (setf (wait-list-waiters wait-list) nil)
@@ -325,6 +342,9 @@ The `body' is an implied progn form."
 the socket.  When `timeout' (a non-negative real number) is
 specified, wait `timeout' seconds, or wait indefinitely when
 it isn't specified.  A `timeout' value of 0 (zero) means polling.
+
+`socket-or-sockets' can be either a single usocket instance, a list of usocket
+instances, or a wait-list instance.
 
 Returns two values: the first value is the list of streams which
 are readable (or in case of server streams acceptable).  NIL may
@@ -404,6 +424,9 @@ the values documented in usocket.lisp in the usocket class."
 ;;
 
 (defun integer-to-octet-buffer (integer buffer octets &key (start 0))
+  "Given an integer `integer', write the first `octets' bytes of that integer into `buffer', returning `buffer'.
+
+`start', when specified, is the first index of `buffer' the bytes will be written to."
   (do ((b start (1+ b))
        (i (ash (1- octets) 3) ;; * 8
           (- i 8)))
@@ -412,6 +435,9 @@ the values documented in usocket.lisp in the usocket class."
           (ldb (byte 8 i) integer))))
 
 (defun octet-buffer-to-integer (buffer octets &key (start 0))
+  "Given a byte vector `buffer', convert `octets' bytes of its contents into an integer.
+
+`start', when specified, is the first index the integer will be read from."
   (let ((integer 0))
     (do ((b start (1+ b))
          (i (ash (1- octets) 3) ;; * 8
@@ -422,15 +448,19 @@ the values documented in usocket.lisp in the usocket class."
             (aref buffer b)))))
 
 (defmacro port-to-octet-buffer (port buffer &key (start 0))
+  "Write an integer `port' into `buffer' as octets, starting at index `start', returning `buffer'."
   `(integer-to-octet-buffer ,port ,buffer 2 :start ,start))
 
 (defmacro ip-to-octet-buffer (ip buffer &key (start 0))
+  "Write an integer IP address `ip' into `buffer' as octets, starting at index `start', returning `buffer'"
   `(integer-to-octet-buffer (host-byte-order ,ip) ,buffer 4 :start ,start))
 
 (defmacro port-from-octet-buffer (buffer &key (start 0))
+  "Read a port number from `buffer' at position `start', returning an integer."
   `(octet-buffer-to-integer ,buffer 2 :start ,start))
 
 (defmacro ip-from-octet-buffer (buffer &key (start 0))
+  "Read an IP address from `buffer' at position `start', returning the IP address as an integer."
   `(octet-buffer-to-integer ,buffer 4 :start ,start))
 
 ;;
@@ -453,7 +483,7 @@ parse-integer) on each of the string elements."
          string))
 
 (defun hbo-to-dotted-quad (integer) ; exported
-  "Host-byte-order integer to dotted-quad string conversion utility."
+  "Convert a host-byte-order 32-bit `integer' to a dotted quad string"
   (let ((first (ldb (byte 8 24) integer))
         (second (ldb (byte 8 16) integer))
         (third (ldb (byte 8 8) integer))
@@ -461,7 +491,7 @@ parse-integer) on each of the string elements."
     (format nil "~D.~D.~D.~D" first second third fourth)))
 
 (defun hbo-to-vector-quad (integer) ; exported
-  "Host-byte-order integer to dotted-quad string conversion utility."
+  "Convert a host-byte-order 32-bit integer to a byte vector"
   (let ((first (ldb (byte 8 24) integer))
         (second (ldb (byte 8 16) integer))
         (third (ldb (byte 8 8) integer))
@@ -469,6 +499,7 @@ parse-integer) on each of the string elements."
     (vector first second third fourth)))
 
 (defun vector-quad-to-dotted-quad (vector) ; exported
+  "Convert a byte vector `vector' to a dotted quad string"
   (format nil "~D.~D.~D.~D"
           (aref vector 0)
           (aref vector 1)
@@ -476,6 +507,7 @@ parse-integer) on each of the string elements."
           (aref vector 3)))
 
 (defun dotted-quad-to-vector-quad (string) ; exported
+  "Convert a dotted quad `string' to a byte vector."
   (let ((list (list-of-strings-to-integers (split-sequence #\. string))))
     (vector (first list) (second list) (third list) (fourth list))))
 
@@ -502,6 +534,7 @@ such as 3232235777."
 ;;
 
 (defun vector-to-ipv6-host (vector) ; exported
+  "Convert a byte vector `vector' of at least 16 bytes into the string representation of an IPv6 host"
   (with-output-to-string (*standard-output*)
     (loop with zeros-collapsed-p
           with collapsing-zeros-p
@@ -555,6 +588,7 @@ such as 3232235777."
             (ensure-colon))))))
 
 (defun ipv6-host-to-vector (string) ; exported
+  "Convert an IPv6 host `string' to a byte vector"
   (assert (> (length string) 2) ()
           "Unsyntactic IPv6 address literal ~S, expected at least three characters" string)
   (destructuring-bind (words-before-double-colon words-after-double-colon)
@@ -595,6 +629,10 @@ stringified hostname."
      (if *ipv6-only-p* "::" "0.0.0.0")))) ;; "::" is the IPv6 wildcard address
 
 (defun ip= (ip1 ip2) ; exported
+  "Return t if `ip1' and `ip2' represent the same host, regardless of type; return nil otherwise.
+
+BUG: If `ip1' is a byte vector, this function will return `nil' if `ip2' is any
+other representation, even if they represent the same host."
   (etypecase ip1
     (string (string= ip1                  ; IPv4 or IPv6
                      (host-to-hostname ip2)))
@@ -607,6 +645,7 @@ stringified hostname."
                 (host-byte-order ip2))))) ; convert ip2 to integer (hbo)
 
 (defun ip/= (ip1 ip2) ; exported
+  "Return t if `ip1' and `ip2' represent different hosts, nil otherwise."
   (not (ip= ip1 ip2)))
 
 ;;
@@ -614,8 +653,8 @@ stringified hostname."
 ;;
 
 (defun get-host-by-name (name)
-  "0.7.1+: if there're IPv4 addresses, return the first IPv4 address.
-(unless in IPv6-only mode)"
+  "Get the first IP address for `name'. Returns an IPv4 address by default, or
+an IPv6 address if *ipv6-only-p* is true."
   (let* ((hosts (get-hosts-by-name name))
          (ipv4-hosts (remove-if-not #'(lambda (ip) (= 4 (length ip))) hosts))
 	 (ipv6-hosts (remove-if #'(lambda (ip) (= 4 (length ip))) hosts)))
@@ -623,9 +662,13 @@ stringified hostname."
 	  (ipv4-hosts    (car ipv4-hosts))
 	  (t             (car hosts)))))
 
+(setf (documentation 'get-hosts-by-name 'function)
+      "Get a list of all IP addresses associated with `name', including both
+      IPv4 and IPv6 addresses.")
+
 (defun get-random-host-by-name (name)
-  "0.7.1+: if there're IPv4 addresses, only return a random IPv4 address.
-(unless in IPv6-only mode)"
+  "Get a random IP address for `name'. Returns an IPv4 address by default, or an
+IPv6 address if *ipv6-only-p* is true."
   (let* ((hosts (get-hosts-by-name name))
          (ipv4-hosts (remove-if-not #'(lambda (ip) (= 4 (length ip))) hosts))
 	 (ipv6-hosts (remove-if #'(lambda (ip) (= 4 (length ip))) hosts)))
@@ -684,10 +727,16 @@ Optionally, a different fractional part can be specified."
 (setf (documentation 'socket-connect 'function)
       "Connect to `host' on `port'.  `host' is assumed to be a string or
 an IP address represented in vector notation, such as #(192 168 1 1).
-`port' is assumed to be an integer.
+`port' is assumed to be an integer. For a UDP socket, `host' and `port' can be nil.
 
+`protocol' should be :stream (default) or :datagram, which mean TCP and UDP.
 `element-type' specifies the element type to use when constructing the
-stream associated with the socket.  The default is 'character.
+stream associated with a TCP socket.  The default is 'character.
+`timeout' is an integer representing the socket's read timeout (SO_RECVTIMEO) in seconds.
+`deadline' is only supported on CCL and Digitool MCL. Check their docs.
+`local-host' and `local-port', when specified, will cause the socket to bind to
+a local address. This is useful for selecting interfaces to send, or for
+listening for UDP on a port.
 
 `nodelay' Allows to disable/enable Nagle's algorithm (http://en.wikipedia.org/wiki/Nagle%27s_algorithm).
 If this parameter is omitted, the behaviour is inherited from the
@@ -764,26 +813,26 @@ backward compatibility (but deprecated); when both `reuseaddress' and
 
 (defun socket-connect (host port &rest args)
   (let ((socket-host host)
-	(socket-port port))
+	    (socket-port port))
     (loop 
       (restart-case (return
-                     (apply #'socket-connect-internal socket-host socket-port args))
-	(use-other-port (new-port) 
+                      (apply #'socket-connect-internal socket-host socket-port args))
+	    (use-other-port (new-port)
           :report "Use a different port." 
           :interactive 
           (lambda ()
-	    (format *query-io* "Port: ")
+	        (format *query-io* "Port: ")
             (list (parse-integer (read-line *query-io*))))
-	  (setq socket-port new-port))
-	(use-other-host (new-host) 
+	      (setq socket-port new-port))
+	    (use-other-host (new-host)
           :report "Use a different host." 
           :interactive 
           (lambda ()
-	    (format *query-io* "Host: ")
+	        (format *query-io* "Host: ")
             (list (read-line *query-io*)))
-	  (setq socket-host new-host))
+	      (setq socket-host new-host))
         (retry ()
-	  :report "Retry socket connection.")))))
+	      :report "Retry socket connection.")))))
 
 ;; This convenient macro is contributed by Jay Mellor (https://github.com/JayMellor)
 ;;
