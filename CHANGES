@@ -1,5 +1,6 @@
 0.8.7 (???):
 
+  * General: Update and supply documentation for most exported symbols (#107, patch from @tinkerttoy)
   * Bugfix: [SBCL] *socket-connect-nonblock-wait* (non-blocking sockets) doesn't work on Windows, disabled by default (#106)
 
 0.8.6: (Mar 1, 2023)

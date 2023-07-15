@@ -58,10 +58,17 @@ allowing the server to handle multiple connections in parallel."
             (setq *server* socket)
             (real-call))))))
 
-(defvar *remote-host* nil
-  "The remote host of a TCP or UDP event. This variable is dynamically bound in the context of a `socket-server', specifically the handler function.")
-(defvar *remote-port* nil
-  "The remote port of a TCP or UDP event. This variable is dynamically bound in the context of a `socket-server', specifically the handler function.")
+(defvar *remote-host*)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (setf (documentation '*remote-host* 'variable)
+        "The remote host of a TCP or UDP event. This variable is dynamically bound~
+ in the context of a `socket-server', specifically the handler function."))
+
+(defvar *remote-port*)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (setf (documentation '*remote-port* 'variable)
+        "The remote port of a TCP or UDP event. This variable is dynamically bound~
+ in the context of a `socket-server', specifically the handler function."))
 
 (defun default-udp-handler (buffer) ; echo
   "Example handler for a UDP socket-server. Returns datagrams to sender."
