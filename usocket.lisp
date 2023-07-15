@@ -511,20 +511,22 @@ parse-integer) on each of the string elements."
   (let ((list (list-of-strings-to-integers (split-sequence #\. string))))
     (vector (first list) (second list) (third list) (fourth list))))
 
-(defgeneric host-byte-order (address)) ; exported
+(defgeneric host-byte-order (address) ; exported
+  (:documentation "Convert a string such as \"192.168.1.1\", or a vector such~
+ as #(192 168 1 1) to host-byte-order such as 3232235777.
+
+This function is for IPv4 only. For IPv6 vectors, it returns 0."))
 
 (defmethod host-byte-order ((string string))
-  "Convert a string, such as 192.168.1.1, to host-byte-order,
-such as 3232235777."
   (let ((list (list-of-strings-to-integers (split-sequence #\. string))))
     (+ (* (first list) 256 256 256) (* (second list) 256 256)
        (* (third list) 256) (fourth list))))
 
 (defmethod host-byte-order ((vector vector)) ; IPv4 only
-  "Convert a vector, such as #(192 168 1 1), to host-byte-order, such as
-3232235777."
-  (+ (* (aref vector 0) 256 256 256) (* (aref vector 1) 256 256)
-     (* (aref vector 2) 256) (aref vector 3)))
+  (if (= (length vector) 4)
+      (+ (* (aref vector 0) 256 256 256) (* (aref vector 1) 256 256)
+         (* (aref vector 2) 256) (aref vector 3))
+    0))
 
 (defmethod host-byte-order ((int integer))
   int) ; this assume input integer is already host-byte-order
@@ -629,20 +631,19 @@ stringified hostname."
      (if *ipv6-only-p* "::" "0.0.0.0")))) ;; "::" is the IPv6 wildcard address
 
 (defun ip= (ip1 ip2) ; exported
-  "Return t if `ip1' and `ip2' represent the same host, regardless of type; return nil otherwise.
-
-BUG: If `ip1' is a byte vector, this function will return `nil' if `ip2' is any
-other representation, even if they represent the same host."
-  (etypecase ip1
-    (string (string= ip1                  ; IPv4 or IPv6
-                     (host-to-hostname ip2)))
-    ((or (vector t 4)                     ; IPv4
-         (array (unsigned-byte 8) (4))    ; IPv4
-         (vector t 16)                    ; IPv6
-         (array (unsigned-byte 8) (16)))  ; IPv6
-     (equalp ip1 ip2))
-    (integer (= ip1                       ; IPv4 only
-                (host-byte-order ip2))))) ; convert ip2 to integer (hbo)
+  "Return t if `ip1' and `ip2' represent the same host, regardless of type; return nil otherwise."
+  ;; 1. if either ip1 or ip2 is string, there's chance that at least one of them is a hostname,
+  ;; we convert both them to hostname and then compare them.
+  (cond ((or (stringp ip1) (stringp ip2))
+         (string= (host-to-hostname ip1)
+                  (host-to-hostname ip2)))
+        ;; 2. if any of them is a single integer (IPv4), we convert the other to integer too
+        ((or (integerp ip1) (integerp ip2))
+         (= (host-byte-order ip1)
+            (host-byte-order ip2)))
+        ;; 3. now they must be both some kind of vectors (4 or 6 elements)
+        (t
+         (equalp ip1 ip2))))
 
 (defun ip/= (ip1 ip2) ; exported
   "Return t if `ip1' and `ip2' represent different hosts, nil otherwise."
