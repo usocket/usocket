@@ -190,7 +190,7 @@
 
 ;;; SOCKET-CONNECT
 
-(defun socket-connect-internal (host port &key (protocol :stream) (element-type 'character)
+(defun socket-connect-internal (host &key port (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-supplied-p)
                        local-host local-port)
   (when deadline (unsupported 'deadline 'socket-connect))

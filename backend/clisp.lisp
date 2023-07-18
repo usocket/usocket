@@ -126,7 +126,7 @@
                       (t
                        (signal usock-error :socket socket))))))))))
 
-(defun socket-connect-internal (host port &key (protocol :stream) (element-type 'character)
+(defun socket-connect-internal (host &key port (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port)
   (declare (ignorable timeout local-host local-port))
