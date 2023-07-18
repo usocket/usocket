@@ -125,8 +125,8 @@
        (iolib/sockets:shutdown (socket usocket) :read t :write t)))))
 
 (defun socket-listen-internal
-                          (host port
-                           &key reuseaddress reuse-address
+                          (host &key port reuseaddress
+                           reuse-address
                            (backlog 5)
                            (element-type 'character))
   (declare (ignore element-type))

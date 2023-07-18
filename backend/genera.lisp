@@ -128,7 +128,7 @@
 		  (setq tcp::*last-gensym-port-number* #.(expt 2 10))))))
 
 (defun socket-listen-internal
-                     (host port &key (reuse-address nil reuse-address-p)
+                     (host &key port (reuse-address nil reuse-address-p)
 				     (reuseaddress nil reuseaddress-p)
 				     (backlog 5) (element-type 'character))
   (let ((host-object (host-to-host-object host))
