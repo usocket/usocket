@@ -30,7 +30,7 @@
        ;; TODO:
        (unsupported 'datagram 'socket-connect)))))
 
-(defun socket-listen-internal (host port &key reuseaddress
+(defun socket-listen-internal (host &key port reuseaddress
                                (reuse-address nil reuse-address-supplied-p)
                                (backlog 5)
                                (element-type 'character))

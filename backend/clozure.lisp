@@ -59,7 +59,7 @@
 
 #+ipv6
 (defun socket-listen-internal
-                     (host port &key
+                     (host &key port
                       (reuse-address nil reuse-address-supplied-p)
                       (reuseaddress (when reuse-address-supplied-p reuse-address))
                       (backlog 5)

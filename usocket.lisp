@@ -794,7 +794,7 @@ backward compatibility (but deprecated); when both `reuseaddress' and
 	(socket-port port))
     (loop 
       (restart-case (return
-                     (apply #'socket-listen-internal socket-host socket-port args))
+                     (apply #'socket-listen-internal socket-host :port socket-port args))
 	(use-other-port (new-port) 
           :report "Use a different port." 
           :interactive 
