@@ -62,7 +62,7 @@
     (sys:network-error
       (error 'unknown-error :socket socket :real-error condition :errno -1))))
 
-(defun socket-connect-internal (host port &key (protocol :stream) element-type
+(defun socket-connect-internal (host &key port (protocol :stream) element-type
 			    timeout deadline (nodelay nil nodelay-p)
 			    local-host local-port)
   (declare (ignore local-host))
