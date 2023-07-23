@@ -429,20 +429,31 @@ happen. Use with care."
   (when (eq nodelay :if-supported)
     (setf nodelay t))
 
-  (let* ((remote (when host
+  (let* ((remote (and host (not (pathnamep host))
                    (car (get-hosts-by-name (host-to-hostname host)))))
          (local (when local-host
                   (car (get-hosts-by-name (host-to-hostname local-host)))))
          (ipv6 (or (and remote (= 16 (length remote)))
                    (and local (= 16 (length local)))))
-         (socket (make-instance #+sbcl (if ipv6
-                                           'sb-bsd-sockets::inet6-socket
-                                           'sb-bsd-sockets:inet-socket)
-                                #+(or ecl mkcl clasp) 'sb-bsd-sockets:inet-socket
+         (sock-type #+sbcl
+                    (cond
+                      ((pathnamep host) 'sb-bsd-sockets:local-socket)
+                      (ipv6 'sb-bsd-sockets:inet6-socket)
+                      (t 'sb-bsd-sockets:inet-socket))
+                    #+(or ecl mkcl clasp) 'sb-bsd-sockets:inet-socket)
+         (socket (make-instance sock-type
                                 :type protocol
                                 :protocol (case protocol
-                                            (:stream :tcp)
+                                            (:stream #+sbcl(if (pathnamep host) 0 :tcp)
+                                                     #+(or ecl mkcl clasp) :tcp)
                                             (:datagram :udp))))
+         (connect-args (if (pathnamep host)
+                        (list (uiop:unix-namestring host))
+                        (list #+sbcl (if (and local (not (eq host *wildcard-host*)))
+                                         local
+                                         (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any))
+                              #+(or ecl mkcl clasp) (host-to-vector-quad host)
+                              port)))
          usocket
          ok)
 
@@ -474,7 +485,7 @@ happen. Use with care."
                           (progn
                             (setf (sb-bsd-sockets:non-blocking-mode socket) t) ;; non-blocking mode
                             (multiple-value-bind (retval err)
-                                (ignore-errors (sb-bsd-sockets:socket-connect socket remote port))
+                                (ignore-errors (apply #'sb-bsd-sockets:socket-connect (cons socket connect-args)))
                               ;; if the error generated is not EINPROGRESS then throw error
                               (when (and (not retval) err)
                                 (when (not (%socket-operation-condition-in-progress-p err))
@@ -514,18 +525,18 @@ happen. Use with care."
                           ;; restore blocking mode
                           (setf (sb-bsd-sockets:non-blocking-mode socket) initial-blocking-mode))
                         ;; no timeout case
-                        (sb-bsd-sockets:socket-connect socket remote port))
+                        (apply #'sb-bsd-sockets:socket-connect (cons socket connect-args)))
                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                     ;; if not *socket-connect-nonblock-wait*, then use old timeout code
                     ;; which uses interrupts on SBCL, and doesn't work on ECL
                     #+(and sbcl (not win32))
                     (labels ((connect ()
-                               (sb-bsd-sockets:socket-connect socket remote port)))
+                               (apply #'sb-bsd-sockets:socket-connect (cons socket connect-args))))
                       (if timeout
                           (%with-timeout (timeout (error 'sb-ext:timeout)) (connect))
                           (connect)))
                     #+(or ecl mkcl clasp (and sbcl win32))
-                    (sb-bsd-sockets:socket-connect socket remote port))
+                    (apply #'sb-bsd-sockets:socket-connect (cons socket connect-args)))
                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
                 ;; Now that we're connected make the stream.
@@ -559,7 +570,7 @@ happen. Use with care."
               (setf usocket (make-datagram-socket socket))
               (when (and host port)
                 (with-mapped-conditions (usocket)
-                  (sb-bsd-sockets:socket-connect socket remote port)
+                  (apply #'sb-bsd-sockets:socket-connect (cons socket connect-args))
                   (setf (connected-p usocket) t)))))
            (setf ok t))
       ;; Clean up in case of an error.
@@ -573,25 +584,31 @@ happen. Use with care."
                            (backlog 5)
                            (element-type 'character))
   (let* (#+sbcl
-         (local (when host
+         (local (and host (not (pathnamep host))
                   (car (get-hosts-by-name (host-to-hostname host)))))
          #+sbcl
          (ipv6 (and local (= 16 (length local))))
+         (sock-type #+sbcl
+                    (cond
+                      ((pathnamep host) 'sb-bsd-sockets:local-socket)
+                      (ipv6 'sb-bsd-sockets:inet6-socket)
+                      (t 'sb-bsd-sockets:inet-socket))
+                    #+(or ecl mkcl clasp) 'sb-bsd-sockets:inet-socket)
          (reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
-         (ip #+sbcl (if (and local (not (eq host *wildcard-host*)))
-                        local
-                        (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any))
-             #+(or ecl mkcl clasp) (host-to-vector-quad host))
-         (sock (make-instance #+sbcl (if ipv6
-                                         'sb-bsd-sockets::inet6-socket
-                                         'sb-bsd-sockets:inet-socket)
-                              #+(or ecl mkcl clasp) 'sb-bsd-sockets:inet-socket
+         (sock (make-instance sock-type
                               :type :stream
-                              :protocol :tcp)))
+                              :protocol (if (pathnamep host) 0 :tcp)))
+         (bind-args (if (pathnamep host)
+                        (list (uiop:unix-namestring host))
+                        (list #+sbcl (if (and local (not (eq host *wildcard-host*)))
+                                         local
+                                         (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any))
+                              #+(or ecl mkcl clasp) (host-to-vector-quad host)
+                              port))))
     (handler-case
         (with-mapped-conditions (nil host)
           (setf (sb-bsd-sockets:sockopt-reuse-address sock) reuseaddress)
-          (sb-bsd-sockets:socket-bind sock ip port)
+          (apply #'sb-bsd-sockets:socket-bind (cons sock bind-args))
           (sb-bsd-sockets:socket-listen sock backlog)
           (make-stream-server-socket sock :element-type element-type))
       (t (c)
