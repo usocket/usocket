@@ -789,7 +789,7 @@ backward compatibility (but deprecated); when both `reuseaddress' and
 ;;
 ;; This function is contributed by Mariano Montone (https://github.com/mmontone)
 ;;
-(defun socket-listen (host port  &rest args)
+(defun socket-listen (host &optional port  &rest args)
   (let ((socket-host host)
 	(socket-port port))
     (loop 
@@ -812,7 +812,7 @@ backward compatibility (but deprecated); when both `reuseaddress' and
         (retry ()
 	  :report "Retry socket connection.")))))
 
-(defun socket-connect (host port &rest args)
+(defun socket-connect (host &optional port &rest args)
   (let ((socket-host host)
 	    (socket-port port))
     (loop 
