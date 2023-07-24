@@ -414,6 +414,8 @@ happen. Use with care."
                        &aux
                        (sockopt-tcp-nodelay-p
                         (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
+  (when (and (member :win32 *features*) (pathnamep host))
+    (unsupported 'unix-domain-socket 'Windows))
   (when deadline (unsupported 'deadline 'socket-connect))
   #+(or ecl mkcl clasp)
   (when (and timeout #-clasp (not *socket-connect-nonblock-wait*))
@@ -437,7 +439,7 @@ happen. Use with care."
                    (and local (= 16 (length local)))))
          (sock-type #+sbcl
                     (cond
-                      ((pathnamep host) 'sb-bsd-sockets:local-socket)
+                      #-win32((pathnamep host) 'sb-bsd-sockets:local-socket)
                       (ipv6 'sb-bsd-sockets:inet6-socket)
                       (t 'sb-bsd-sockets:inet-socket))
                     #+(or ecl mkcl clasp) 'sb-bsd-sockets:inet-socket)
@@ -583,6 +585,8 @@ happen. Use with care."
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
+  (when (and (member :win32 *features*) (pathnamep host))
+    (unsupported 'unix-domain-socket 'Windows))
   (let* (#+sbcl
          (local (and host (not (pathnamep host))
                   (car (get-hosts-by-name (host-to-hostname host)))))
@@ -590,7 +594,7 @@ happen. Use with care."
          (ipv6 (and local (= 16 (length local))))
          (sock-type #+sbcl
                     (cond
-                      ((pathnamep host) 'sb-bsd-sockets:local-socket)
+                      #-win32((pathnamep host) 'sb-bsd-sockets:local-socket)
                       (ipv6 'sb-bsd-sockets:inet6-socket)
                       (t 'sb-bsd-sockets:inet-socket))
                     #+(or ecl mkcl clasp) 'sb-bsd-sockets:inet-socket)
