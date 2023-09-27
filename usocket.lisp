@@ -14,8 +14,9 @@
 (defparameter *auto-port* 0
   "Port number to pass when an auto-assigned port number is wanted.")
 
-(defparameter *version* "0.8.2"
-  "usocket version string")
+;; usocket version string, now stored in version.sexp file
+(define-symbol-macro *version*
+  #+asdf (asdf:system-version (asdf:find-system :usocket)) #-asdf "")
 
 (defconstant +max-datagram-packet-size+ 65507
   "The theoretical maximum amount of data in a UDP datagram.
