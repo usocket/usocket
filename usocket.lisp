@@ -16,7 +16,7 @@
 
 ;; usocket version string, now stored in version.sexp file
 (define-symbol-macro *version*
-  #+asdf (asdf:system-version (asdf:find-system :usocket)) #-asdf "")
+  #+asdf (asdf:component-version (asdf:find-system :usocket)) #-asdf "")
 
 (defconstant +max-datagram-packet-size+ 65507
   "The theoretical maximum amount of data in a UDP datagram.
