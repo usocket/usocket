@@ -18,7 +18,7 @@
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (:split-sequence
-                 (:feature (:and (:or :sbcl :ecl)
+                 (:feature (:and (:or :sbcl :ecl :clasp)
                                  (:not :usocket-iolib))
                   :sb-bsd-sockets)
                  (:feature :usocket-iolib
