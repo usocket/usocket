@@ -408,12 +408,18 @@ happen. Use with care."
         (and (or ecl mkcl) (not (or darwin linux openbsd freebsd netbsd bsd))))
   nil)
 
-(defun socket-connect-internal (host &key port (protocol :stream) (element-type 'character)
-                       timeout deadline (nodelay t nodelay-specified)
-                       local-host local-port
-                       &aux
-                       (sockopt-tcp-nodelay-p
-                        (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
+(defun socket-connect-internal (host
+                                &key port (protocol :stream) (element-type 'character)
+                                  timeout
+                                  ;; connection-timeout and read-timeout override
+                                  ;; plain timeout
+                                  (connection-timeout nil conn-timeout-p)
+                                  (read-timeout       nil read-timeout-p)
+                                  deadline (nodelay t nodelay-specified)
+                                  local-host local-port
+                                &aux
+                                  (sockopt-tcp-nodelay-p
+                                   (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
   (when (and (member :win32 *features*) (pathnamep host))
     (unsupported 'unix-domain-socket 'Windows))
   (when deadline (unsupported 'deadline 'socket-connect))
@@ -431,7 +437,9 @@ happen. Use with care."
   (when (eq nodelay :if-supported)
     (setf nodelay t))
 
-  (let* ((remote (and host (not (pathnamep host))
+  (let* ((read-timeout* (if read-timeout-p read-timeout       timeout))
+         (conn-timeout* (if conn-timeout-p connection-timeout timeout))
+         (remote (and host (not (pathnamep host))
                    (car (get-hosts-by-name (host-to-hostname host)))))
          (local (when local-host
                   (car (get-hosts-by-name (host-to-hostname local-host)))))
@@ -449,6 +457,11 @@ happen. Use with care."
                                             (:stream #+sbcl(if (pathnamep host) 0 :tcp)
                                                      #+(or ecl mkcl clasp) :tcp)
                                             (:datagram :udp))))
+
+         ;; sb-bsd-sockets:socket-connect is apparently called as 
+         ;; (socket-connect socket remote-host remote-port) or
+         ;; (socket-connect socket local-socket-address)
+         ;; hence connect-args is constructed as follows
          (connect-args (if (pathnamep host)
                            (list (uiop:unix-namestring host))
                          (list #+sbcl (if (and local (not (eq host *wildcard-host*)))
@@ -481,7 +494,7 @@ happen. Use with care."
               (with-mapped-conditions (usocket host)
                 (if *socket-connect-nonblock-wait* ;; global var to disable new connect timeout
                     ;; case of new timeout code
-                    (if timeout 
+                    (if conn-timeout*
                         (let ((initial-blocking-mode  (sb-bsd-sockets:non-blocking-mode socket)))
                           ;; first connect
                           (progn
@@ -499,7 +512,7 @@ happen. Use with care."
                               with start-time of-type double-float
                                 = (/ (* 1d0 (get-internal-real-time)) internal-time-units-per-second)
                               with end-time  of-type double-float 
-                                = (+ start-time (float timeout 1d0))
+                                = (+ start-time (float conn-timeout* 1d0))
                               with current-time of-type double-float = start-time
                               do
                                  ;;(format t "TIME: ~A DT: ~,7F~%" current-time dt-sleep)
@@ -546,6 +559,7 @@ happen. Use with care."
                       (sb-bsd-sockets:socket-make-stream socket 
                         :input t :output t :buffering :full
                         :element-type element-type
+                        :timeout read-timeout*
                         ;; Robert Brown <robert.brown@gmail.com> said on Aug 4, 2011:
                         ;; ... This means that SBCL streams created by usocket have a true
                         ;; serve-events property.  When writing large amounts of data to several
