@@ -450,12 +450,12 @@ happen. Use with care."
                                                      #+(or ecl mkcl clasp) :tcp)
                                             (:datagram :udp))))
          (connect-args (if (pathnamep host)
-                        (list (uiop:unix-namestring host))
-                        (list #+sbcl (if (and local (not (eq host *wildcard-host*)))
-                                         local
-                                         (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any))
-                              #+(or ecl mkcl clasp) (host-to-vector-quad host)
-                              port)))
+                           (list (uiop:unix-namestring host))
+                         (list #+sbcl (if (and local (not (eq host *wildcard-host*)))
+                                          local
+                                          remote)
+                               #+(or ecl mkcl clasp) (host-to-vector-quad host)
+                               port)))
          usocket
          ok)
 
