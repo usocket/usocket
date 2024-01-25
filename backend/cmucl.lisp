@@ -54,7 +54,7 @@
                                                :condition condition
                                                :host-or-ip host-or-ip))))
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
+(defun socket-connect-internal (host &key port (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
 		       (local-host nil local-host-p)
 		       (local-port nil local-port-p)
@@ -118,8 +118,8 @@
 	   (let ((err (unix:unix-errno)))
 	     (when err (cmucl-map-socket-error err))))))))
 
-(defun socket-listen (host port
-                           &key reuseaddress
+(defun socket-listen-internal
+                          (host &key port reuseaddress
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
@@ -178,7 +178,8 @@
   (with-mapped-conditions (usocket)
     (ext:inet-shutdown (socket usocket) (ecase direction
                                           (:input ext:shut-rd)
-                                          (:output ext:shut-wr)))))
+                                          (:output ext:shut-wr)
+                                          (:io ext:shut-rdwr)))))
 
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0)
 			&aux (real-buffer (if (zerop offset)
@@ -244,7 +245,7 @@
                             '((1 ns-host-not-found-error)     ;; HOST_NOT_FOUND
                               (2 ns-no-recovery-error)        ;; NO_DATA
                               (3 ns-no-recovery-error)        ;; NO_RECOVERY
-                              (4 ns-try-again-condition)))))) ;; TRY_AGAIN
+                              (4 ns-try-again-error))))))     ;; TRY_AGAIN
         (when exception
           (error exception))))))
 

@@ -10,7 +10,7 @@
     (mezzano.network.tcp:connection-timed-out
      (error 'timeout-error :socket socket))))
 
-(defun socket-connect (host port &key (protocol :stream) element-type
+(defun socket-connect-internal (host &key port (protocol :stream) element-type
                                       timeout deadline (nodelay nil nodelay-p)
                                       local-host local-port)
   (declare (ignore local-host local-port))
@@ -30,10 +30,10 @@
        ;; TODO:
        (unsupported 'datagram 'socket-connect)))))
 
-(defun socket-listen (host port &key reuseaddress
-                                     (reuse-address nil reuse-address-supplied-p)
-                                     (backlog 5)
-                                     (element-type 'character))
+(defun socket-listen-internal (host &key port reuseaddress
+                               (reuse-address nil reuse-address-supplied-p)
+                               (backlog 5)
+                               (element-type 'character))
   (declare (ignore reuseaddress reuse-address reuse-address-supplied-p))
   (let ((ip (mezzano.network.ip:make-ipv4-address host)))
     (make-stream-server-socket (mezzano.network.tcp:tcp-listen ip port :backlog backlog)

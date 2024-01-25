@@ -6,12 +6,10 @@
 (defun handle-condition (condition &optional socket (host-or-ip nil))
   ; incomplete, needs to handle additional conditions
   (flet ((raise-error (&optional socket-condition host-or-ip)
-           (if socket-condition
-               (cond ((typep socket-condition ns-error)
-                      (error socket-condition :socket socket :host-or-ip host-or-ip))
-                     (t
-                      (error socket-condition :socket socket)))
-               (error 'unknown-error :socket socket :real-error condition))))
+           (cond ((typep socket-condition ns-error)
+                  (error socket-condition :socket socket :host-or-ip host-or-ip))
+                 (t
+                  (error socket-condition :socket socket)))))
     (typecase condition
       (ccl:host-stopped-responding
        (raise-error 'host-down-error host-or-ip))
@@ -22,11 +20,9 @@
       (ccl:connection-timed-out
        (raise-error 'timeout-error))
       (ccl:opentransport-protocol-error
-       (raise-error 'protocol-not-supported-error))       
-      (otherwise
-       (raise-error condition host-or-ip)))))
+       (raise-error 'protocol-not-supported-error)))))
 
-(defun socket-connect (host port &key (element-type 'character) timeout deadline nodelay 
+(defun socket-connect-internal (host &key port (element-type 'character) timeout deadline nodelay
                             local-host local-port (protocol :stream))
   (when (eq nodelay :if-supported)
     (setf nodelay t))
@@ -51,8 +47,8 @@
 	 (ccl::open-udp-socket :local-address (and local-host (host-to-hbo local-host))
 			       :local-port local-port))))))
 
-(defun socket-listen (host port
-                           &key reuseaddress
+(defun socket-listen-internal
+                          (host &key port reuseaddress
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))

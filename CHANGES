@@ -1,7 +1,41 @@
-0.8.4:
+0.8.7 (???):
 
+  * General: Update and supply documentation for most exported symbols (#107, patch from @tinkerttoy)
+  * Bugfix: [SBCL] *socket-connect-nonblock-wait* (non-blocking sockets) doesn't work on Windows, disabled by default (#106)
+  * Bugfix: ip= doesn't compare properly if the first argument is a vector (#108)
+
+0.8.6: (Mar 1, 2023)
+
+  * Bugfix: [SBCL/ECL] improved SOCKET-CONNECT timeout handling based on non-blocking sockets (#92, patch from @jetmonk)
+  * Bugfix: [CCL] capture SOCKET-CREATION-ERROR exception in RESOLVE-ADDRESS when calling SOCKET-CONNECT (#96, patch from @jetmonk)
+  * Bugfix: [SBCL, LW, etc] with-mapped-conditions no more throw unknown-error so that user can correctly capture their own conditions (#97, reported by @avodonosov (Anton Vodonosov))
+  * Bugfix: [server] Permit 0-length UDP data payloads (#93, patch from @rabuf (Jared Summers))
+
+0.8.5: (Sep 14, 2022)
+
+  * Bugfix: [SBCL] Fix for sbcl 2.2.7+ (internal SB-ALIEN::HINSTANCE got removed) (thanks to @MrDispatch on GitHub)
+  * Bugfix: [SBCL] Fix Build failure on some SBCL versions due to sb-int:broken-pipe (#81)
+  * Bugfix: [CCL] When #+ipv6 also try to resolve an IPv4 address if the connection cannot be established with the IPv6 address. #75 (patch by Pascal J. Bourguignon)
+  * Bugfix: [ABCL] Fix "socket-send returns NIL on ABCL" (Issue #82, patch from Kasper Galkowski)
+  * Bugfix: [server/SBCL] Ignore invalid argument error for system call on sbcl (#80), by @charJe
+
+0.8.4: (Mar 13, 2022)
+
+  * New experimental backend: MKCL (support via sb-bsd-sockets) (thanks to @Madhu)
   * New feature: new socket options (TCP keepalive, UDP broadcast) (#70, #73) (thanks to Eugene Zaikonnikov)
+  * New feature: Added IPv6-only support in host-to-hostname, get-host-by-name and get-random-host-by-name; new exported symbol: *ipv6-only-p*
+  * New feature: [LW] Add UDP broadcast support for LispWorks (#70, #72)
+  * Bugfix: Support (SOCKET-SHUTDOWN ... :DIRECTION :IO) as the generic function documentation advertises (#76)
   * Bugfix: "usocket leaks file descriptors on sb-int:broken-pipe conditions" (#64) (thanks to Jesse Off)
+  * Bugfix: Added missing socket-error conditions used in `+unix-errno-error-map+` (#61, thanks to Yehouda Harpaz)
+  * Bugfix: Use ns-try-again-error instead of ns-try-again-condition (#79) to match condition degign of SBCL and others (ns-try-again-condition is now deprecated)
+  * Bugfix: [LW] socket-shutdown on stream-usocket need to pass the stream to comm:socket-stream-shutdown (rather than the socket) #59
+  * Bugfix: [LW] SOCKET-ACCEPT now raises CONNECTION-ABPRTED-ERROR instead of INVALID-SOCKET-ERROR if the underlying socket got from comm::accept-connection-to-socket or comm::get-fd-from-socket is NIL. (#63)
+  * Bugfix: [LW] socket-accept returns NIL if the underlying socket is NIL and the error (somehow) is not captured
+  * Bugfix: [LW] SOCKET-SEND and SOCKET-RECEIVE should never return NIL (comes from raise-usock-err) (#62)
+  * Bugfix: [SBCL] Add (sb-int:broken-pipe . connection-aborted-error) into +sbcl-error-map+ (#64)
+  * Bugfix: [SBCL, ECL, clasp] Fix condition map for sb-bsd-sockets::host-not-found-error (ns-host-not-found-error) (#65)
+  * Bugfix: [CCL] Explicitly specifying :FORMAT :TEXT to CCL:MAKE-SOCKET makes the socket monovalent. (thanks to @Madhu)
 
 0.8.3: (Dec 23, 2019)
 

@@ -81,6 +81,8 @@
              #:ns-unknown-condition
              #:unknown-error
              #:ns-unknown-error
+	     #:already-shutdown-error
+	     #:out-of-memory-error
              #:socket-warning ; warnings (udp)
 
              #:insufficient-implementation ; conditions regarding usocket support level
@@ -97,7 +99,8 @@
              #:get-random-host-by-name
              #:ns-host-not-found-error
              #:ns-no-recovery-error
-             #:ns-try-again-condition
+             #:ns-try-again-condition ; obsoleted
+             #:ns-try-again-error
              #:default-udp-handler
              #:default-tcp-handler
              #:echo-tcp-handler ;; server handlers
@@ -124,6 +127,11 @@
              ;; added in 0.8.2
              #:host-or-ip
 
-	     ;; added in 0.9.0
+	     ;; added in 0.8.4
 	     #:*ipv6-only-p*
+
+             ;; restarts of SOCKET-LISTEN (added in 0.8.6)
+             #:use-other-host
+             #:use-other-port
+             #:retry
              ))

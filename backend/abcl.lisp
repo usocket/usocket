@@ -190,7 +190,7 @@
 
 ;;; SOCKET-CONNECT
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
+(defun socket-connect-internal (host &key port (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-supplied-p)
                        local-host local-port)
   (when deadline (unsupported 'deadline 'socket-connect))
@@ -235,7 +235,8 @@
 
 ;;; SOCKET-LISTEN
 
-(defun socket-listen (host port &key reuseaddress
+(defun socket-listen-internal
+                     (host &key port reuseaddress
                       (reuse-address nil reuse-address-supplied-p)
 		      (backlog 5 backlog-supplied-p)
 		      (element-type 'character))
@@ -284,6 +285,9 @@
       (:input
        (jcall $@shutdownInput/Socket/0 (socket usocket)))
       (:output
+       (jcall $@shutdownOutput/Socket/0 (socket usocket)))
+      (:io
+       (jcall $@shutdownInput/Socket/0 (socket usocket))
        (jcall $@shutdownOutput/Socket/0 (socket usocket))))))
 
 ;;; GET-LOCAL/PEER-NAME/ADDRESS/PORT
@@ -348,7 +352,8 @@
     (loop for i from offset below (+ size offset)
        do (setf (jarray-ref byte-array i) (*->byte (aref buffer i))))
     (with-mapped-conditions (usocket host)
-      (jcall $@send/1 socket packet))))
+      (jcall $@send/1 socket packet)
+      size)))
 
 ;;; TODO: return-host and return-port cannot be get ...
 (defmethod socket-receive ((usocket datagram-usocket) buffer length

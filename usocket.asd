@@ -18,38 +18,70 @@
     :licence "MIT"
     :description "Universal socket library for Common Lisp"
     :depends-on (:split-sequence
-		 #+(and (or sbcl ecl)
-			(not usocket-iolib)) :sb-bsd-sockets
-		 #+usocket-iolib :iolib)
+                 (:feature (:and (:or :sbcl :ecl :clasp)
+                                 (:not :usocket-iolib))
+                  :sb-bsd-sockets)
+                 (:feature :usocket-iolib
+                  :iolib))
     :components ((:file "package")
-		 (:module "vendor" :depends-on ("package")
-		  :components (#+mcl (:file "kqueue")
-			       #+mcl (:file "OpenTransportUDP")))
-		 (:file "usocket" :depends-on ("vendor"))
-		 (:file "condition" :depends-on ("usocket"))
-		 #-usocket-iolib
-		 (:module "backend" :depends-on ("condition")
-		  :components (#+abcl		(:file "abcl")
-			       #+(or allegro cormanlisp)
-						(:file "allegro")
-			       #+clisp		(:file "clisp")
-			       #+(or openmcl clozure)
-						(:file "openmcl")
-			       #+clozure	(:file "clozure" :depends-on ("openmcl"))
-			       #+cmu		(:file "cmucl")
-			       #+(or sbcl ecl clasp)
-                                                (:file "sbcl")
-			       #+ecl		(:file "ecl" :depends-on ("sbcl"))
-			       #+clasp		(:file "clasp" :depends-on ("sbcl"))
-			       #+lispworks	(:file "lispworks")
-			       #+mcl		(:file "mcl")
-			       #+mocl		(:file "mocl")
-			       #+scl		(:file "scl")
-			       #+genera		(:file "genera")
-			       #+mezzano	(:file "mezzano")))
-		 #-usocket-iolib
-		 (:file "option" :depends-on ("backend"))
-		 #+usocket-iolib
-		 (:module "backend" :depends-on ("condition")
-		  :components ((:file "iolib"))))
+                 (:module "vendor" :depends-on ("package")
+                  :if-feature :mcl
+                  :components ((:file "kqueue")
+                               (:file "OpenTransportUDP")))
+                 (:file "usocket" :depends-on ("vendor"))
+                 (:file "condition" :depends-on ("usocket"))
+                 (:module "backend"
+                  :depends-on ("condition")
+                  :components ((:file "iolib"
+                                :if-feature :usocket-iolib)
+                               (:file "abcl"
+                                :if-feature (:and :abcl
+                                                  (:not :usocket-iolib)))
+                               (:file "allegro"
+                                :if-feature (:and (:or :allegro :cormanlisp)
+                                                  (:not :usocket-iolib)))
+                               (:file "clisp"
+                                :if-feature (:and :clisp
+                                                  (:not :usocket-iolib)))
+                               (:file "openmcl"
+                                :if-feature (:and (:or :openmcl :clozure)
+                                                  (:not :usocket-iolib)))
+                               (:file "clozure"
+                                :if-feature (:and :clozure
+                                                  (:not :usocket-iolib))
+                                :depends-on ("openmcl"))
+                               (:file "cmucl"
+                                :if-feature (:and :cmu
+                                                  (:not :usocket-iolib)))
+                               (:file "sbcl"
+                                :if-feature (:and (:or :sbcl :ecl :clasp)
+                                                  (:not :usocket-iolib)))
+                               (:file "ecl"
+                                :if-feature (:and :ecl
+                                                  (:not :usocket-iolib))
+                                :depends-on ("sbcl"))
+                               (:file "clasp"
+                                :if-feature (:and :clasp
+                                                  (:not :usocket-iolib))
+                                :depends-on ("sbcl"))
+                               (:file "lispworks"
+                                :if-feature (:and :lispworks
+                                                  (:not :usocket-iolib)))
+                               (:file "mcl"
+                                :if-feature (:and :mcl
+                                                  (:not :usocket-iolib)))
+                               (:file "mocl"
+                                :if-feature (:and :mocl
+                                                  (:not :usocket-iolib)))
+                               (:file "scl"
+                                :if-feature (:and :scl
+                                                  (:not :usocket-iolib)))
+                               (:file "genera"
+                                :if-feature (:and :genera
+                                                  (:not :usocket-iolib)))
+                               (:file "mezzano"
+                                :if-feature (:and :mezzano))))
+                 (:file "option"
+                  :if-feature (:not :usocket-iolib)
+                  :depends-on ("backend")))
     :in-order-to ((test-op (test-op :usocket-test))))

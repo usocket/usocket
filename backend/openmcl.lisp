@@ -24,7 +24,7 @@
 
 (defparameter +openmcl-nameserver-error-map+
   '((:no-recovery . ns-no-recovery-error)
-    (:try-again . ns-try-again-condition)
+    (:try-again . ns-try-again-error)
     (:host-not-found . ns-host-not-found-error)))
 
 ;; we need something which the openmcl implementors 'forgot' to do:
@@ -94,7 +94,7 @@
 	 :bivalent)))
 
 #-ipv6
-(defun socket-connect (host port &key (protocol :stream) element-type
+(defun socket-connect-internal (host &key port (protocol :stream) element-type
 		       timeout deadline nodelay
 		       local-host local-port)
   (when (eq nodelay :if-supported)
@@ -131,8 +131,8 @@
 	 usocket)))))
 
 #-ipv6
-(defun socket-listen (host port
-                      &key reuseaddress
+(defun socket-listen-internal
+                     (host &key port reuseaddress
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
@@ -163,8 +163,19 @@
     (close (socket usocket) :abort t))) ; see "sbcl.lisp" for (:abort t)
 
 (defmethod socket-shutdown ((usocket usocket) direction)
-  (with-mapped-conditions (usocket)
-    (openmcl-socket:shutdown (socket usocket) :direction direction)))
+  (let ((ccl-direction (case direction
+                         (:io :both)
+                         (otherwise direction))))
+    (with-mapped-conditions (usocket)
+      (if (and (eq ccl-direction :both)
+               ;; The :BOTH support was introduced in CCL 1.11.5,
+               ;; and CCL's *FEATURES* allow to distignguish only major version,
+               ;; so we use it starting with 1.12.
+               (not (member :ccl-1.12 *features*)))
+          (progn
+            (openmcl-socket:shutdown (socket usocket) :direction :input)
+            (openmcl-socket:shutdown (socket usocket) :direction :output))
+          (openmcl-socket:shutdown (socket usocket) :direction ccl-direction)))))
 
 #-ipv6
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))

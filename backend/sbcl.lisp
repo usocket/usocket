@@ -263,14 +263,19 @@
     #-(or ecl mkcl clasp)
     (sb-sys:io-timeout . timeout-error)
     #+sbcl (sb-ext:timeout . timeout-error)
-    #+sbcl (sb-int:broken-pipe . connection-aborted-error)
+
+    ;; learnt from fiveam (suggested by Anton Vodonosov) for early SBCL versions
+    #+#.(cl:if (cl:ignore-errors (cl:find-symbol "BROKEN-PIPE" "SB-INT"))
+               '(and) '(or))
+    (sb-int:broken-pipe . connection-aborted-error)
+
     (sb-bsd-sockets:socket-error . ,#'map-socket-error)
 
     ;; Nameservice errors: mapped to unknown-error
     #-(or ecl mkcl clasp)
     (sb-bsd-sockets:no-recovery-error . ns-no-recovery-error)
     #-(or ecl mkcl clasp)
-    (sb-bsd-sockets:try-again-error . ns-try-again-condition)
+    (sb-bsd-sockets:try-again-error . ns-try-again-error)
     #-(or ecl mkcl clasp)
     (sb-bsd-sockets:host-not-found-error . ns-host-not-found-error)))
 
@@ -284,27 +289,21 @@
                              (funcall usock-error condition)
                              usock-error)))
        (declare (type symbol usock-error))
-       (if usock-error
-           (cond ((subtypep usock-error 'ns-error)
-                  (error usock-error :socket socket :host-or-ip host-or-ip))
-                 (t
-                  (error usock-error :socket socket)))
-           (error 'unknown-error
-                  :real-error condition
-                  :socket socket))))
+       (when usock-error
+         (cond ((subtypep usock-error 'ns-error)
+                (error usock-error :socket socket :host-or-ip host-or-ip))
+               (t
+                (error usock-error :socket socket))))))
     (condition
      (let* ((usock-cond (cdr (assoc (type-of condition) +sbcl-condition-map+)))
             (usock-cond (if (functionp usock-cond)
                             (funcall usock-cond condition)
                             usock-cond)))
-       (if usock-cond
-           (cond ((subtypep usock-cond 'ns-condition)
-                  (signal usock-cond :socket socket :host-or-ip host-or-ip))
-                 (t
-                  (signal usock-cond :socket socket)))
-           (signal 'unknown-condition
-                   :real-condition condition
-                   :socket socket))))))
+       (when usock-cond
+         (cond ((subtypep usock-cond 'ns-condition)
+                (signal usock-cond :socket socket :host-or-ip host-or-ip))
+               (t
+                (signal usock-cond :socket socket))))))))
 
 ;;; "The socket stream ends up with a bogus name as it is created before
 ;;; the socket is connected, making things harder to debug than they need
@@ -331,26 +330,25 @@ so unless all code executed during it -- including anything
 down the call chain -- is asynch unwind safe, bad things will
 happen. Use with care."
   (let ((exec (gensym)) (unwind (gensym)) (timer (gensym))
-	(timeout (gensym)) (block (gensym)))
+        (timeout (gensym)) (block (gensym)))
     `(block ,block
        (tagbody
-	  (flet ((,unwind ()
-		   (go ,timeout))
-		 (,exec ()
-		   ,@body))
-	    (declare (dynamic-extent #',exec #',unwind))
-	    (let ((,timer (sb-ext:make-timer #',unwind)))
-	      (declare (dynamic-extent ,timer))
-	      (sb-sys:without-interrupts
-		  (unwind-protect
-		       (progn
-			 (sb-ext:schedule-timer ,timer ,seconds)
-			 (return-from ,block
-			   (sb-sys:with-local-interrupts
-			       (,exec))))
-		    (sb-ext:unschedule-timer ,timer)))))
-	  ,timeout
-	  (return-from ,block ,timeout-form)))))
+          (flet ((,unwind ()
+                   (go ,timeout))
+                 (,exec ()
+                   ,@body))
+            (declare (dynamic-extent #',exec #',unwind))
+            (let ((,timer (sb-ext:make-timer #',unwind)))
+              (sb-sys:without-interrupts
+                  (unwind-protect
+                       (progn
+                         (sb-ext:schedule-timer ,timer ,seconds)
+                         (return-from ,block
+                           (sb-sys:with-local-interrupts
+                               (,exec))))
+                    (sb-ext:unschedule-timer ,timer)))))
+          ,timeout
+          (return-from ,block ,timeout-form)))))
 
 (defun get-hosts-by-name (name)
   (with-mapped-conditions (nil name)
@@ -362,15 +360,72 @@ happen. Use with care."
                      (sb-bsd-sockets::host-ent-addresses host6))))
         (append addr4 addr6)))))
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
-                       timeout deadline (nodelay t nodelay-specified)
-                       local-host local-port
-		       &aux
-		       (sockopt-tcp-nodelay-p
-			(fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
+
+;; determine if a socket condition indicates operation is in progress
+(defun %socket-operation-condition-in-progress-p (condition)
+  #+sbcl  ;; sbcl defines this condition (also for Windows?)
+  (typep condition 'sb-bsd-sockets:operation-in-progress) ;; errno 36 
+  ;;
+  #+(or ecl mkcl clasp) ; MKCL *might* work, no idea about clasp
+  ;; we might expect sb-bsd-sockets in ECL to translate errno to BSD, but it does not.
+  ;; on Darwin ECL seems to prefer error 35, which is EWOULDBLOCK, not 36
+  ;; so we  allow both
+  (and (typep condition 'sb-bsd-sockets::socket-error)
+       (member (sb-bsd-sockets::socket-error-errno condition) ;; have to use unexported symbol
+               '(#-linux 35 #-linux 36  ;; should cover darwin and any BSD
+                 ;; on ECL for Raspberry Pi  (and others?) Linux EINPROGRESS=115 is
+                 ;; not translated correctly to BSD, so we allow code 115 too
+                 #+linux 115 
+                 ))))
+
+;; determine if a socket condition indicates not-connected (yet) status
+(defun %socket-operation-condition-not-connected-p (condition)
+  #+sbcl  ;; sbcl defines this condition (also for Windows?)
+  (typep condition 'sb-bsd-sockets:not-connected-error) ;; errno 36 
+  #+(or ecl mkcl clasp) ; MKCL *might* work, no idea about CLASP
+  ;; we might expect sb-bsd-sockets in ECL to translate errno to BSD, but it does not.
+  (and (typep condition 'sb-bsd-sockets::socket-error)
+       (member (sb-bsd-sockets::socket-error-errno condition) ;; have to use unexported symbol
+               '(#-linux 57 ;; should cover darwin and any BSD
+                 ;; on ECL for Raspberry Pi (and others?) Linux ENOTCONN=107 
+                 #+linux 107))))
+
+
+;; enable the new non-blocking socket method
+(defparameter *socket-connect-nonblock-wait*
+  ;; trust SBCL errno to be handled correctly in SB-BSD-SOCKETS on all platforms
+  ;; ..except Windows: "EINTR (A non-blocking socket operation could not be completed immediately.)" (#106)
+  #+(and sbcl windows)
+  nil
+  #+(and sbcl (not windows))
+  t
+  ;; trust that errno is done correctly above - how are BSD flavors marked in *features*?
+  #+(and (or ecl mkcl) (or darwin linux openbsd freebsd netbsd bsd))
+  t
+  ;; for all other cases, we have no reason to think we handle errno correctly in
+  ;; %socket-operation-condition-*
+  #+(or clasp
+        (and (or ecl mkcl) (not (or darwin linux openbsd freebsd netbsd bsd))))
+  nil)
+
+(defun socket-connect-internal (host
+                                &key port (protocol :stream) (element-type 'character)
+                                  timeout
+                                  ;; connection-timeout and read-timeout override
+                                  ;; plain timeout
+                                  (connection-timeout nil conn-timeout-p)
+                                  (read-timeout       nil read-timeout-p)
+                                  deadline (nodelay t nodelay-specified)
+                                  local-host local-port
+                                &aux
+                                  (sockopt-tcp-nodelay-p
+                                   (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
+  (when (and (member :win32 *features*) (pathnamep host))
+    (unsupported 'unix-domain-socket 'Windows))
   (when deadline (unsupported 'deadline 'socket-connect))
   #+(or ecl mkcl clasp)
-  (when timeout (unsupported 'timeout 'socket-connect))
+  (when (and timeout #-clasp (not *socket-connect-nonblock-wait*))
+    (unsupported 'timeout 'socket-connect))
   (when (and nodelay-specified
              ;; 20080802: ECL added this function to its sockets
              ;; package today. There's no guarantee the functions
@@ -382,20 +437,38 @@ happen. Use with care."
   (when (eq nodelay :if-supported)
     (setf nodelay t))
 
-  (let* ((remote (when host
+  (let* ((read-timeout* (if read-timeout-p read-timeout       timeout))
+         (conn-timeout* (if conn-timeout-p connection-timeout timeout))
+         (remote (and host (not (pathnamep host))
                    (car (get-hosts-by-name (host-to-hostname host)))))
          (local (when local-host
                   (car (get-hosts-by-name (host-to-hostname local-host)))))
          (ipv6 (or (and remote (= 16 (length remote)))
                    (and local (= 16 (length local)))))
-         (socket (make-instance #+sbcl (if ipv6
-                                           'sb-bsd-sockets::inet6-socket
-                                           'sb-bsd-sockets:inet-socket)
-                                #+(or ecl mkcl clasp) 'sb-bsd-sockets:inet-socket
+         (sock-type #+sbcl
+                    (cond
+                      #-win32((pathnamep host) 'sb-bsd-sockets:local-socket)
+                      (ipv6 'sb-bsd-sockets:inet6-socket)
+                      (t 'sb-bsd-sockets:inet-socket))
+                    #+(or ecl mkcl clasp) 'sb-bsd-sockets:inet-socket)
+         (socket (make-instance sock-type
                                 :type protocol
                                 :protocol (case protocol
-                                            (:stream :tcp)
+                                            (:stream #+sbcl(if (pathnamep host) 0 :tcp)
+                                                     #+(or ecl mkcl clasp) :tcp)
                                             (:datagram :udp))))
+
+         ;; sb-bsd-sockets:socket-connect is apparently called as 
+         ;; (socket-connect socket remote-host remote-port) or
+         ;; (socket-connect socket local-socket-address)
+         ;; hence connect-args is constructed as follows
+         (connect-args (if (pathnamep host)
+                           (list (uiop:unix-namestring host))
+                         (list #+sbcl (if (and local (not (eq host *wildcard-host*)))
+                                          local
+                                          remote)
+                               #+(or ecl mkcl clasp) (host-to-vector-quad host)
+                               port)))
          usocket
          ok)
 
@@ -419,35 +492,90 @@ happen. Use with care."
                                             (or local-port *auto-port*)))
 
               (with-mapped-conditions (usocket host)
-		#+(and sbcl (not win32))
-		(labels ((connect ()
-                           (sb-bsd-sockets:socket-connect socket remote port)))
-		  (if timeout
-		      (%with-timeout (timeout (error 'sb-ext:timeout)) (connect))
-		      (connect)))
-		#+(or ecl mkcl clasp (and sbcl win32))
-		(sb-bsd-sockets:socket-connect socket remote port)
+                (if *socket-connect-nonblock-wait* ;; global var to disable new connect timeout
+                    ;; case of new timeout code
+                    (if conn-timeout*
+                        (let ((initial-blocking-mode  (sb-bsd-sockets:non-blocking-mode socket)))
+                          ;; first connect
+                          (progn
+                            (setf (sb-bsd-sockets:non-blocking-mode socket) t) ;; non-blocking mode
+                            (multiple-value-bind (retval err)
+                                (ignore-errors (apply #'sb-bsd-sockets:socket-connect (cons socket connect-args)))
+                              ;; if the error generated is not EINPROGRESS then throw error
+                              (when (and (not retval) err)
+                                (when (not (%socket-operation-condition-in-progress-p err))
+                                  (error err)))))
+                          ;; then loop/sleep until ready
+                          (loop
+                              ;; start with very short wait time
+                              with dt-sleep of-type double-float = 10d-6
+                              with start-time of-type double-float
+                                = (/ (* 1d0 (get-internal-real-time)) internal-time-units-per-second)
+                              with end-time  of-type double-float 
+                                = (+ start-time (float conn-timeout* 1d0))
+                              with current-time of-type double-float = start-time
+                              do
+                                 ;;(format t "TIME: ~A DT: ~,7F~%" current-time dt-sleep)
+                                 ;; check if there is a peer on other end
+                                 (multiple-value-bind (peer err)
+                                     (ignore-errors (sb-bsd-sockets:socket-peername socket))
+                                   (cond (peer (return)) ;; socket has peer, so is connected
+                                         ((and err ;; not 'not-connected' error, so it failed
+                                               (not (%socket-operation-condition-not-connected-p err)))
+                                          (error err))))
+                                 (sleep dt-sleep)
+                                 (setf current-time (/ (* 1d0 (get-internal-real-time))
+                                                       internal-time-units-per-second))
+                                 
+                                 (when (>= current-time end-time)
+                                   (error 'timeout-error))
+                                 
+                                 ;; Keep increasing sleep time in
+                                 ;; 4 steps per decade but don't exceed the
+                                 ;; end-time.  Max is 0.1 sec.
+                                 (setf dt-sleep (min (* dt-sleep #.(sqrt (sqrt 10d0)))
+                                                     0.1d0  ;; but not more than 0.1 sec
+                                                     (max (- end-time current-time) ;; but don't oversleep
+                                                          10d-6))))
+                          ;; restore blocking mode
+                          (setf (sb-bsd-sockets:non-blocking-mode socket) initial-blocking-mode))
+                        ;; no timeout case
+                        (apply #'sb-bsd-sockets:socket-connect (cons socket connect-args)))
+                    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                    ;; if not *socket-connect-nonblock-wait*, then use old timeout code
+                    ;; which uses interrupts on SBCL, and doesn't work on ECL
+                    #+(and sbcl (not win32))
+                    (labels ((connect ()
+                               (apply #'sb-bsd-sockets:socket-connect (cons socket connect-args))))
+                      (if timeout
+                          (%with-timeout (timeout (error 'sb-ext:timeout)) (connect))
+                          (connect)))
+                    #+(or ecl mkcl clasp (and sbcl win32))
+                    (apply #'sb-bsd-sockets:socket-connect (cons socket connect-args)))
+                    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
                 ;; Now that we're connected make the stream.
                 (setf (socket-stream usocket)
-                      (sb-bsd-sockets:socket-make-stream socket
+                      (sb-bsd-sockets:socket-make-stream socket 
                         :input t :output t :buffering :full
-			:element-type element-type
-			;; Robert Brown <robert.brown@gmail.com> said on Aug 4, 2011:
-			;; ... This means that SBCL streams created by usocket have a true
-			;; serve-events property.  When writing large amounts of data to several
-			;; streams, the kernel will eventually stop accepting data from SBCL.
-			;; When this happens, SBCL either waits for I/O to be possible on
-			;; the file descriptor it's writing to or queues the data to be flushed later.
-			;; Because usocket streams specify serve-events as true, SBCL
-			;; always queues.  Instead, it should wait for I/O to be available and
-			;; write the remaining data to the socket.  That's what serve-events
-			;; equal to NIL gets you.
-			;;
-			;; Nikodemus Siivola <nikodemus@random-state.net> said on Aug 8, 2011:
-			;; It's set to T for purely historical reasons, and will soon change to
-			;; NIL in SBCL. (The docstring has warned of T being a temporary default
-			;; for as long as the :SERVE-EVENTS keyword argument has existed.)
-			:serve-events nil))))
+                        :element-type element-type
+                        :timeout read-timeout*
+                        ;; Robert Brown <robert.brown@gmail.com> said on Aug 4, 2011:
+                        ;; ... This means that SBCL streams created by usocket have a true
+                        ;; serve-events property.  When writing large amounts of data to several
+                        ;; streams, the kernel will eventually stop accepting data from SBCL.
+                        ;; When this happens, SBCL either waits for I/O to be possible on
+                        ;; the file descriptor it's writing to or queues the data to be flushed later.
+                        ;; Because usocket streams specify serve-events as true, SBCL
+                        ;; always queues.  Instead, it should wait for I/O to be available and
+                        ;; write the remaining data to the socket.  That's what serve-events
+                        ;; equal to NIL gets you.
+                        ;;
+                        ;; Nikodemus Siivola <nikodemus@random-state.net> said on Aug 8, 2011:
+                        ;; It's set to T for purely historical reasons, and will soon change to
+                        ;; NIL in SBCL. (The docstring has warned of T being a temporary default
+                        ;; for as long as the :SERVE-EVENTS keyword argument has existed.)
+                        :serve-events nil))))
              (:datagram
               (when (or local-host local-port)
                 (sb-bsd-sockets:socket-bind socket
@@ -458,7 +586,7 @@ happen. Use with care."
               (setf usocket (make-datagram-socket socket))
               (when (and host port)
                 (with-mapped-conditions (usocket)
-                  (sb-bsd-sockets:socket-connect socket remote port)
+                  (apply #'sb-bsd-sockets:socket-connect (cons socket connect-args))
                   (setf (connected-p usocket) t)))))
            (setf ok t))
       ;; Clean up in case of an error.
@@ -466,31 +594,39 @@ happen. Use with care."
         (sb-bsd-sockets:socket-close socket :abort t)))
     usocket))
 
-(defun socket-listen (host port
-                           &key reuseaddress
+(defun socket-listen-internal
+                          (host &key port reuseaddress
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
+  (when (and (member :win32 *features*) (pathnamep host))
+    (unsupported 'unix-domain-socket 'Windows))
   (let* (#+sbcl
-	 (local (when host
+         (local (and host (not (pathnamep host))
                   (car (get-hosts-by-name (host-to-hostname host)))))
-	 #+sbcl
+         #+sbcl
          (ipv6 (and local (= 16 (length local))))
+         (sock-type #+sbcl
+                    (cond
+                      #-win32((pathnamep host) 'sb-bsd-sockets:local-socket)
+                      (ipv6 'sb-bsd-sockets:inet6-socket)
+                      (t 'sb-bsd-sockets:inet-socket))
+                    #+(or ecl mkcl clasp) 'sb-bsd-sockets:inet-socket)
          (reuseaddress (if reuse-address-supplied-p reuse-address reuseaddress))
-         (ip #+sbcl (if (and local (not (eq host *wildcard-host*)))
-                        local
-                        (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any))
-             #+(or ecl mkcl clasp) (host-to-vector-quad host))
-         (sock (make-instance #+sbcl (if ipv6
-                                         'sb-bsd-sockets::inet6-socket
-                                         'sb-bsd-sockets:inet-socket)
-                              #+(or ecl mkcl clasp) 'sb-bsd-sockets:inet-socket
+         (sock (make-instance sock-type
                               :type :stream
-                              :protocol :tcp)))
+                              :protocol (if (pathnamep host) 0 :tcp)))
+         (bind-args (if (pathnamep host)
+                        (list (uiop:unix-namestring host))
+                        (list #+sbcl (if (and local (not (eq host *wildcard-host*)))
+                                         local
+                                         (hbo-to-vector-quad sb-bsd-sockets-internal::inaddr-any))
+                              #+(or ecl mkcl clasp) (host-to-vector-quad host)
+                              port))))
     (handler-case
         (with-mapped-conditions (nil host)
           (setf (sb-bsd-sockets:sockopt-reuse-address sock) reuseaddress)
-          (sb-bsd-sockets:socket-bind sock ip port)
+          (apply #'sb-bsd-sockets:socket-bind (cons sock bind-args))
           (sb-bsd-sockets:socket-listen sock backlog)
           (make-stream-server-socket sock :element-type element-type))
       (t (c)
@@ -511,13 +647,13 @@ happen. Use with care."
     (let ((socket (sb-bsd-sockets:socket-accept (socket usocket))))
       (when socket
         (prog1
-	  (make-stream-socket
-	   :socket socket
-	   :stream (sb-bsd-sockets:socket-make-stream
-		    socket
-		    :input t :output t :buffering :full
-		    :element-type (or element-type
-				      (element-type usocket))))
+          (make-stream-socket
+           :socket socket
+           :stream (sb-bsd-sockets:socket-make-stream
+                    socket
+                    :input t :output t :buffering :full
+                    :element-type (or element-type
+                                      (element-type usocket))))
 
           ;; next time wait for event again if we had EAGAIN/EINTR
           ;; or else we'd enter a tight loop of failed accepts
@@ -554,7 +690,8 @@ happen. Use with care."
   (let ((sock-fd (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
         (direction-flag (ecase direction
                           (:input 0)
-                          (:output 1))))
+                          (:output 1)
+                          (:io 2))))
     (unless (zerop (ffi:c-inline (sock-fd direction-flag) (:int :int) :int
                                "shutdown(#0, #1)" :one-liner t))
       (error (map-errno-error (cerrno))))))
@@ -564,7 +701,8 @@ happen. Use with care."
   (let ((sock-fd (sb-bsd-sockets:socket-file-descriptor (socket usocket)))
         (direction-flag (ecase direction
                           (:input 0)
-                          (:output 1))))
+                          (:output 1)
+                          (:io 2))))
     (unless (zerop (sockets-internal:shutdown sock-fd direction-flag))
       (error (map-errno-error (cerrno))))))
 
@@ -580,12 +718,13 @@ happen. Use with care."
         (sb-bsd-sockets:socket-send s real-buffer size :address dest)))))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length
-			   &key (element-type '(unsigned-byte 8)))
+                           &key (element-type '(unsigned-byte 8)))
   #+sbcl
   (declare (values (simple-array (unsigned-byte 8) (*)) ; buffer
-		   (integer 0)                          ; size
-		   (simple-array (unsigned-byte 8) (*)) ; host
-		   (unsigned-byte 16)))                 ; port
+                   (integer 0)                          ; size
+                   (simple-array (unsigned-byte 8) (*)) ; host
+                   (unsigned-byte 16)                   ; port
+                   &optional))
   (with-mapped-conditions (usocket)
     (let ((s (socket usocket)))
       (sb-bsd-sockets:socket-receive s buffer length :element-type element-type))))
@@ -755,7 +894,9 @@ happen. Use with care."
   (sb-alien:define-alien-type ws-socket sb-alien:signed)
 
   (sb-alien:define-alien-type ws-dword sb-alien:unsigned-long)
-  (sb-alien:define-alien-type ws-event sb-alien::hinstance)
+  
+  ;; WS-EVENT was formerly defined as [internal, now removed] SB-ALIEN::HINSTANCE (synonym for SIGNED)
+  (sb-alien:define-alien-type ws-event sb-alien:signed) 
 
   (sb-alien:define-alien-type nil
     (sb-alien:struct wsa-network-events
@@ -872,12 +1013,12 @@ happen. Use with care."
     (setf (wait-list-%wait wait-list) (sb-alien:make-alien ws-event))
     (setf (os-wait-list-%wait wait-list) (wsa-event-create))
     (sb-ext:finalize wait-list
-		     (let ((event-handle (os-wait-list-%wait wait-list))
-			   (alien (wait-list-%wait wait-list)))
-		       #'(lambda ()
-			   (wsa-event-close event-handle)
-			   (unless (null alien)
-			     (sb-alien:free-alien alien))))))
+                     (let ((event-handle (os-wait-list-%wait wait-list))
+                           (alien (wait-list-%wait wait-list)))
+                       #'(lambda ()
+                           (wsa-event-close event-handle)
+                           (unless (null alien)
+                             (sb-alien:free-alien alien))))))
 
 ) ; progn
 
@@ -889,7 +1030,7 @@ happen. Use with care."
           (split-timeout (or timeout 1))
         (multiple-value-bind (result-fds err)
             (read-select wl (when timeout secs) usecs)
-	  (declare (ignore result-fds))
+          (declare (ignore result-fds))
           (unless (null err)
             (error (map-errno-error err)))))))
 
@@ -952,7 +1093,7 @@ happen. Use with care."
   (defun bytes-available-for-read (socket)
     (let ((nbytes (%bytes-available-for-read socket)))
       (when (plusp nbytes)
-	(setf (state socket) :read))
+        (setf (state socket) :read))
       nbytes))
 
   (defun update-ready-and-state-slots (wait-list)

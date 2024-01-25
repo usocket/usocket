@@ -126,7 +126,7 @@
                       (t
                        (signal usock-error :socket socket))))))))))
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
+(defun socket-connect-internal (host &key port (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
                        local-host local-port)
   (declare (ignorable timeout local-host local-port))
@@ -160,8 +160,8 @@
      #-(or rawsock ffi)
      (unsupported '(protocol :datagram) 'socket-connect))))
 
-(defun socket-listen (host port
-                           &key reuseaddress
+(defun socket-listen-internal
+                          (host &key port reuseaddress
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))
@@ -198,7 +198,11 @@
 
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
   (with-mapped-conditions (usocket)
-    (socket:socket-stream-shutdown (socket usocket) direction)))
+    (if (eq :io direction)
+        (progn
+          (socket:socket-stream-shutdown (socket usocket) :input)
+          (socket:socket-stream-shutdown (socket usocket) :output))
+        (socket:socket-stream-shutdown (socket usocket) direction))))
 
 (defmethod get-local-name ((usocket stream-usocket))
   (multiple-value-bind

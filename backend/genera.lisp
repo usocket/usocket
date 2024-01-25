@@ -62,7 +62,7 @@
     (sys:network-error
       (error 'unknown-error :socket socket :real-error condition :errno -1))))
 
-(defun socket-connect (host port &key (protocol :stream) element-type
+(defun socket-connect-internal (host &key port (protocol :stream) element-type
 			    timeout deadline (nodelay nil nodelay-p)
 			    local-host local-port)
   (declare (ignore local-host))
@@ -127,7 +127,8 @@
 		 (t
 		  (setq tcp::*last-gensym-port-number* #.(expt 2 10))))))
 
-(defun socket-listen (host port &key (reuse-address nil reuse-address-p)
+(defun socket-listen-internal
+                     (host &key port (reuse-address nil reuse-address-p)
 				     (reuseaddress nil reuseaddress-p)
 				     (backlog 5) (element-type 'character))
   (let ((host-object (host-to-host-object host))

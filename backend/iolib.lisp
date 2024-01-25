@@ -36,7 +36,7 @@
    ;; Nameservice errors (src/sockets/dns/conditions.lisp)
    (iolib/sockets:resolver-error                     . ns-error)
    (iolib/sockets:resolver-fail-error                . ns-host-not-found-error)
-   (iolib/sockets:resolver-again-error               . ns-try-again-condition)
+   (iolib/sockets:resolver-again-error               . ns-try-again-error)
    (iolib/sockets:resolver-no-name-error             . ns-no-recovery-error)
    (iolib/sockets:resolver-unknown-error             . ns-unknown-error)
    ))
@@ -64,24 +64,21 @@
 	 (usock-error (if (functionp usock-error)
 			  (funcall usock-error condition)
                           usock-error)))
-    (if usock-error
-        (if (typep usock-error 'socket-error)
-            (cond ((subtypep usock-error 'ns-error)
-                  (error usock-error :socket socket :host-or-ip host-or-ip))
-                 (t
-                  (error usock-error :socket socket)))
-            (cond ((subtypep usock-error 'ns-condition)
-                  (signal usock-error :socket socket :host-or-ip host-or-ip))
-                 (t
-                  (signal usock-error :socket socket))))
-        (error 'unknown-error
-               :real-error condition
-               :socket socket))))
+    (when usock-error
+      (if (typep usock-error 'socket-error)
+          (cond ((subtypep usock-error 'ns-error)
+                 (error usock-error :socket socket :host-or-ip host-or-ip))
+                (t
+                 (error usock-error :socket socket)))
+          (cond ((subtypep usock-error 'ns-condition)
+                 (signal usock-error :socket socket :host-or-ip host-or-ip))
+                (t
+                 (signal usock-error :socket socket)))))))
 
 (defun ipv6-address-p (host)
   (iolib/sockets:ipv6-address-p (iolib/sockets:ensure-hostname host)))
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
+(defun socket-connect-internal (host &key port (protocol :stream) (element-type 'character)
                        timeout deadline
                        (nodelay t) ;; nodelay == t is the ACL default
                        local-host local-port)
@@ -127,8 +124,9 @@
       (t ; :io by default
        (iolib/sockets:shutdown (socket usocket) :read t :write t)))))
 
-(defun socket-listen (host port
-                           &key reuseaddress reuse-address
+(defun socket-listen-internal
+                          (host &key port reuseaddress
+                           reuse-address
                            (backlog 5)
                            (element-type 'character))
   (declare (ignore element-type))

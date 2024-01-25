@@ -7,7 +7,7 @@
   (declare (ignore socket))
   (signal condition))
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
+(defun socket-connect-internal (host &key port (protocol :stream) (element-type 'character)
                        timeout deadline (nodelay t nodelay-specified)
 		       (local-host nil local-host-p)
 		       (local-port nil local-port-p))
@@ -32,8 +32,8 @@
               :feature '(protocol :datagram)
               :context 'socket-connect)))))
 
-(defun socket-listen (host port
-                           &key reuseaddress
+(defun socket-listen-internal
+                          (host &key port reuseaddress
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))

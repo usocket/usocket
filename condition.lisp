@@ -47,8 +47,8 @@ been implemented yet."))
 
 (define-condition socket-condition (condition)
   ((socket :initarg :socket
-           :accessor usocket-socket))
-  ;;###FIXME: no slots (yet); should at least be the affected usocket...
+           :accessor usocket-socket
+           :documentation "Socket that raised the condition"))
   (:documentation "Parent condition for all socket related conditions."))
 
 (define-condition socket-error (socket-condition error)
@@ -118,6 +118,25 @@ condition available."))
    invalid-socket-stream-error)
   (socket-error))
 
+;; This is obsolated. USOCKET no more raises it inside HANDLE-CONDITION (from backends),
+;; so that code patterns like below becomes possible: (previously on SBCL, my-error was
+;; captured by HANDLE-CONDITION and was packed into UNKNOWN-ERROR whose :real-error is
+;; that my-error instance. See also https://github.com/usocket/usocket/issues/97
+#|
+(ql:quickload "usocket")
+
+(define-condition my-error (error) ())
+
+(handler-case
+    (usocket:with-client-socket (socket stream "google.com" 443
+                                        :element-type '(unsigned-byte 8))
+      ;; some my code
+      ;; ...
+      (error 'my-error ))
+  (my-error (c)
+    ;; handle my error
+             ))
+|#
 (define-condition unknown-error (socket-error)
   ((real-error :initarg :real-error
                :accessor usocket-real-error
@@ -139,7 +158,7 @@ condition available."))
 error available."))
 
 (define-usocket-condition-classes
-  (ns-try-again-condition)
+  (ns-try-again-condition) ; obsoleted
   (socket-condition))
 
 (define-condition ns-unknown-condition (ns-condition)
@@ -155,7 +174,8 @@ condition available."))
   ;; with lisp, we just return NIL (indicating no data) instead of
   ;; raising an exception...
   (ns-host-not-found-error
-   ns-no-recovery-error)
+   ns-no-recovery-error
+   ns-try-again-error)
   (ns-error))
 
 (define-condition ns-unknown-error (ns-error)
@@ -174,13 +194,16 @@ condition available."))
 error available."))
 
 (defmacro with-mapped-conditions ((&optional socket host-or-ip) &body body)
+  "Run `body', handling implementation-specific conditions by re-raising them as usocket conditions.
+
+When `socket' or `host-or-ip' are specified, their values will be passed as arguments to the corresponding usocket conditions."
   `(handler-bind ((condition
                    #'(lambda (c) (handle-condition c ,socket ,host-or-ip))))
      ,@body))
 
 (defparameter +unix-errno-condition-map+
-  `(((11) . ns-try-again-condition) ;; EAGAIN
-    ((35) . ns-try-again-condition) ;; EDEADLCK
+  `(((11) . ns-try-again-error)     ;; EAGAIN
+    ((35) . ns-try-again-error)     ;; EDEADLCK
     ((4) . interrupted-condition))) ;; EINTR
 
 (defparameter +unix-errno-error-map+
@@ -220,7 +243,7 @@ error available."))
 
 (defparameter +unix-ns-error-map+
   `((1 . ns-host-not-found-error)
-    (2 . ns-try-again-condition)
+    (2 . ns-try-again-error)
     (3 . ns-no-recovery-error)))
 
 (defmacro unsupported (feature context &key minimum)

@@ -44,21 +44,18 @@
             (cdr (assoc (excl:stream-error-identifier condition)
                         +allegro-identifier-error-map+))))
        (declare (type symbol usock-error))
-       (if usock-error
-           (cond ((subtypep usock-error 'ns-error)
-                  (error usock-error :socket socket :host-or-ip host-or-ip))
-                 (t
-                  (error usock-error :socket socket)))
-           (error 'unknown-error
-                  :real-error condition
-                  :socket socket))))))
+       (when usock-error
+         (cond ((subtypep usock-error 'ns-error)
+                (error usock-error :socket socket :host-or-ip host-or-ip))
+               (t
+                (error usock-error :socket socket))))))))
 
 (defun to-format (element-type)
   (if (subtypep element-type 'character)
       :text
     :binary))
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'character)
+(defun socket-connect-internal (host &key port (protocol :stream) (element-type 'character)
                        timeout deadline
                        (nodelay t) ;; nodelay == t is the ACL default
                        local-host local-port)
@@ -114,10 +111,14 @@
 
 (defmethod socket-shutdown ((usocket stream-usocket) direction)
   (with-mapped-conditions (usocket)
-    (socket:shutdown (socket usocket) :direction direction)))
+    (if (eq :io direction)
+        (progn
+          (socket:shutdown (socket usocket) :direction :input)
+          (socket:shutdown (socket usocket) :direction :output))
+        (socket:shutdown (socket usocket) :direction direction))))
 
-(defun socket-listen (host port
-                           &key reuseaddress
+(defun socket-listen-internal
+                          (host &key port reuseaddress
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'character))

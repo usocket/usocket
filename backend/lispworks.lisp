@@ -57,22 +57,19 @@
           +unix-errno-error-map+))
 
 (defun raise-usock-err (errno socket &optional condition (host-or-ip nil))
+  (declare (ignore condition))
   (let ((usock-error
          (cdr (assoc errno +lispworks-error-map+ :test #'member))))
-    (if usock-error
-        (if (subtypep usock-error 'error)
-            (cond ((subtypep usock-error 'ns-error)
-                   (error usock-error :socket socket :host-or-ip host-or-ip))
-                  (t
-                   (error usock-error :socket socket)))
-            (cond ((subtypep usock-error 'ns-condition)
-                   (signal usock-error :socket socket :host-or-ip host-or-ip))
-                  (t
-                   (signal usock-error :socket socket))))
-      (error 'unknown-error
-             :socket socket
-             :real-error condition
-             :errno errno))))
+    (when usock-error
+      (if (subtypep usock-error 'error)
+          (cond ((subtypep usock-error 'ns-error)
+                 (error usock-error :socket socket :host-or-ip host-or-ip))
+                (t
+                 (error usock-error :socket socket)))
+        (cond ((subtypep usock-error 'ns-condition)
+               (signal usock-error :socket socket :host-or-ip host-or-ip))
+              (t
+               (signal usock-error :socket socket)))))))
 
 (defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
@@ -459,7 +456,7 @@
                 (error "cannot connect")))
           (error "cannot create socket"))))))
 
-(defun socket-connect (host port &key (protocol :stream) (element-type 'base-char)
+(defun socket-connect-internal (host &key port (protocol :stream) (element-type 'base-char)
                        timeout deadline (nodelay t)
                        local-host local-port)
   ;; What's the meaning of this keyword?
@@ -523,8 +520,8 @@
                      :connected-p (and host port t))))
        usocket))))
 
-(defun socket-listen (host port
-                           &key reuseaddress
+(defun socket-listen-internal
+                          (host &key port reuseaddress
                            (reuse-address nil reuse-address-supplied-p)
                            (backlog 5)
                            (element-type 'base-char))
