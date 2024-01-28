@@ -74,6 +74,8 @@
 (defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
   (typecase condition
+    (comm:socket-error (error 'socket-error :socket socket))
+    (conditions:stream-closed-error (error 'invalid-socket-stream-error :socket socket))
     (condition (let ((errno #-win32 (lw:errno-value)
                             #+win32 (wsa-get-last-error)))
                  (unless (zerop errno)
@@ -440,10 +442,13 @@
                                         :local-port local-port
                                         :read-timeout read-timeout
                                         :address-family address-family)))
-        (when (string= hostname "255.255.255.255")
-          ;; LispWorks fails on connect if the broadcast option for broadcast
-          ;; address is not set in advance
-          (set-socket-broadcast socket-fd 1))
+	;; For broadcast addresses, the broadcast option has to be set prior to COMM:CONNECT
+	(when (eql address-family 2)
+	  (let ((last-octet-pos (position #\. hostname :from-end t)))
+	    ;; Kludgy check for most broadcast IPv4 addresses in absence of netmask.
+	    ;; This will still fail with networks smaller than /24
+	    (when (and last-octet-pos (string= "255" (subseq hostname (1+ last-octet-pos))))
+              (set-socket-broadcast socket-fd 1))))
         (if socket-fd
             (if (comm::connect socket-fd server-addr server-addr-length)
                 ;; success, return socket fd
