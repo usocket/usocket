@@ -443,7 +443,7 @@
                                         :read-timeout read-timeout
                                         :address-family address-family)))
 	;; For broadcast addresses, the broadcast option has to be set prior to COMM:CONNECT
-	(when (eql address-family 2)
+	(when (eql address-family comm::*socket_af_inet*)
 	  (let ((last-octet-pos (position #\. hostname :from-end t)))
 	    ;; Kludgy check for most broadcast IPv4 addresses in absence of netmask.
 	    ;; This will still fail with networks smaller than /24
