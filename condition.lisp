@@ -61,8 +61,7 @@ been implemented yet."))
   (:documentation "Parent condition for all name resolution conditions."))
 
 (define-condition ns-error (ns-condition error)
-  (#+(or clasp ecl)
-   (socket :initarg :socket
+  ((socket :initarg :socket
            :accessor usocket-socket))
   (:documentation "Parent error for all name resolution errors."))
 
