@@ -1,8 +1,10 @@
-0.8.7 (???):
+0.8.7 (Mar 20, 2024):
 
   * General: Update and supply documentation for most exported symbols (#107, patch from @tinkerttoy)
+  * New feature: [SBCL] separate :connection-time and :read-time in socket-connect (#119)
   * Bugfix: [SBCL] *socket-connect-nonblock-wait* (non-blocking sockets) doesn't work on Windows, disabled by default (#106)
   * Bugfix: ip= doesn't compare properly if the first argument is a vector (#108)
+  * Bugfix: [LW] NS-TRY-AGAIN-ERROR with wrong initargs (#121)
 
 0.8.6: (Mar 1, 2023)
 
