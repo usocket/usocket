@@ -53,7 +53,7 @@ allowing the server to handle multiple connections in parallel."
                                   :timeout timeout
                                   :max-buffer-size max-buffer-size)))))
       (if in-new-thread
-          (values (bt:make-thread #'real-call :name (or name "USOCKET Server")) socket)
+          (values (bt2:make-thread #'real-call :name (or name "USOCKET Server")) socket)
           (progn
             (setq *server* socket)
             (real-call))))))
@@ -136,7 +136,7 @@ allowing the server to handle multiple connections in parallel."
                                             (list :element-type element-type))))
                     (client-stream (socket-stream client-socket)))
                     (if multi-threading
-                        (bt:make-thread
+                        (bt2:make-thread
                          (lambda ()
                            (handler-case (apply real-function client-socket arguments)
                              #+sbcl
