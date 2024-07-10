@@ -7,9 +7,7 @@
 #+ipv6
 (defun socket-connect-internal (host &key port
                        (protocol :stream) element-type
-                       timeout deadline nodelay local-host local-port)
-  (when (eq nodelay :if-supported)
-    (setf nodelay t))
+                       timeout deadline (nodelay t) local-host local-port)
   (with-mapped-conditions (nil host)
     (let (remote local mcl-sock)
       (loop

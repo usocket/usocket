@@ -66,8 +66,6 @@
     #+ccl-1.12
     (ccl::stream-is-closed-error
      (error 'invalid-socket-stream-error :socket socket))
-    (ccl:socket-error
-       (error 'socket-error :socket socket))
     (ccl:input-timeout
        (error 'timeout-error :socket socket))
     (ccl:communication-deadline-expired
@@ -95,10 +93,8 @@
 
 #-ipv6
 (defun socket-connect-internal (host &key port (protocol :stream) element-type
-		       timeout deadline nodelay
+		       timeout deadline (nodelay t)
 		       local-host local-port)
-  (when (eq nodelay :if-supported)
-    (setf nodelay t))
   (with-mapped-conditions (nil host)
     (ecase protocol
       (:stream
