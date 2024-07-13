@@ -482,7 +482,7 @@ happen. Use with care."
               (setf usocket (make-stream-socket :socket socket :stream *dummy-stream*))
               ;; binghe: use SOCKOPT-TCP-NODELAY as internal symbol
               ;;         to pass compilation on ECL without it.
-              (when (and nodelay-specified sockopt-tcp-nodelay-p)
+              (when (and nodelay sockopt-tcp-nodelay-p)
                 (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) nodelay))
               (when (or local-host local-port)
                 (sb-bsd-sockets:socket-bind socket
