@@ -66,6 +66,8 @@
     #+ccl-1.12
     (ccl::stream-is-closed-error
      (error 'invalid-socket-stream-error :socket socket))
+    (ccl:output-timeout
+       (error 'timeout-error :socket socket))
     (ccl:input-timeout
        (error 'timeout-error :socket socket))
     (ccl:communication-deadline-expired
