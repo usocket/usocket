@@ -709,6 +709,9 @@ to a vector quad."
      (host-byte-order host))
     (integer host)))
 
+(setf (documentation 'get-host-name 'function)
+      "Get the hostname string of the current local machine")
+
 ;;
 ;; Other utility functions
 ;;
