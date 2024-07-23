@@ -1,3 +1,13 @@
+                               USOCKET ChangeLogs
+
+0.8.8:
+
+  * General: [server] upgrade server dependencies to bordeaux-threads-2
+  * Bugfix: [CCL] Change default value of nodelay to T (as other backends)
+  * Bugfix: [SBCL] doesn't put :windows on *features*, use :win32 instead (#124)
+  * Bugfix: [SBCL] Fix default nodelay true on sbcl backend to actually work (#126)
+	* Bugfix: [CCL] A patch from CCL maintainer (R. Matthew Emerson) (#113)
+
 0.8.7 (Mar 20, 2024):
 
   * General: Update and supply documentation for most exported symbols (#107, patch from @tinkerttoy)
