@@ -134,4 +134,7 @@
              #:use-other-host
              #:use-other-port
              #:retry
+
+             ;; added in 0.8.8
+             #:get-host-name
              ))
