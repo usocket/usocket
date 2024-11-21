@@ -105,11 +105,11 @@ layer a `flexi-stream` (from `flexi-streams`) on top of a `usocket` stream.
  - `host-unreachable-error`
  - `shutdown-error`
  - `timeout-error`
- - `unkown-error`
+ - `unknown-error`
 
 ### Non-fatal conditions:
  - `interrupted-condition`
- - `unkown-condition`
+ - `unknown-condition`
 
 (for a description of the API methods and functions see
   https://common-lisp.net/project/usocket/api-docs.shtml)
