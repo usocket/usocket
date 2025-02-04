@@ -44,7 +44,7 @@
                                       :format ,(to-format element-type protocol)
                                       :external-format ,ccl:*default-external-format*
                                       :deadline ,deadline
-                                      :nodelay ,nodelay
+                                      :nodelay ,(when (eql protocol :stream) nodelay)
                                       :connect-timeout ,timeout
                                       :input-timeout ,timeout))))
                (loop-finish)
