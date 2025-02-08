@@ -282,3 +282,11 @@
 (defun set-socket-option-tcp-nodelay (socket value)
   (ccl::int-setsockopt (ccl::socket-device socket)
                                   #$IPPROTO_TCP #$TCP_NODELAY value))
+
+(defun get-socket-option-keep-alive (socket)
+  (ccl::int-getsockopt (ccl::socket-device socket)
+                                  #$SOL_SOCKET #$SO_KEEPALIVE))
+
+(defun set-socket-option-keep-alive (socket value)
+  (ccl::int-setsockopt (ccl::socket-device socket)
+                                  #$SOL_SOCKET #$SO_KEEPALIVE value))

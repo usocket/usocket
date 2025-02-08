@@ -363,7 +363,7 @@
     #+clisp
     () ; TODO
     #+clozure
-    () ; TODO
+    (int->bool (get-socket-option-keep-alive socket))
     #+cmu
     ()
     #+(or ecl clasp)
@@ -392,7 +392,7 @@
     #+clisp
     () ; TODO
     #+clozure
-    (ccl::set-socket-options socket :keepalive new-value)
+    (set-socket-option-keep-alive socket (bool->int new-value))
     #+cmu
     ()
     #+(or ecl clasp)
