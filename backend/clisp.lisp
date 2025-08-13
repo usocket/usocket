@@ -337,20 +337,20 @@ and the address of the sender as values."
                                                (make-sockaddr_in)
                                                (host-byte-order host)
                                                port))))
-           (real-size (min size +max-datagram-packet-size+))
-           (real-buffer (if (typep buffer '(simple-array (unsigned-byte 8) (*)))
-                            buffer
-                          (make-array real-size
-                                      :element-type '(unsigned-byte 8)
-                                      :initial-contents (subseq buffer 0 real-size))))
-           (rv (if (and host port)
-                   (rawsock:sendto sock real-buffer sockaddr
-                                   :start offset
-                                   :end (+ offset real-size))
-                   (rawsock:send sock real-buffer
-                                 :start offset
-                                 :end (+ offset real-size)))))
-      rv))
+           (real-size (min size +max-datagram-packet-size+)))
+      (unless (typep buffer '(simple-array (unsigned-byte 8) (*)))
+        (setf buffer (replace
+                       (make-array real-size :element-type '(unsigned-byte 8))
+                       buffer
+                       :start2 offset :end2 (+ offset real-size))
+              offset 0))
+      (if (and host port)
+          (rawsock:sendto sock buffer sockaddr
+                          :start offset
+                          :end (+ offset real-size))
+          (rawsock:send sock buffer
+                        :start offset
+                        :end (+ offset real-size)))))
 
   (defmethod socket-close ((usocket datagram-usocket))
     (rawsock:sock-close (socket usocket)))
