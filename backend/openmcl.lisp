@@ -123,7 +123,7 @@
 	      (usocket (make-datagram-socket mcl-sock)))
 	 (when (and host port)
 	   (ccl::inet-connect (ccl::socket-device mcl-sock)
-			      (ccl::host-as-inet-host host)
+			      (ccl::host-as-inet-host (host-to-hostname host))
 			      (ccl::port-as-inet-port port "udp")))
 	 (setf (connected-p usocket) t)
 	 usocket)))))
