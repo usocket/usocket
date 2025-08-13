@@ -661,7 +661,7 @@ and the address of the sender as values."
 	     (fill-sockaddr_in (ffi:allocate-shallow 'sockaddr_in) host port)))
 	  (send-buffer
 	   (ffi:allocate-deep 'ffi:uint8
-			      (if (zerop offset)
+			      (if (and (zerop offset) (= size (length buffer)))
 				  buffer
 				  (subseq buffer offset (+ offset size)))
 			      :count size :read-only t))
