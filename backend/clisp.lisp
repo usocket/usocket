@@ -612,8 +612,12 @@ and the address of the sender as values."
 
   (defmethod socket-close ((usocket datagram-usocket))
     (with-slots (recv-buffer socket) usocket
-      (ffi:foreign-free recv-buffer)
-      (zerop (%close socket))))
+      (when recv-buffer
+        (ffi:foreign-free recv-buffer)
+        (%close socket)
+        (setf recv-buffer nil
+              socket nil)
+        t)))
 
   (defmethod socket-receive ((usocket datagram-usocket) buffer length &key)
     (let ((remote-address (ffi:allocate-shallow 'sockaddr_in))
