@@ -45,3 +45,7 @@ List of major USOCKET contributors:
 * @Hamayama <fkyo0985@gmail.com>
 
   - Reporting/hints/testing of issue #50 (regression in 0.8.0, 0.8.1)
+
+* Vibhu Mohindra
+
+  - CCL & CLISP fixes regarding UDP sockets
