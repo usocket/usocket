@@ -1,5 +1,16 @@
                                USOCKET ChangeLogs
 
+0.8.9 (Oct 24, 2025):
+
+  * General: Remove &optional from SOCKET-LISTEN and SOCKET-CONNECT (#131)
+  * Bugfix: [SBCL] prevent setting TCP_NODELAY to unix domain sockets (#131)
+  * Bugfix: [LW] revert broadcast hack (#134)
+  * Bugfix: [CCL] avoid using ccl::set-socket-options which doesn't exist in newer versions
+  * Bugfix: [CCL] Bugfix for error sending a UDP datagram on CCL when host is a vector (thanks to Vibhu Mohindra)
+  * Bugfix: [CLISP] rawsock socket-send neglected offset (thanks to Vibhu Mohindra)
+  * Bugfix: [CLISP] ffi udp socket-send (thanks to Vibhu Mohindra)
+  * Bugfix: [CLISP] clisp ffi udp corrupt memory and descriptors (thanks to Vibhu Mohindra)
+
 0.8.8 (Jul 23, 2024):
 
   * General: Exported GET-HOST-NAME (for getting the local machine hostname)
