@@ -361,7 +361,7 @@
     #+allegro
     () ; TODO
     #+clisp
-    () ; TODO
+    (int->bool (socket:socket-options socket :so-keepalive))
     #+clozure
     (int->bool (get-socket-option-keep-alive socket))
     #+cmu
@@ -388,9 +388,9 @@
     #+abcl
     () ; TODO
     #+allegro
-    () ; TODO
+    (socket:set-socket-options socket :keepalive new-value)
     #+clisp
-    () ; TODO
+    (socket:socket-options socket :so-keepalive (bool->int new-value))
     #+clozure
     (set-socket-option-keep-alive socket (bool->int new-value))
     #+cmu

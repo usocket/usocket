@@ -107,6 +107,8 @@
   (let ((errno
           (cond
             ;clisp 2.49+
+            ((typep condition (find-symbol "OS-ERROR" "EXT"))
+             (ext:os-error-code condition))
             ((typep condition (find-symbol "OS-STREAM-ERROR" "EXT"))
              (parse-errno condition))
             ;clisp 2.49
