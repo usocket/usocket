@@ -113,7 +113,7 @@
 	 (make-stream-socket :stream mcl-sock :socket mcl-sock)))
       (:datagram
        (let* ((mcl-sock
-	       (openmcl-socket:make-socket :address-family :internet
+	       (openmcl-socket:make-socket :address-family (if (pathnamep host) :file :internet)
 					   :type :datagram
 					   :local-host local-host
 					   :local-port local-port
@@ -290,3 +290,73 @@
 (defun set-socket-option-keep-alive (socket value)
   (ccl::int-setsockopt (ccl::socket-device socket)
                                   #$SOL_SOCKET #$SO_KEEPALIVE value))
+
+
+;;; ----------------------------------------------------------------------
+;;; ;madhu 241117 - as C `send' and `recv' can work on non-datagram
+;;; sockets try to support those for USOCKET in Clozure.
+;;;
+
+(defmethod socket-send ((usocket usocket) buffer size &key host port (offset 0))
+  (when (or host port) (warn "socket-send: Ignoring host or port"))
+  (let* ((buffer (etypecase buffer
+		   (string
+		    (babel:string-to-octets buffer))
+		   ((simple-array (unsigned-byte 8))
+		    buffer)
+		   ((array (unsigned-byte 8))
+		    (make-array (length buffer)
+				:element-type '(unsigned-byte 8)
+				:initial-contents buffer))))
+	 (size (or size ;; we expect nil
+		   (length buffer))))
+    (let* ((socket (socket usocket))
+	   (fd (ccl::socket-device socket)))
+      (multiple-value-setq (buffer offset)
+	(ccl::verify-socket-buffer buffer offset size))
+      (ccl::%stack-block ((bufptr size))
+	(ccl::%copy-ivector-to-ptr buffer offset bufptr 0 size)
+	(ccl::socket-call socket "send"
+			  (ccl::with-eagain fd :output
+			    (ccl::ignoring-eintr
+			      (ccl::check-socket-error (#_send fd bufptr size 0)))))))))
+
+(defmethod ccl::socket-format ((stream CCL::FUNDAMENTAL-FILE-SOCKET-STREAM))
+  :binary
+  #+nil
+  (if (eq (stream-element-type stream) 'character)
+    :text
+    :bivalent))
+
+(defmethod socket-receive ((usocket usocket) buffer size &key (offset 0) extract)
+  (unless size (setq size (length buffer)))
+  (with-mapped-conditions (usocket)
+    (let* ((socket (socket usocket))
+	   (fd (ccl::socket-device socket))
+	   (vec-offset offset)
+	   (vec buffer)
+	   (ret-size -1))
+      (when vec
+	(multiple-value-setq (vec vec-offset)
+	  (ccl::verify-socket-buffer vec vec-offset size)))
+      (ccl::%stack-block ((bufptr size))
+	(setq ret-size (ccl::socket-call socket "recv"
+					 (ccl::with-eagain fd :input
+					   (#_recv fd bufptr size 0))))
+	(unless vec
+	  (setq vec (make-array ret-size
+				:element-type
+				(ecase (ccl::socket-format socket)
+				  ((:binary) '(unsigned-byte 8))))
+		vec-offset 0))
+	(ccl::%copy-ptr-to-ivector bufptr 0 vec vec-offset ret-size))
+      (let* ((buffer (cond ((null buffer)
+                            vec)
+                           ((or (not extract)
+				(and (eql 0 (or offset 0))
+				     (eql ret-size (length buffer))))
+                            buffer)
+                           (t
+                             (subseq vec vec-offset (+ vec-offset ret-size))))))
+	(values buffer ret-size)))))
+

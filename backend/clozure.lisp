@@ -9,9 +9,9 @@
                        (protocol :stream) element-type
                        timeout deadline (nodelay t) local-host local-port)
   (with-mapped-conditions (nil host)
-    (let (remote local mcl-sock)
+    (let (remote local mcl-sock (host-local-socket-p (pathnamep host)))
       (loop
-        :for address-family :in '(:internet6 :internet)
+        :for address-family :in (if host-local-socket-p '(:file) '(:internet6 :internet))
         :do (tagbody
                (handler-bind
                    ((ccl:socket-creation-error
@@ -20,27 +20,36 @@
                             (go :continue))
                         (signal err))))
                  (setq remote
+		       (unless host-local-socket-p
                        (when (and host port)
                          (openmcl-socket:resolve-address :host (host-to-hostname host)
                                                          :port port
                                                          :socket-type protocol
-                                                         :address-family address-family))
+                                                         :address-family address-family)))
                        local
+		       (unless host-local-socket-p
                        (when (and local-host local-port)
                          (openmcl-socket:resolve-address :host (host-to-hostname local-host)
                                                          :port local-port
                                                          :socket-type protocol
-                                                         :address-family address-family))
+                                                         :address-family address-family)))
                        mcl-sock
                        (apply #'openmcl-socket:make-socket
                               `(:type ,protocol
                                       ,@(when (or remote local)
                                           `(:address-family
                                             ,(openmcl-socket:socket-address-family (or remote local))))
+				,@(when host-local-socket-p
+				    `(:address-family :file))
+
                                       ,@(when remote
                                           `(:remote-address ,remote))
                                       ,@(when local
                                           `(:local-address ,local))
+
+				,@(when host-local-socket-p
+				    `(:remote-filename ,(namestring host)))
+
                                       :format ,(to-format element-type protocol)
                                       :external-format ,ccl:*default-external-format*
                                       :deadline ,deadline

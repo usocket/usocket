@@ -419,6 +419,8 @@ happen. Use with care."
                                   local-host local-port
                                 &aux
                                   (sockopt-tcp-nodelay-p
+				   ;;			#+mkcl nil	;;madhu 211120 mkcl's implementation goes through SOL_SOCKET instead of IPPROTO_TCP and is busted
+				   ;;			#-mkcl
                                    (fboundp 'sb-bsd-sockets::sockopt-tcp-nodelay)))
   (when (and (member :win32 *features*) (pathnamep host))
     (unsupported 'unix-domain-socket 'Windows))
@@ -480,6 +482,9 @@ happen. Use with care."
               ;; connected, it gets a misleading name so supply a
               ;; dummy value to start with.
               (setf usocket (make-stream-socket :socket socket :stream *dummy-stream*))
+
+;;	      #+mkcl
+;;	      (assert (not sockopt-tcp-nodelay-p))
               ;; binghe: use SOCKOPT-TCP-NODELAY as internal symbol
               ;;         to pass compilation on ECL without it.
               (when (and nodelay sockopt-tcp-nodelay-p
@@ -592,7 +597,7 @@ happen. Use with care."
            (setf ok t))
       ;; Clean up in case of an error.
       (unless ok
-        (sb-bsd-sockets:socket-close socket :abort t)))
+        (sb-bsd-sockets:socket-close socket #-mkcl :abort #-mkcl t)))
     usocket))
 
 (defun socket-listen-internal
@@ -1148,3 +1153,34 @@ happen. Use with care."
            (sb-bsd-sockets::socket-error 'wait-for-input-internal))))))
 
 ) ; progn
+
+
+;;; ----------------------------------------------------------------------
+;;; ;madhu 241117
+;;; try to allow `sendto' and `recvfrom' on unix domain sockets
+;;;
+
+(defmethod socket-send ((usocket usocket) buffer size &key host port (offset 0))
+  (let ((remote (when host
+                  (car (get-hosts-by-name (host-to-hostname host))))))
+    (with-mapped-conditions (usocket host)
+      (let* ((s (socket usocket))
+             (dest (if (and host port) (list remote port) nil))
+             (real-buffer (if (zerop offset)
+                              buffer
+                              (subseq buffer offset (+ offset size)))))
+        (sb-bsd-sockets:socket-send s real-buffer size :address dest)))))
+
+(defmethod socket-receive ((usocket usocket) buffer length
+                           &key (element-type '(unsigned-byte 8)))
+  (with-mapped-conditions (usocket)
+    (let ((s (socket usocket)))
+      (multiple-value-bind (buf len peer)
+	  (sb-bsd-sockets:socket-receive s buffer length :element-type element-type)
+	(declare (ignore peer))
+	(assert (eql buf buffer))
+	(values
+	 #|| (cond ((= (length buf) len)
+		buf)
+		(t (subseq buf 0 len)))	||#
+	 buffer	len)))))

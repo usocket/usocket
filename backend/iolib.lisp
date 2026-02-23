@@ -84,21 +84,28 @@
                        local-host local-port)
   (declare (ignore element-type deadline nodelay))
   (with-mapped-conditions (nil host)
-    (let* ((remote (when (and host port) (iolib/sockets:ensure-hostname host)))
-	   (local  (when (and local-host local-port)
-		     (iolib/sockets:ensure-hostname local-host)))
+    (let* ((host-local-socket-p (pathnamep host))
+	   (remote (unless host-local-socket-p
+		     (when (and host port) (iolib/sockets:ensure-hostname host))))
+	   (local (unless host-local-socket-p
+		    (when (and local-host local-port)
+		      (iolib/sockets:ensure-hostname local-host))))
 	   (ipv6-p (or (and remote (ipv6-address-p remote)
 		       (and local  (ipv6-address-p local)))))
 	   (socket (apply #'iolib/sockets:make-socket
 			  `(:type ,protocol
-			    :address-family :internet
+			    :address-family ,(if host-local-socket-p :local :internet)
 			    :ipv6 ,ipv6-p
-			    :connect ,(cond ((eq protocol :stream) :active)
+			    :connect ,(cond (host-local-socket-p :active)
+					    ((eq protocol :stream) :active)
 					    ((and host port)       :active)
 					    (t                     :passive))
 			    ,@(when local
 				`(:local-host ,local :local-port ,local-port))
-			    :nodelay nodelay))))
+			    ,@(when host-local-socket-p
+				`(:remote-filename ,(namestring host)))
+			    ,@(unless host-local-socket-p
+				`(:nodelay nodelay))))))
       (when remote
 	(apply #'iolib/sockets:connect
 	       `(,socket ,remote :port ,port ,@(when timeout `(:wait ,timeout))))
@@ -287,16 +294,97 @@ Backtrace:
 (defun wait-for-input-internal (wait-list &key timeout)
   (let ((event-base (wait-list-%wait wait-list)))
     (handler-case
-	(iolib/multiplex:event-dispatch event-base :timeout timeout)
+	(iolib/multiplex:event-dispatch event-base :one-shot t :timeout timeout)
       (iolib/streams:hangup ())
       (end-of-file ()))
     ;; close the event-base after use
     (unless (eq event-base *event-base*)
       (close event-base))))
 
-(defmethod socket-option ((socket usocket) option)
+(defmethod socket-option ((socket usocket) option &key)
   (iolib/sockets:socket-option (socket-stream socket) option))
 
-(defmethod (setf socket-option) (new-value (socket usocket) option)
+(defmethod (setf socket-option) (new-value (socket usocket) option &key)
   (let ((form `(setf (iolib/sockets:socket-option ,(socket-stream socket) ,option) ,new-value)))
     (eval (macroexpand-1 form))))
+
+
+
+
+;;; ----------------------------------------------------------------------
+;;
+;; ;madhu 241117 - C `sendto' and `recvfrom' are not limited to datagram
+;; sockets.  We want to support socket-send and socket-receive on
+;; iolib :file (or :local) sockets
+;;
+;; IOLIB/SOCKETS:SEND-TO is defined on IOLIB/SOCKETS:INTERNET-SOCKET,
+;; and IOLIB/SOCKETS:LOCAL-SOCKET.
+;;
+;; and
+;;
+;; IOLIB/SOCKETS:RECEIVE-FROM is defined on
+;; IOLIB/SOCKETS:STREAM-SOCKET IOLIB/SOCKETS:RAW-SOCKET
+;; IOLIB/SOCKETS:DATAGRAM-SOCKET
+;;
+;; define methdods for USOCKET:SOCKET-SEND and USOCKET:SOCKET-RECV on
+;; USOCKET:USOCKET so iolib can call the c system calls.
+;;
+;; the calls on USOCKET:USOCKET-DATAGRAM objects will be dispacted as
+;; usual to that method.
+
+(defmacro with-ewouldblock-handled (&body body)
+  `(handler-bind ((iolib/syscalls:ewouldblock
+		   (lambda (c)
+		     (let ((r (find-restart 'iolib/sockets:retry-syscall c)))
+		       (cond (r
+			      (format t "ewouldblock handled~%")
+			      (invoke-restart r))
+			     (t (format t "ewouldblock: no restart!~%")))))))
+     ,@body))
+
+(defmacro with-ewouldblock-handled (&body body) `(progn ,@body))
+
+(defun maybe-pinned-array (array)
+  #+lispworks
+  (make-array (length array)
+	      #+lispworks :allocation
+	      #+lispworks :pinnable
+	      :element-type '(unsigned-byte 8)
+	      :initial-contents array)
+  #-lispworks
+  array)
+
+(defmethod socket-send ((usocket usocket) buffer size &key host port (offset 0))
+  (let* ((buffer (etypecase buffer
+		   (string
+		    (babel:string-to-octets buffer))
+		   ((simple-array (unsigned-byte 8))
+		    buffer)
+		   ((array (unsigned-byte 8))
+		    (make-array (length buffer)
+				:element-type '(unsigned-byte 8)
+				:initial-contents buffer))))
+	 (size (or size	;; better be coerrect, we expect nil
+		   (length buffer))))
+    #+lispworks
+    (setq buffer (maybe-pinned-array buffer))
+    (with-ewouldblock-handled
+      (apply #'iolib/sockets:send-to
+	     `(,(socket usocket) ,buffer :start ,offset :end ,(+ offset size)
+		:dont-wait t
+		,@(when (and host port)
+		    `(:remote-host ,(iolib/sockets:ensure-hostname host)
+		      :remote-port ,port)))))))
+
+;; lispworks8 requires buffer to be :pinnable
+(defmethod socket-receive ((usocket usocket) buffer length &key start end)
+  (multiple-value-bind (buffer size host port)
+      (with-ewouldblock-handled
+	(iolib/sockets:receive-from (socket usocket)
+				    :buffer buffer :size (or length (length buffer))
+				    :start (or start 0)
+				    :end (or end (length buffer))
+;; ???
+				    :dont-wait t
+				    ))
+    (values buffer size (if host (iolib-vector-to-vector-quad host)) port)))
