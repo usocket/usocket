@@ -63,6 +63,9 @@
     () ; unknown
     #+sbcl
     (sb-impl::fd-stream-timeout (socket-stream usocket))
+    #+dotcl
+    (let ((ms (dotnet:invoke (dotnet:invoke socket "Client") "ReceiveTimeout")))
+      (if (zerop ms) nil (/ ms 1000)))
     #+scl
     ())) ; TODO
 
@@ -94,6 +97,9 @@
     #+sbcl
     (setf (sb-impl::fd-stream-timeout (socket-stream usocket))
           (coerce timeout 'single-float))
+    #+dotcl
+    (setf (dotnet:invoke (dotnet:invoke socket "Client") "ReceiveTimeout")
+          (round (* 1000 timeout)))
     #+scl
     () ; TODO
     new-value))
@@ -125,6 +131,9 @@
     () ; unknown
     #+sbcl
     (sb-impl::fd-stream-timeout (socket-stream usocket))
+    #+dotcl
+    (let ((ms (dotnet:invoke (dotnet:invoke socket "Client") "SendTimeout")))
+      (if (zerop ms) nil (/ ms 1000)))
     #+scl
     ())) ; TODO
 
@@ -156,6 +165,9 @@
     #+sbcl
     (setf (sb-impl::fd-stream-timeout (socket-stream usocket))
           (coerce timeout 'single-float))
+    #+dotcl
+    (setf (dotnet:invoke (dotnet:invoke socket "Client") "SendTimeout")
+          (round (* 1000 timeout)))
     #+scl
     () ; TODO
     new-value))
