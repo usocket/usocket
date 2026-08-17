@@ -81,7 +81,10 @@
                                 :if-feature (:and :genera
                                                   (:not :usocket-iolib)))
                                (:file "mezzano"
-                                :if-feature (:and :mezzano))))
+                                :if-feature (:and :mezzano))
+                               (:file "clamiga"
+                                :if-feature (:and :cl-amiga
+                                                  (:not :usocket-iolib)))))
                  (:file "option"
                   :if-feature (:not :usocket-iolib)
                   :depends-on ("backend")))
