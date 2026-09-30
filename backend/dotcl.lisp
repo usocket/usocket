@@ -57,7 +57,7 @@
 
 (defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   (typecase condition
-    (usocket-condition condition)       ; already ours, let it through
+    ((or socket-condition ns-condition) condition) ; already ours, let it through
     (error
      (let ((sockex (%socket-exception condition)))
        (cond
