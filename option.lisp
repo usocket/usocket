@@ -64,8 +64,7 @@
     #+sbcl
     (sb-impl::fd-stream-timeout (socket-stream usocket))
     #+dotcl
-    (let ((ms (dotnet:invoke (dotnet:invoke socket "Client") "ReceiveTimeout")))
-      (if (zerop ms) nil (/ ms 1000)))
+    (dotcl-bsd-sockets:sockopt-receive-timeout socket)
     #+scl
     ())) ; TODO
 
@@ -98,8 +97,7 @@
     (setf (sb-impl::fd-stream-timeout (socket-stream usocket))
           (coerce timeout 'single-float))
     #+dotcl
-    (setf (dotnet:invoke (dotnet:invoke socket "Client") "ReceiveTimeout")
-          (round (* 1000 timeout)))
+    (setf (dotcl-bsd-sockets:sockopt-receive-timeout socket) timeout)
     #+scl
     () ; TODO
     new-value))
@@ -132,8 +130,7 @@
     #+sbcl
     (sb-impl::fd-stream-timeout (socket-stream usocket))
     #+dotcl
-    (let ((ms (dotnet:invoke (dotnet:invoke socket "Client") "SendTimeout")))
-      (if (zerop ms) nil (/ ms 1000)))
+    (dotcl-bsd-sockets:sockopt-send-timeout socket)
     #+scl
     ())) ; TODO
 
@@ -166,8 +163,7 @@
     (setf (sb-impl::fd-stream-timeout (socket-stream usocket))
           (coerce timeout 'single-float))
     #+dotcl
-    (setf (dotnet:invoke (dotnet:invoke socket "Client") "SendTimeout")
-          (round (* 1000 timeout)))
+    (setf (dotcl-bsd-sockets:sockopt-send-timeout socket) timeout)
     #+scl
     () ; TODO
     new-value))
@@ -197,6 +193,8 @@
     () ; unknown
     #+(or ecl sbcl clasp)
     (sb-bsd-sockets:sockopt-reuse-address socket)
+    #+dotcl
+    (dotcl-bsd-sockets:sockopt-reuse-address socket)
     #+scl
     ())) ; TODO
 
@@ -223,6 +221,8 @@
     () ; unknown
     #+(or ecl sbcl clasp)
     (setf (sb-bsd-sockets:sockopt-reuse-address socket) new-value)
+    #+dotcl
+    (setf (dotcl-bsd-sockets:sockopt-reuse-address socket) new-value)
     #+scl
     () ; TODO
     new-value))
@@ -254,6 +254,8 @@
     () ; unknown
     #+sbcl
     (sb-bsd-sockets:sockopt-broadcast socket)
+    #+dotcl
+    (dotcl-bsd-sockets:sockopt-broadcast socket)
     #+scl
     ())) ; TODO
 
@@ -283,6 +285,8 @@
     () ; unknown
     #+sbcl
     (setf (sb-bsd-sockets:sockopt-broadcast socket) new-value)
+    #+dotcl
+    (setf (dotcl-bsd-sockets:sockopt-broadcast socket) new-value)
     #+scl
     () ; TODO
     new-value))
@@ -319,6 +323,8 @@
     () ; unknown
     #+sbcl
     (sb-bsd-sockets::sockopt-tcp-nodelay socket)
+    #+dotcl
+    (dotcl-bsd-sockets:sockopt-tcp-nodelay socket)
     #+scl
     ())) ; TODO
 
@@ -357,6 +363,8 @@
     () ; unknown
     #+sbcl
     (setf (sb-bsd-sockets::sockopt-tcp-nodelay socket) new-value)
+    #+dotcl
+    (setf (dotcl-bsd-sockets:sockopt-tcp-nodelay socket) new-value)
     #+scl
     () ; TODO
     new-value))
@@ -388,6 +396,8 @@
     () ; unknown
     #+sbcl
     (sb-bsd-sockets:sockopt-keep-alive socket)
+    #+dotcl
+    (dotcl-bsd-sockets:sockopt-keep-alive socket)
     #+scl
     ())) ; TODO
 
@@ -417,6 +427,8 @@
     () ; unknown
     #+sbcl
     (setf (sb-bsd-sockets:sockopt-keep-alive socket) new-value)
+    #+dotcl
+    (setf (dotcl-bsd-sockets:sockopt-keep-alive socket) new-value)
     #+scl
     () ; TODO
     new-value))

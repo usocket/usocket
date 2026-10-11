@@ -22,6 +22,8 @@
                  (:feature (:and (:or :sbcl :ecl :clasp)
                                  (:not :usocket-iolib))
                   :sb-bsd-sockets)
+                 (:feature (:and :dotcl (:not :usocket-iolib))
+                  :dotcl-bsd-sockets)
                  (:feature :usocket-iolib
                   :iolib))
     :components ((:file "package")
