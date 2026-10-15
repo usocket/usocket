@@ -1,8 +1,8 @@
 ;;;; -*- Mode: Common-Lisp -*-
 
-;;;; CL-Amiga (clamiga) backend for usocket.
+;;;; AmiLisp (amilisp) backend for usocket.
 ;;;;
-;;;; clamiga exposes TCP sockets through its EXT package as ordinary
+;;;; amilisp exposes TCP sockets through its EXT package as ordinary
 ;;;; bidirectional (unsigned-byte 8) streams:
 ;;;;
 ;;;;   (ext:open-tcp-stream host port)   => active/client connection stream
@@ -11,11 +11,11 @@
 ;;;;   (ext:socket-local-port listener)  => bound local port (for port 0)
 ;;;;
 ;;;; These map almost one-to-one onto usocket's stream socket protocol, so a
-;;;; usocket stream-/stream-server-socket simply wraps the clamiga stream.
-;;;; There is no separate "socket handle" object on clamiga — the stream IS the
+;;;; usocket stream-/stream-server-socket simply wraps the amilisp stream.
+;;;; There is no separate "socket handle" object on amilisp — the stream IS the
 ;;;; socket — so the usocket :socket and :stream slots hold the same stream.
 ;;;;
-;;;; Connected datagram (UDP) sockets map onto clamiga's
+;;;; Connected datagram (UDP) sockets map onto amilisp's
 ;;;;
 ;;;;   (ext:open-udp-stream host port)              => connected UDP stream
 ;;;;   (ext:udp-stream-send stream buf &optional n) => t
@@ -31,7 +31,7 @@
 (in-package :usocket)
 
 (defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
-  "Map a clamiga stream/IO error to the closest usocket condition.  clamiga
+  "Map an amilisp stream/IO error to the closest usocket condition.  amilisp
 signals plain CL conditions for socket failures, so without more specific
 information we surface them as an UNKNOWN-ERROR carrying the socket."
   (declare (ignore host-or-ip))
@@ -43,7 +43,7 @@ information we surface them as an UNKNOWN-ERROR carrying the socket."
 (defun socket-connect-internal (host &key port (protocol :stream) element-type
                                       timeout deadline (nodelay nil nodelay-p)
                                       local-host local-port)
-  ;; clamiga's open-tcp-stream gives a fixed (unsigned-byte 8) bidirectional
+  ;; amilisp's open-tcp-stream gives a fixed (unsigned-byte 8) bidirectional
   ;; stream; element-type, deadline, nodelay and local binding are not
   ;; configurable through the EXT layer, so those values are ignored.  TIMEOUT
   ;; (seconds, fractional allowed) IS honored: it bounds the connect handshake
@@ -71,7 +71,7 @@ information we surface them as an UNKNOWN-ERROR carrying the socket."
                                     (reuse-address nil reuse-address-supplied-p)
                                     (backlog 5)
                                     (element-type 'character))
-  ;; clamiga's socket-listen takes a port and a loopback flag; it has no
+  ;; amilisp's socket-listen takes a port and a loopback flag; it has no
   ;; reuse-address / backlog controls.  We bind loopback-only when HOST names
   ;; the loopback interface, all interfaces otherwise.
   (declare (ignore reuseaddress reuse-address reuse-address-supplied-p backlog))
@@ -143,7 +143,7 @@ information we surface them as an UNKNOWN-ERROR carrying the socket."
 
 ;;; Name / address introspection.
 ;;;
-;;; clamiga's EXT layer only exposes the local port of a listening socket, so
+;;; amilisp's EXT layer only exposes the local port of a listening socket, so
 ;;; the peer/local *address* accessors return the unspecified-address
 ;;; placeholder rather than erroring — enough for callers that print or compare
 ;;; loosely, while honestly reflecting what the platform can tell us.
@@ -181,7 +181,7 @@ information we surface them as an UNKNOWN-ERROR carrying the socket."
   0)
 
 (defun get-hosts-by-name (name)
-  ;; clamiga resolves names inside open-tcp-stream; it offers no standalone
+  ;; amilisp resolves names inside open-tcp-stream; it offers no standalone
   ;; resolver, so report none here.
   (declare (ignore name))
   nil)
@@ -192,7 +192,7 @@ information we surface them as an UNKNOWN-ERROR carrying the socket."
 
 ;;; Input multiplexing.
 ;;;
-;;; clamiga has no select()/poll() exposed to Lisp, so readiness is probed with
+;;; amilisp has no select()/poll() exposed to Lisp, so readiness is probed with
 ;;; LISTEN on each waiter's stream.  This is a best-effort, level-triggered
 ;;; check that is correct for blocking client use (drakma) and adequate for the
 ;;; single-acceptor server loop in the test fixtures.
@@ -206,12 +206,12 @@ information we surface them as an UNKNOWN-ERROR carrying the socket."
 (defun %remove-waiter (wait-list waiter)
   (declare (ignore wait-list waiter)))
 
-(defun %clamiga-mark-ready (wait-list)
-  "Probe each waiter with CL:LISTEN on its underlying clamiga stream, marking
+(defun %amilisp-mark-ready (wait-list)
+  "Probe each waiter with CL:LISTEN on its underlying amilisp stream, marking
 ready ones :READ.  Returns T if any waiter became ready.
 
-We use the base SOCKET accessor (not SOCKET-STREAM): on clamiga the stream IS
-the socket, so the SOCKET slot holds the clamiga stream for BOTH connection
+We use the base SOCKET accessor (not SOCKET-STREAM): on amilisp the stream IS
+the socket, so the SOCKET slot holds the amilisp stream for BOTH connection
 sockets (stream-usocket) and listening sockets (stream-server-usocket) —
 whereas SOCKET-STREAM only exists on stream-usocket and would error on a
 server socket, killing hunchentoot's accept loop.  For a listener,
@@ -225,7 +225,7 @@ server socket, killing hunchentoot's accept loop.  For a listener,
 
 (defun wait-for-input-internal (wait-list &key timeout)
   "Block until a waiter is ready, TIMEOUT seconds elapse, or — when TIMEOUT is
-NIL — indefinitely.  clamiga exposes no select()/poll() over a fd set to Lisp,
+NIL — indefinitely.  amilisp exposes no select()/poll() over a fd set to Lisp,
 so readiness is polled with CL:LISTEN; between polls we SLEEP briefly to YIELD
 rather than busy-spin.  Busy-spinning here is not merely wasteful: each
 usocket:wait-for-input conses a fresh wait-list, so a no-timeout spin allocates
@@ -233,7 +233,7 @@ hundreds of thousands of objects per second, and the resulting compacting-GC
 storm starves the very I/O we are waiting on (hunchentoot's accept loop calls
 us with no timeout).  A short sleep keeps the thread at a GC safepoint and lets
 connections land."
-  (when (%clamiga-mark-ready wait-list)
+  (when (%amilisp-mark-ready wait-list)
     (return-from wait-for-input-internal wait-list))
   ;; A zero timeout means "poll once and return" — caller already saw nothing.
   (when (and timeout (zerop timeout))
@@ -243,7 +243,7 @@ connections land."
                        (round (* timeout internal-time-units-per-second))))))
     (loop
       (sleep 0.005)                     ; ~5ms yield between readiness polls
-      (when (%clamiga-mark-ready wait-list)
+      (when (%amilisp-mark-ready wait-list)
         (return))
       (when (and deadline (>= (get-internal-real-time) deadline))
         (return))))

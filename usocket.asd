@@ -82,8 +82,8 @@
                                                   (:not :usocket-iolib)))
                                (:file "mezzano"
                                 :if-feature (:and :mezzano))
-                               (:file "clamiga"
-                                :if-feature (:and :cl-amiga
+                               (:file "amilisp"
+                                :if-feature (:and :amilisp
                                                   (:not :usocket-iolib)))))
                  (:file "option"
                   :if-feature (:not :usocket-iolib)
