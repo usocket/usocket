@@ -46,7 +46,7 @@
     #+abcl
     () ; TODO
     #+allegro
-    () ; TODO
+    (excl::stream-read-timeout socket)
     #+clisp
     (socket:socket-options socket :so-rcvtimeo)
     #+clozure
@@ -75,7 +75,7 @@
     #+abcl
     () ; TODO
     #+allegro
-    () ; TODO
+    (socket:socket-control socket :read-timeout timeout)
     #+clisp
     (socket:socket-options socket :so-rcvtimeo timeout)
     #+clozure
@@ -108,7 +108,7 @@
     #+abcl
     () ; TODO
     #+allegro
-    () ; TODO
+    (excl::stream-write-timeout socket)
     #+clisp
     (socket:socket-options socket :so-sndtimeo)
     #+clozure
@@ -137,7 +137,7 @@
     #+abcl
     () ; TODO
     #+allegro
-    () ; TODO
+    (socket:socket-control socket :write-timeout timeout)
     #+clisp
     (socket:socket-options socket :so-sndtimeo timeout)
     #+clozure
