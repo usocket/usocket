@@ -59,7 +59,6 @@
                        timeout deadline
                        (nodelay t) ;; nodelay == t is the ACL default
                        local-host local-port)
-  (when timeout (unsupported 'timeout 'socket-connect))
   (when deadline (unsupported 'deadline 'socket-connect))
   (when (eq nodelay :if-supported)
     (setf nodelay t))
@@ -79,7 +78,7 @@
 					      :nodelay nodelay)))
                  #+allegro
 		 (if timeout
-		     (mp:with-timeout (timeout nil)
+		     (mp:with-timeout (timeout (error 'timeout-error))
 		       (make-socket))
 		     (make-socket))
                  #+cormanlisp (make-socket)))
