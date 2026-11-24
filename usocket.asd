@@ -56,6 +56,9 @@
                                (:file "cmucl"
                                 :if-feature (:and :cmu
                                                   (:not :usocket-iolib)))
+                               (:file "dotcl"
+                                :if-feature (:and :dotcl
+                                                  (:not :usocket-iolib)))
                                (:file "sbcl"
                                 :if-feature (:and (:or :sbcl :ecl :clasp)
                                                   (:not :usocket-iolib)))
@@ -83,10 +86,9 @@
                                 :if-feature (:and :genera
                                                   (:not :usocket-iolib)))
                                (:file "mezzano"
-                                :if-feature (:and :mezzano))
-                               (:file "dotcl"
-                                :if-feature (:and :dotcl
-                                                  (:not :usocket-iolib)))))
+                                :if-feature (:and :mezzano
+                                                  (:not :usocket-iolib)))
+                               ))
                  (:file "option"
                   :if-feature (:not :usocket-iolib)
                   :depends-on ("backend")))
