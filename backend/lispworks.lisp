@@ -824,7 +824,7 @@
                              rv t))))))
         (if timeout
             (mp:process-wait-with-timeout "Waiting for a socket to become active"
-                                        (truncate timeout)
+                                        timeout
                                         #'wait-function
                                         (wait-list-waiters wait-list))
             (mp:process-wait "Waiting for a socket to become active"

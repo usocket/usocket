@@ -22,6 +22,8 @@
                  (:feature (:and (:or :sbcl :ecl :clasp)
                                  (:not :usocket-iolib))
                   :sb-bsd-sockets)
+                 (:feature (:and :dotcl (:not :usocket-iolib))
+                  :dotcl-bsd-sockets)
                  (:feature :usocket-iolib
                   :iolib))
     :components ((:file "package")
@@ -82,6 +84,9 @@
                                                   (:not :usocket-iolib)))
                                (:file "mezzano"
                                 :if-feature (:and :mezzano))
+                               (:file "dotcl"
+                                :if-feature (:and :dotcl
+                                                  (:not :usocket-iolib)))
                                (:file "amilisp"
                                 :if-feature (:and :amilisp
                                                   (:not :usocket-iolib)))))
