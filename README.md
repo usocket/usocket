@@ -2,29 +2,33 @@
 
 https://usocket.common-lisp.dev
 
+
 This is the `usocket` Common Lisp sockets library - a library to bring
 sockets access to the broadest of Common Lisp implementations as possible.
 
-## The library currently supports:
+## The library currently supports the following CL implementations:
 
-1. Allegro CL
-2. ABCL (ArmedBear)
-3. Clasp
-4. Clozure CL
-5. Corman Lisp
-6. GNU CLISP
-7. CMUCL
-8. ECL
-9. LispWorks (4.3 and up)
-10. Digitool MCL and RMCL (5.0 and up)
-11. Mezzano
-12. MOCL
-13. SBCL
-14. Scieneer CL
-15. Symbolics Lisp Machine (Genera)
+1. [Armed Bear Common Lisp (ABCL)](https://armedbear.common-lisp.dev/)
+2. [Allegro Common Lisp](https://franz.com/products/allegro-common-lisp/)
+3. [AmiLisp (formerly CL-Amiga)](https://github.com/mdbergmann/amilisp)
+4. [Clasp](https://clasp-developers.github.io/)
+5. [GNU CLISP](https://www.gnu.org/software/clisp/)
+6. [Clozure CL (formerly OpenMCL)](https://ccl.clozure.com/)
+7. [CMU Common Lisp (CMUCL)](https://cmucl.org/)
+8. [Corman Lisp](https://github.com/sharplispers/cormanlisp)
+9. [dotcl (Common Lisp implementation on .NET/CLR)](https://github.com/dotcl/dotcl)
+10. [Embeddable Common-Lisp (ECL)](https://ecl.common-lisp.dev/)
+11. [Digitool MCL and RMCL (5.0 and up)](https://github.com/binghe/MCL)
+12. [Symbolics Lisp Machine (Genera)](https://www.symbolics.biz/)
+13. [LispWorks](https://www.lispworks.com/products/lispworks.html)
+14. [Mezzano](https://github.com/froggey/Mezzano)
+15. [MKCL](https://mkcl.common-lisp.dev/)
+16. [MOCL](https://github.com/Wukix/mocl-example-lisp-contacts-ios)
+17. [SBCL](https://www.sbcl.org/)
+18. [Scieneer CL](https://www.liquisearch.com/scieneer_common_lisp)
 
 If your favorite Common Lisp is missing from the above list, please contact
-usocket-devel@common-lisp.net and submit a request.  Please include
+usocket-devel@common-lisp.net (or [GitHub]()) and submit a request.  Please include
 references to available sockets functions in your Lisp implementation.
 
 The library is [ASDF](http://cliki.net/ASDF)-enabled, meaning
@@ -59,30 +63,30 @@ layer a `flexi-stream` (from `flexi-streams`) on top of a `usocket` stream.
  - `usocket` (class)
  - `stream-usocket` (class; usocket derivative)
  - `stream-server-usocket` (class; usocket derivative)
- - `socket-connect (host port &key element-type)` (function) 
- 
+ - `socket-connect (host port &key element-type)` (function)
+
    Create an active/connected socket. `host` can be a vectorized IP, or a string representation of a dotted IP address, or a hostname for lookup in the DNS system.
-   
- - `socket-listen (host port &key reuseaddress backlog element-type)` (function) 
- 
+
+ - `socket-listen (host port &key reuseaddress backlog element-type)` (function)
+
    Create a passive/listening socket. For possible values of `host`, see `socket-connect`.
-   
+
  - `socket-accept (socket &key element-type)` (method)
 
    Create an active/connected socket. Returns (server side) a connected socket derived from a listening/passive socket.
-   
+
  - `socket-close (socket)` (method)
- 
+
    Where `socket` is a previously-returned socket.
-   
+
  - `socket` (usocket slot accessor),
- 
+
    Returns the internal/implementation-defined socket representation.
-   
+
  - `socket-stream (socket)` (usocket slot accessor),
-    
+
    Returns a value which satisfies the normal stream interface.
-   
+
  - `socket-shutdown`
 
 ### Errors:

@@ -1,5 +1,13 @@
                                USOCKET ChangeLogs
 
+0.9.0 (Nov 25, 2026):
+
+  * New experimental backends: dotcl (SANO Masatoshi) and Amilisp (Manfred Bergmann)
+  * Bugfix: [LW] remove timeout truncation in the wait-for-input-internal (Eugene Zaikonnikov)
+  * Bugfix: [CLISP] Improved CLISP support (Robert Brown)
+  * Bugfix: [IOlib] Various fixes and improvements allowing Hunchentoot to run (@Madhu)
+  * Bugfix: [ACL] Added receive and send timeouts, and a connect timeout that signals (David John Cooper)
+
 0.8.9 (Oct 24, 2025):
 
   * General: Remove &optional from SOCKET-LISTEN and SOCKET-CONNECT (#131)
