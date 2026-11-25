@@ -291,7 +291,6 @@
   (ccl::int-setsockopt (ccl::socket-device socket)
                                   #$SOL_SOCKET #$SO_KEEPALIVE value))
 
-
 ;;; ----------------------------------------------------------------------
 ;;; ;madhu 241117 - as C `send' and `recv' can work on non-datagram
 ;;; sockets try to support those for USOCKET in Clozure.
@@ -359,4 +358,3 @@
                            (t
                              (subseq vec vec-offset (+ vec-offset ret-size))))))
 	(values buffer ret-size)))))
-

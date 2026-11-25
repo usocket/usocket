@@ -364,7 +364,7 @@ happen. Use with care."
 ;; determine if a socket condition indicates operation is in progress
 (defun %socket-operation-condition-in-progress-p (condition)
   #+sbcl  ;; sbcl defines this condition (also for Windows?)
-  (typep condition 'sb-bsd-sockets:operation-in-progress) ;; errno 36 
+  (typep condition 'sb-bsd-sockets:operation-in-progress) ;; errno 36
   ;;
   #+(or ecl mkcl clasp) ; MKCL *might* work, no idea about clasp
   ;; we might expect sb-bsd-sockets in ECL to translate errno to BSD, but it does not.
@@ -375,19 +375,19 @@ happen. Use with care."
                '(#-linux 35 #-linux 36  ;; should cover darwin and any BSD
                  ;; on ECL for Raspberry Pi  (and others?) Linux EINPROGRESS=115 is
                  ;; not translated correctly to BSD, so we allow code 115 too
-                 #+linux 115 
+                 #+linux 115
                  ))))
 
 ;; determine if a socket condition indicates not-connected (yet) status
 (defun %socket-operation-condition-not-connected-p (condition)
   #+sbcl  ;; sbcl defines this condition (also for Windows?)
-  (typep condition 'sb-bsd-sockets:not-connected-error) ;; errno 36 
+  (typep condition 'sb-bsd-sockets:not-connected-error) ;; errno 36
   #+(or ecl mkcl clasp) ; MKCL *might* work, no idea about CLASP
   ;; we might expect sb-bsd-sockets in ECL to translate errno to BSD, but it does not.
   (and (typep condition 'sb-bsd-sockets::socket-error)
        (member (sb-bsd-sockets::socket-error-errno condition) ;; have to use unexported symbol
                '(#-linux 57 ;; should cover darwin and any BSD
-                 ;; on ECL for Raspberry Pi (and others?) Linux ENOTCONN=107 
+                 ;; on ECL for Raspberry Pi (and others?) Linux ENOTCONN=107
                  #+linux 107))))
 
 
@@ -458,7 +458,7 @@ happen. Use with care."
                                                      #+(or ecl mkcl clasp) :tcp)
                                             (:datagram :udp))))
 
-         ;; sb-bsd-sockets:socket-connect is apparently called as 
+         ;; sb-bsd-sockets:socket-connect is apparently called as
          ;; (socket-connect socket remote-host remote-port) or
          ;; (socket-connect socket local-socket-address)
          ;; hence connect-args is constructed as follows
@@ -512,7 +512,7 @@ happen. Use with care."
                               with dt-sleep of-type double-float = 10d-6
                               with start-time of-type double-float
                                 = (/ (* 1d0 (get-internal-real-time)) internal-time-units-per-second)
-                              with end-time  of-type double-float 
+                              with end-time  of-type double-float
                                 = (+ start-time (float conn-timeout* 1d0))
                               with current-time of-type double-float = start-time
                               do
@@ -527,10 +527,10 @@ happen. Use with care."
                                  (sleep dt-sleep)
                                  (setf current-time (/ (* 1d0 (get-internal-real-time))
                                                        internal-time-units-per-second))
-                                 
+
                                  (when (>= current-time end-time)
                                    (error 'timeout-error))
-                                 
+
                                  ;; Keep increasing sleep time in
                                  ;; 4 steps per decade but don't exceed the
                                  ;; end-time.  Max is 0.1 sec.
@@ -557,7 +557,7 @@ happen. Use with care."
 
                 ;; Now that we're connected make the stream.
                 (setf (socket-stream usocket)
-                      (sb-bsd-sockets:socket-make-stream socket 
+                      (sb-bsd-sockets:socket-make-stream socket
                         :input t :output t :buffering :full
                         :element-type element-type
                         :timeout read-timeout*
@@ -895,9 +895,9 @@ happen. Use with care."
   (sb-alien:define-alien-type ws-socket sb-alien:signed)
 
   (sb-alien:define-alien-type ws-dword sb-alien:unsigned-long)
-  
+
   ;; WS-EVENT was formerly defined as [internal, now removed] SB-ALIEN::HINSTANCE (synonym for SIGNED)
-  (sb-alien:define-alien-type ws-event sb-alien:signed) 
+  (sb-alien:define-alien-type ws-event sb-alien:signed)
 
   (sb-alien:define-alien-type nil
     (sb-alien:struct wsa-network-events
@@ -1000,7 +1000,7 @@ happen. Use with care."
   ;; reference from that closure prevents its collection forever. That's
   ;; the case with USOCKET in %SETUP-WAIT-LIST.
   ;;
-  ;; "I use the following redefinition of %SETUP-WAIT-LIST: 
+  ;; "I use the following redefinition of %SETUP-WAIT-LIST:
   ;;
   ;; "Of course it may be rewritten with more clarity, but you can see the
   ;; core idea: I'm closing over those components of WAIT-LIST that I need
@@ -1149,7 +1149,6 @@ happen. Use with care."
 
 ) ; progn
 
-
 ;;; ----------------------------------------------------------------------
 ;;; ;madhu 241117
 ;;; try to allow `sendto' and `recvfrom' on unix domain sockets

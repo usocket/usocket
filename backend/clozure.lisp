@@ -1,13 +1,12 @@
 ;;;; See LICENSE for licensing information.
 
-;;;; Functions for CCL 1.11 (IPv6) only, see openmcl.lisp for rest of functions.
+;;;; Functions for CCL 1.11+ (IPv6), see openmcl.lisp for rest of functions.
 
 (in-package :usocket)
 
 #+ipv6
-(defun socket-connect-internal (host &key port
-                       (protocol :stream) element-type
-                       timeout deadline (nodelay t) local-host local-port)
+(defun socket-connect-internal (host &key port (protocol :stream) element-type
+                                timeout deadline (nodelay t) local-host local-port)
   (with-mapped-conditions (nil host)
     (let (remote local mcl-sock (host-local-socket-p (pathnamep host)))
       (loop
@@ -57,7 +56,7 @@
                                       :connect-timeout ,timeout
                                       :input-timeout ,timeout))))
                (loop-finish)
-             :continue)) 
+             :continue))
       (ecase protocol
         (:stream
          (make-stream-socket :stream mcl-sock :socket mcl-sock))

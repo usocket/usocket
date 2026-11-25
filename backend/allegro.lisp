@@ -55,10 +55,11 @@
       :text
     :binary))
 
-(defun socket-connect-internal (host &key port (protocol :stream) (element-type 'character)
-                       timeout deadline
-                       (nodelay t) ;; nodelay == t is the ACL default
-                       local-host local-port)
+(defun socket-connect-internal (host &key port (protocol :stream)
+                                (element-type 'character)
+                                timeout deadline
+                                (nodelay t) ;; nodelay == t is the ACL default
+                                local-host local-port)
   (when deadline (unsupported 'deadline 'socket-connect))
   (when (eq nodelay :if-supported)
     (setf nodelay t))

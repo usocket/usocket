@@ -797,19 +797,19 @@ backward compatibility (but deprecated); when both `reuseaddress' and
 (defun socket-listen (host port &rest args)
   (let ((socket-host host)
 	(socket-port port))
-    (loop 
+    (loop
       (restart-case (return
                      (apply #'socket-listen-internal socket-host :port socket-port args))
-	(use-other-port (new-port) 
-          :report "Use a different port." 
-          :interactive 
+	(use-other-port (new-port)
+          :report "Use a different port."
+          :interactive
           (lambda ()
 	    (format *query-io* "Port: ")
             (list (parse-integer (read-line *query-io*))))
 	  (setq socket-port new-port))
-	(use-other-host (new-host) 
-          :report "Use a different host." 
-          :interactive 
+	(use-other-host (new-host)
+          :report "Use a different host."
+          :interactive
           (lambda ()
 	    (format *query-io* "Host: ")
             (list (read-line *query-io*)))
@@ -820,19 +820,19 @@ backward compatibility (but deprecated); when both `reuseaddress' and
 (defun socket-connect (host port &rest args)
   (let ((socket-host host)
 	    (socket-port port))
-    (loop 
+    (loop
       (restart-case (return
                       (apply #'socket-connect-internal socket-host :port socket-port args))
 	    (use-other-port (new-port)
-          :report "Use a different port." 
-          :interactive 
+          :report "Use a different port."
+          :interactive
           (lambda ()
 	        (format *query-io* "Port: ")
             (list (parse-integer (read-line *query-io*))))
 	      (setq socket-port new-port))
 	    (use-other-host (new-host)
-          :report "Use a different host." 
-          :interactive 
+          :report "Use a different host."
+          :interactive
           (lambda ()
 	        (format *query-io* "Host: ")
             (list (read-line *query-io*)))

@@ -353,8 +353,8 @@
   #+(or lispworks4 lispworks5 lispworks6.0)
   (let ((server-addr (fli:allocate-dynamic-foreign-object
                       :type '(:struct comm::sockaddr_in))))
-    (values (comm::initialize-sockaddr_in 
-             server-addr 
+    (values (comm::initialize-sockaddr_in
+             server-addr
              comm::*socket_af_inet*
              hostname
              service protocol)
@@ -376,8 +376,8 @@
         (let ((server-addr (fli:allocate-dynamic-foreign-object
                             :type '(:struct comm::lw-sockaddr))))
           (multiple-value-bind (error family)
-              (comm::initialize-sockaddr_in 
-               server-addr 
+              (comm::initialize-sockaddr_in
+               server-addr
                hostname
                service protocol)
             (values error family
@@ -836,7 +836,6 @@
 
 ) ; end of block
 
-
 ;;;
 ;;;  The Windows side of the story
 ;;;    We want to wait without busy looping
@@ -845,14 +844,13 @@
 ;;;    but are those available to 'us'.
 ;;;
 
-
 #+win32
 (progn
 
   ;; LispWorks doesn't provide an interface to wait for a socket
   ;; to become ready (under Win32, that is) meaning that we need
   ;; to resort to system calls to achieve the same thing.
-  ;; Luckily, it provides us access to the raw socket handles (as we 
+  ;; Luckily, it provides us access to the raw socket handles (as we
   ;; wrote the code above.
 
   (defconstant fd-read 1)
@@ -875,7 +873,7 @@
   (defconstant fd-routing-interface-bit 8)
   (defconstant fd-address-list-change 512)
   (defconstant fd-address-list-change-bit 9)
-  
+
   (defconstant fd-max-events 10)
 
   (defconstant fionread 1074030207)
@@ -896,7 +894,7 @@
   ;;  Note that the special free action will be called on all
   ;;  objects which have been flagged for special free, so be
   ;;  sure to check for the right argument type!
-  
+
   (fli:define-foreign-type ws-socket () '(:unsigned :int))
   (fli:define-foreign-type win32-handle () '(:unsigned :int))
   (fli:define-c-struct wsa-network-events
@@ -926,7 +924,7 @@
        (network-events (:reference-return wsa-network-events)))
     :result-type :int
     :module "ws2_32")
-  
+
   (fli:define-foreign-function (wsa-event-select "WSAEventSelect" :source)
       ((socket ws-socket)
        (event-object win32-handle)
@@ -945,7 +943,7 @@
     :module "ws2_32")
 
 
-  ;; The Windows system 
+  ;; The Windows system
 
 
   ;; Now that we have access to the system calls, this is the plan:
@@ -1020,10 +1018,10 @@
       (unless (null (wait-list-%wait wl))
         (wsa-event-close (wait-list-%wait wl))
         (setf (wait-list-%wait wl) nil))))
-  
+
   (eval-when (:load-toplevel :execute)
     (hcl:add-special-free-action 'free-wait-list))
-  
+
   (defun %setup-wait-list (wait-list)
     (hcl:flag-special-free-action wait-list)
     (setf (wait-list-%wait wait-list) (wsa-event-create)))
@@ -1041,7 +1039,7 @@
     (maybe-wsa-error
      (wsa-event-select (os-socket-handle waiter) (wait-list-%wait wait-list) 0)
      waiter))
-  
+
 ) ; end of WIN32-block
 
 (defun set-socket-reuse-address (socket-fd reuse-address-p)
