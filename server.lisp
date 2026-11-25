@@ -1,7 +1,10 @@
+;;;; -*- Mode: LISP; Base: 10; Syntax: ANSI-Common-lisp; Package: USOCKET -*-
 ;;;; See LICENSE for licensing information.
 
 (in-package :usocket)
 
+;;; Without (in-new-thread t), the created server (by calling socket-server) is
+;;; stored in *server* special variable.
 (defvar *server*)
 
 (defun socket-server (host port function &optional arguments
