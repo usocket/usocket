@@ -43,6 +43,9 @@
                                (:file "allegro"
                                 :if-feature (:and (:or :allegro :cormanlisp)
                                                   (:not :usocket-iolib)))
+                               (:file "amilisp"
+                                :if-feature (:and :amilisp
+                                                  (:not :usocket-iolib)))
                                (:file "clisp"
                                 :if-feature (:and :clisp
                                                   (:not :usocket-iolib)))
