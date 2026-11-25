@@ -5,27 +5,9 @@
 
 (in-package :usocket)
 
-;; put here because option.lisp is for native backend only
-(defparameter *backend* :native)
-
-;;; Interface definition
-
-(defgeneric socket-option (socket option &key)
-  (:documentation
-   "Get a socket's internal options"))
-
-(defgeneric (setf socket-option) (new-value socket option &key)
-  (:documentation
-   "Set a socket's internal options"))
-
-;;; Handling of wrong type of arguments
-
-(defmethod socket-option ((socket usocket) (option t) &key)
-  (error 'type-error :datum option :expected-type 'keyword))
-
-(defmethod (setf socket-option) (new-value (socket usocket) (option t) &key)
-  (declare (ignore new-value))
-  (socket-option socket option))
+;; It's here because option.lisp is for native backend only
+(eval-when (:load-toplevel :execute)
+  (setq *backend* :native))
 
 (defmethod socket-option ((socket usocket) (option symbol) &key)
   (if (keywordp option)
@@ -432,6 +414,3 @@
     #+scl
     () ; TODO
     new-value))
-
-(eval-when (:load-toplevel :execute)
-  (export 'socket-option))

@@ -81,8 +81,8 @@
              #:ns-unknown-condition
              #:unknown-error
              #:ns-unknown-error
-	     #:already-shutdown-error
-	     #:out-of-memory-error
+	           #:already-shutdown-error
+	           #:out-of-memory-error
              #:socket-warning ; warnings (udp)
 
              #:insufficient-implementation ; conditions regarding usocket support level
@@ -110,9 +110,11 @@
              #:*default-event-base*
              #:host-to-hostname
 
+             #:socket-option
+
              ;; socket-related conditions from IOlib
              #:ADDRESS-NOT-AVAILABLE-ERROR #:HOST-DOWN-ERROR
-             #:OPERATION-NOT-SUPPORTED-ERROR #:SOCKET-OPTION
+             #:OPERATION-NOT-SUPPORTED-ERROR
              #:NETWORK-DOWN-ERROR #:INVALID-SOCKET-ERROR
              #:SOCKET-TYPE-NOT-SUPPORTED-ERROR #:DEADLINE-TIMEOUT-ERROR
              #:SHUTDOWN-ERROR #:HOST-UNREACHABLE-ERROR
@@ -127,8 +129,8 @@
              ;; added in 0.8.2
              #:host-or-ip
 
-	     ;; added in 0.8.4
-	     #:*ipv6-only-p*
+	           ;; added in 0.8.4
+	           #:*ipv6-only-p*
 
              ;; restarts of SOCKET-LISTEN (added in 0.8.6)
              #:use-other-host

@@ -299,6 +299,7 @@
             (usock-cond (if (functionp usock-cond)
                             (funcall usock-cond condition)
                             usock-cond)))
+       (declare (type symbol usock-cond))
        (when usock-cond
          (cond ((subtypep usock-cond 'ns-condition)
                 (signal usock-cond :socket socket :host-or-ip host-or-ip))

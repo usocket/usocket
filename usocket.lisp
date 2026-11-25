@@ -846,3 +846,25 @@ backward compatibility (but deprecated); when both `reuseaddress' and
                                     &body body)
   `(with-server-socket (,conn (socket-accept ,@socket-accept-args))
      ,@body))
+
+;; USOCKET backends, to be set from option.lisp or iolib.lisp
+(defvar *backend*)  ; valid values: :native or :iolib
+
+;;; Interface definition
+
+(defgeneric socket-option (socket option &key)
+  (:documentation
+   "Get a socket's internal options"))
+
+(defgeneric (setf socket-option) (new-value socket option &key)
+  (:documentation
+   "Set a socket's internal options"))
+
+;;; Handling of wrong type of arguments
+
+(defmethod socket-option ((socket usocket) (option t) &key)
+  (error 'type-error :datum option :expected-type 'keyword))
+
+(defmethod (setf socket-option) (new-value (socket usocket) (option t) &key)
+  (declare (ignore new-value))
+  (socket-option socket option))

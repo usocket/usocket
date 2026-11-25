@@ -2,9 +2,9 @@
 
 (in-package :usocket)
 
-(defparameter *backend* :iolib)
-
-(export 'socket-option)
+;;; NOTE: This overrides the same parameter defined in option.lisp
+(eval-when (:load-toplevel :execute)
+  (setq *backend* :iolib))
 
 (defparameter +iolib-error-map+
  `((iolib/sockets:socket-address-in-use-error        . address-in-use-error)
@@ -60,20 +60,29 @@
 
 (defun handle-condition (condition &optional (socket nil) (host-or-ip nil))
   "Dispatch correct usocket condition."
-  (let* ((usock-error (cdr (assoc (type-of condition) +iolib-error-map+)))
-	 (usock-error (if (functionp usock-error)
-			  (funcall usock-error condition)
-                          usock-error)))
-    (when usock-error
-      (if (typep usock-error 'socket-error)
-          (cond ((subtypep usock-error 'ns-error)
+  (typecase condition
+    (serious-condition
+     (let* ((usock-error (cdr (assoc (type-of condition) +iolib-error-map+)))
+	          (usock-error (if (functionp usock-error)
+			                       (funcall usock-error condition)
+                             usock-error)))
+       (declare (type symbol usock-error))
+       (when usock-error
+         (cond ((subtypep usock-error 'ns-error)
                  (error usock-error :socket socket :host-or-ip host-or-ip))
                 (t
-                 (error usock-error :socket socket)))
-          (cond ((subtypep usock-error 'ns-condition)
-                 (signal usock-error :socket socket :host-or-ip host-or-ip))
-                (t
-                 (signal usock-error :socket socket)))))))
+                 (error usock-error :socket socket))))))
+    (condition
+     (let* ((usock-cond (cdr (assoc (type-of condition) +iolib-error-map+)))
+	          (usock-cond (if (functionp usock-cond)
+			                      (funcall usock-cond condition)
+                            usock-cond)))
+       (declare (type symbol usock-cond))
+       (when usock-cond
+         (cond ((subtypep usock-cond 'ns-condition)
+                (signal usock-cond :socket socket :host-or-ip host-or-ip))
+               (t
+                (signal usock-cond :socket socket))))))))
 
 (defun ipv6-address-p (host)
   (iolib/sockets:ipv6-address-p (iolib/sockets:ensure-hostname host)))
@@ -176,10 +185,10 @@
 
 (defmethod socket-send ((usocket datagram-usocket) buffer size &key host port (offset 0))
   (apply #'iolib/sockets:send-to
-	 `(,(socket usocket) ,buffer :start ,offset :end ,(+ offset size)
+         `(,(socket usocket) ,buffer :start ,offset :end ,(+ offset size)
 			     ,@(when (and host port)
-				 `(:remote-host ,(iolib/sockets:ensure-hostname host)
-				   :remote-port ,port)))))
+				       `(:remote-host ,(iolib/sockets:ensure-hostname host)
+				         :remote-port ,port)))))
 
 (defmethod socket-receive ((usocket datagram-usocket) buffer length &key start end)
   (multiple-value-bind (buffer size host port)
@@ -231,12 +240,14 @@
 	(funcall disconnector :close)))))
 
 #||
-Too few arguments in call to #<Compiled-function (:internal usocket::make-usocket-error-handler) (Non-Global)  #x3020018C678F>:
+Too few arguments in call to
+ #<Compiled-function (:internal usocket::make-usocket-error-handler) (Non-Global)  #x3020018C678F>:
 2 arguments provided, at least 3 required.
 
 Backtrace:
   0: ((:internal usocket::make-usocket-error-handler) 17511955605035 2)
-  1: (iolib/multiplex::%handle-one-fd #<event base, 1 FDs monitored, using: #<epoll(4) multiplexer> #x3020018C963D> (8 (:error :read :write)) 54337.518855526D0 nil 0.0D0)
+  1: (iolib/multiplex::%handle-one-fd #<event base, 1 FDs monitored, using:
+     #<epoll(4) multiplexer> #x3020018C963D> (8 (:error :read :write)) 54337.518855526D0 nil 0.0D0)
 ||#
 
 (defun make-usocket-error-handler (usocket disconnector)
@@ -301,16 +312,14 @@ Backtrace:
     (unless (eq event-base *event-base*)
       (close event-base))))
 
-(defmethod socket-option ((socket usocket) option &key)
+(defmethod socket-option ((socket usocket) (option symbol) &key)
   (iolib/sockets:socket-option (socket-stream socket) option))
 
-(defmethod (setf socket-option) (new-value (socket usocket) option &key)
-  (let ((form `(setf (iolib/sockets:socket-option ,(socket-stream socket) ,option) ,new-value)))
+(defmethod (setf socket-option) (new-value (socket usocket) (option symbol) &key)
+  (let ((form `(setf (iolib/sockets:socket-option
+                       ,(socket-stream socket) ,option) ,new-value)))
     (eval (macroexpand-1 form))))
 
-
-
-
 ;;; ----------------------------------------------------------------------
 ;;
 ;; ;madhu 241117 - C `sendto' and `recvfrom' are not limited to datagram
@@ -342,8 +351,7 @@ Backtrace:
 			     (t (format t "ewouldblock: no restart!~%")))))))
      ,@body))
 
-(defmacro with-ewouldblock-handled (&body body) `(progn ,@body))
-
+;; NOTE: LispWorks 8 requires buffer to be :pinnable
 (defun maybe-pinned-array (array)
   #+lispworks
   (make-array (length array)
@@ -356,16 +364,16 @@ Backtrace:
 
 (defmethod socket-send ((usocket usocket) buffer size &key host port (offset 0))
   (let* ((buffer (etypecase buffer
-		   (string
-		    (babel:string-to-octets buffer))
-		   ((simple-array (unsigned-byte 8))
-		    buffer)
-		   ((array (unsigned-byte 8))
-		    (make-array (length buffer)
-				:element-type '(unsigned-byte 8)
-				:initial-contents buffer))))
-	 (size (or size	;; better be coerrect, we expect nil
-		   (length buffer))))
+		               (string
+		                (babel:string-to-octets buffer))
+		               ((simple-array (unsigned-byte 8))
+		                buffer)
+		               ((array (unsigned-byte 8))
+		                (make-array (length buffer)
+				                        :element-type '(unsigned-byte 8)
+				                        :initial-contents buffer))))
+	       (size (or size	;; better be coerrect, we expect nil
+		               (length buffer))))
     #+lispworks
     (setq buffer (maybe-pinned-array buffer))
     (with-ewouldblock-handled
@@ -376,15 +384,14 @@ Backtrace:
 		    `(:remote-host ,(iolib/sockets:ensure-hostname host)
 		      :remote-port ,port)))))))
 
-;; lispworks8 requires buffer to be :pinnable
 (defmethod socket-receive ((usocket usocket) buffer length &key start end)
   (multiple-value-bind (buffer size host port)
       (with-ewouldblock-handled
-	(iolib/sockets:receive-from (socket usocket)
-				    :buffer buffer :size (or length (length buffer))
-				    :start (or start 0)
-				    :end (or end (length buffer))
-;; ???
-				    :dont-wait t
-				    ))
+	        (iolib/sockets:receive-from (socket usocket)
+				     :buffer buffer :size (or length (length buffer))
+				     :start (or start 0)
+				     :end (or end (length buffer))
+             ;; ???
+				     :dont-wait t
+				     ))
     (values buffer size (if host (iolib-vector-to-vector-quad host)) port)))
