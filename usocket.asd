@@ -37,6 +37,8 @@
                   :depends-on ("condition")
                   :components ((:file "iolib"
                                 :if-feature :usocket-iolib)
+                               ;; NOTE: filenames below are sorted alphabetically to
+                               ;; prevent potential merge conflicts for new backends.
                                (:file "abcl"
                                 :if-feature (:and :abcl
                                                   (:not :usocket-iolib)))
@@ -46,11 +48,12 @@
                                (:file "amilisp"
                                 :if-feature (:and :amilisp
                                                   (:not :usocket-iolib)))
+                               (:file "clasp"
+                                :if-feature (:and :clasp
+                                                  (:not :usocket-iolib))
+                                :depends-on ("sbcl"))
                                (:file "clisp"
                                 :if-feature (:and :clisp
-                                                  (:not :usocket-iolib)))
-                               (:file "openmcl"
-                                :if-feature (:and (:or :openmcl :clozure)
                                                   (:not :usocket-iolib)))
                                (:file "clozure"
                                 :if-feature (:and :clozure
@@ -62,34 +65,33 @@
                                (:file "dotcl"
                                 :if-feature (:and :dotcl
                                                   (:not :usocket-iolib)))
-                               (:file "sbcl"
-                                :if-feature (:and (:or :sbcl :ecl :clasp)
-                                                  (:not :usocket-iolib)))
                                (:file "ecl"
                                 :if-feature (:and :ecl
                                                   (:not :usocket-iolib))
                                 :depends-on ("sbcl"))
-                               (:file "clasp"
-                                :if-feature (:and :clasp
-                                                  (:not :usocket-iolib))
-                                :depends-on ("sbcl"))
+                               (:file "genera"
+                                :if-feature (:and :genera
+                                                  (:not :usocket-iolib)))
                                (:file "lispworks"
                                 :if-feature (:and :lispworks
                                                   (:not :usocket-iolib)))
                                (:file "mcl"
                                 :if-feature (:and :mcl
                                                   (:not :usocket-iolib)))
+                               (:file "mezzano"
+                                :if-feature (:and :mezzano
+                                                  (:not :usocket-iolib)))
                                (:file "mocl"
                                 :if-feature (:and :mocl
                                                   (:not :usocket-iolib)))
+                               (:file "openmcl"
+                                :if-feature (:and (:or :openmcl :clozure)
+                                                  (:not :usocket-iolib)))
+                               (:file "sbcl"
+                                :if-feature (:and (:or :sbcl :ecl :clasp)
+                                                  (:not :usocket-iolib)))
                                (:file "scl"
                                 :if-feature (:and :scl
-                                                  (:not :usocket-iolib)))
-                               (:file "genera"
-                                :if-feature (:and :genera
-                                                  (:not :usocket-iolib)))
-                               (:file "mezzano"
-                                :if-feature (:and :mezzano
                                                   (:not :usocket-iolib)))
                                ))
                  (:file "option"
